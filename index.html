@@ -171,6 +171,13 @@
 
   footer { padding: 32px 0 48px; color: var(--ink-soft); font-size: 14px; }
   footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+  /* Language switch */
+  .lang { position: absolute; top: 18px; right: 20px; z-index: 2; display: flex; border: 1px solid var(--line);
+    border-radius: 999px; overflow: hidden; background: var(--card); }
+  .lang button { font: 500 13px "IBM Plex Sans", sans-serif; color: var(--ink-soft); background: none; border: 0;
+    padding: 6px 14px; cursor: pointer; }
+  .lang button[aria-pressed="true"] { background: var(--forest); color: #fff; }
+  .lang button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 </style>
 </head>
 <body>
@@ -192,22 +199,25 @@
     <g fill="var(--accent)"><circle cx="980" cy="295" r="6"/></g>
   </svg>
 
+  <nav class="lang" aria-label="Language / Språk">
+    <button type="button" data-lang="en" lang="en">English</button><button type="button" data-lang="no" lang="nb">Norsk</button>
+  </nav>
   <div class="wrap">
-    <span class="tag">Userscript · geocaching.com</span>
+    <span class="tag" data-no="Brukerskript · geocaching.com">Userscript · geocaching.com</span>
     <h1>Geocaching Map <span class="dash">–</span> Custom Tile Layers</h1>
-    <p class="lede">Use any XYZ, TMS, WMS or WMTS map as a background on the geocaching.com maps, plus place search, coordinate and measuring tools and 161&nbsp;m circles.</p>
+    <p class="lede" data-no="Bruk hvilket som helst XYZ-, TMS-, WMS- eller WMTS-kart som bakgrunn på geocaching.com-kartene, med stedssøk, koordinat- og måleverktøy og 161&amp;nbsp;m-sirkler.">Use any XYZ, TMS, WMS or WMTS map as a background on the geocaching.com maps, plus place search, coordinate and measuring tools and 161&nbsp;m circles.</p>
     <div class="cta">
       <!-- EDIT: file name of the script in the repo -->
       <a class="btn btn-primary" href="geocaching-custom-tiles.user.js">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-        Install script
+        <span data-no="Installer skriptet">Install script</span>
       </a>
       <!-- EDIT: GitHub repo URL -->
-      <a class="btn btn-ghost" href="https://github.com/knutos/custom-tiles">View on GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/knutos/custom-tiles"><span data-no="Se på GitHub">View on GitHub</span></a>
       <a class="btn btn-ghost" href="https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers">Greasy Fork</a>
     </div>
     <!-- EDIT: version number -->
-    <p class="meta">v1.41.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
+    <p class="meta" data-no="v1.41.0 · MIT-lisens · Virker på &lt;code&gt;/map&lt;/code&gt; og &lt;code&gt;/play/map&lt;/code&gt;">v1.41.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
   </div>
 </header>
 
@@ -216,48 +226,48 @@
     <div class="wrap">
       <figure class="shot" style="margin:0">
         <!-- EDIT: add screenshot.png next to index.html. The placeholder shows until it exists. -->
-        <img src="screenshot.png?v=2" alt="The geocaching.com map of central Oslo with a custom map layer, favourite points above the caches, the script toolbar along the top and the coordinate readout" width="1800" height="802"
+        <img src="screenshot.png?v=2" data-no-alt="Geocaching.com-kartet over Oslo sentrum med et eget kartlag, favorittpoeng over cachene, skriptets verktøylinje øverst og koordinatvisningen" alt="The geocaching.com map of central Oslo with a custom map layer, favourite points above the caches, the script toolbar along the top and the coordinate readout" width="1800" height="802"
              onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',textContent:'Add screenshot.png to the repo to show it here'}))">
-        <figcaption>A custom map layer on geocaching.com, with favourite points above the caches, the script’s toolbar along the top and the coordinate readout.</figcaption>
+        <figcaption data-no="Et eget kartlag på geocaching.com, med favorittpoeng over cachene, skriptets verktøylinje øverst og koordinatvisningen.">A custom map layer on geocaching.com, with favourite points above the caches, the script’s toolbar along the top and the coordinate readout.</figcaption>
       </figure>
     </div>
   </section>
 
   <section id="features">
     <div class="wrap">
-      <h2>What it does</h2>
-      <p class="sub">Small additions to the map you already use, without leaving geocaching.com.</p>
+      <h2 data-no="Hva det gjør">What it does</h2>
+      <p class="sub" data-no="Små tillegg til kartet du allerede bruker, uten å forlate geocaching.com.">Small additions to the map you already use, without leaving geocaching.com.</p>
       <!-- EDIT: adjust the feature cards to match the script -->
       <div class="grid">
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg></div>
-          <h3>Any map service</h3>
-          <p>XYZ, TMS, WMS and WMTS layers on both /map and /play/map.</p>
+          <h3 data-no="Alle karttjenester">Any map service</h3>
+          <p data-no="XYZ-, TMS-, WMS- og WMTS-lag på både /map og /play/map.">XYZ, TMS, WMS and WMTS layers on both /map and /play/map.</p>
         </div>
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
-          <h3>Layer editor</h3>
-          <p>URL auto-detect, capabilities browser, live preview, and import/export of your layers.</p>
+          <h3 data-no="Kartlagredigering">Layer editor</h3>
+          <p data-no="Gjenkjenner URL-er automatisk, blar i lagoversikter, viser forhåndsvisning og importerer/eksporterer lagene dine.">URL auto-detect, capabilities browser, live preview, and import/export of your layers.</p>
         </div>
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
-          <h3>Place search</h3>
-          <p>Jump to a place or address straight from the map.</p>
+          <h3 data-no="Stedssøk">Place search</h3>
+          <p data-no="Gå til et sted, en adresse eller en GC-kode rett fra kartet.">Jump to a place or address straight from the map.</p>
         </div>
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-          <h3>Coordinate tools</h3>
-          <p>Read and work with coordinates directly on the map.</p>
+          <h3 data-no="Koordinatverktøy">Coordinate tools</h3>
+          <p data-no="Les og jobb med koordinater direkte på kartet.">Read and work with coordinates directly on the map.</p>
         </div>
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 17 3l4 4L7 21z"/><path d="m7 13 2 2"/><path d="m10 10 2 2"/><path d="m13 7 2 2"/></svg></div>
-          <h3>Measuring</h3>
-          <p>Measure distances on the map.</p>
+          <h3 data-no="Måling">Measuring</h3>
+          <p data-no="Mål avstander på kartet.">Measure distances on the map.</p>
         </div>
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></div>
-          <h3>161 m circles</h3>
-          <p>Show the 0.1-mile proximity circles to see where new caches can be placed.</p>
+          <h3 data-no="161 m-sirkler">161 m circles</h3>
+          <p data-no="Vis 0,1-mils-sirklene for å se hvor nye cacher kan plasseres.">Show the 0.1-mile proximity circles to see where new caches can be placed.</p>
         </div>
       </div>
     </div>
@@ -265,20 +275,20 @@
 
   <section id="install">
     <div class="wrap">
-      <h2>Install</h2>
-      <p class="sub">Takes about a minute.</p>
+      <h2 data-no="Installer">Install</h2>
+      <p class="sub" data-no="Tar omtrent ett minutt.">Takes about a minute.</p>
       <ol class="steps">
         <li>
-          <strong>Install a userscript manager</strong>
-          <span><a href="https://www.tampermonkey.net/">Tampermonkey</a> or <a href="https://violentmonkey.github.io/">Violentmonkey</a>, available for Chrome, Firefox, Edge and Safari.</span>
+          <strong data-no="Installer en brukerskript-behandler">Install a userscript manager</strong>
+          <span data-no="&lt;a href=&quot;https://www.tampermonkey.net/&quot;&gt;Tampermonkey&lt;/a&gt; eller &lt;a href=&quot;https://violentmonkey.github.io/&quot;&gt;Violentmonkey&lt;/a&gt;, for Chrome, Firefox, Edge og Safari."><a href="https://www.tampermonkey.net/">Tampermonkey</a> or <a href="https://violentmonkey.github.io/">Violentmonkey</a>, available for Chrome, Firefox, Edge and Safari.</span>
         </li>
         <li>
-          <strong>Click “Install script”</strong>
-          <span>Your userscript manager opens and asks you to confirm the installation.</span>
+          <strong data-no="Klikk «Installer skriptet»">Click “Install script”</strong>
+          <span data-no="Brukerskript-behandleren åpnes og ber deg bekrefte installasjonen.">Your userscript manager opens and asks you to confirm the installation.</span>
         </li>
         <li>
-          <strong>Open the geocaching.com map</strong>
-          <span>The new layers appear in the map’s layer picker. Updates are installed automatically.</span>
+          <strong data-no="Åpne kartet på geocaching.com">Open the geocaching.com map</strong>
+          <span data-no="Verktøylinjen og de nye kartlagene vises på kartet. Oppdateringer installeres automatisk.">The new layers appear in the map’s layer picker. Updates are installed automatically.</span>
         </li>
       </ol>
     </div>
@@ -286,20 +296,20 @@
 
   <section id="docs">
     <div class="wrap">
-      <h2>Documentation</h2>
-      <p class="sub">Everything the script does, with screenshots.</p>
+      <h2 data-no="Dokumentasjon">Documentation</h2>
+      <p class="sub" data-no="Alt skriptet gjør, med skjermbilder.">Everything the script does, with screenshots.</p>
       <div class="grid">
         <a class="card" href="docs/Geocaching-Map-Custom-Tile-Layers-Guide.pdf">
-          <h3>User guide (English)</h3>
-          <p>PDF · all features, settings and technical details.</p>
+          <h3 data-no="User guide (engelsk)">User guide (English)</h3>
+          <p data-no="PDF · alle funksjoner, innstillinger og tekniske detaljer (på engelsk).">PDF · all features, settings and technical details.</p>
         </a>
         <a class="card" href="docs/Geocaching-Map-Custom-Tile-Layers-Brukerveiledning.pdf">
           <h3>Brukerveiledning (norsk)</h3>
-          <p>PDF · alle funksjoner, innstillinger og tekniske detaljer.</p>
+          <p data-no="PDF · alle funksjoner, innstillinger og tekniske detaljer.">PDF · alle funksjoner, innstillinger og tekniske detaljer.</p>
         </a>
         <a class="card" href="docs/Geocaching-Map-Custom-Tile-Layers-Presentasjon.pdf">
           <h3>Presentasjon (norsk)</h3>
-          <p>PDF · also as <span style="white-space:nowrap">PowerPoint (.pptx)</span> in the docs folder.</p>
+          <p data-no="PDF · finnes også som &lt;span style=&quot;white-space:nowrap&quot;&gt;PowerPoint (.pptx)&lt;/span&gt; i docs-mappen.">PDF · also as <span style="white-space:nowrap">PowerPoint (.pptx)</span> in the docs folder.</p>
         </a>
       </div>
     </div>
@@ -307,19 +317,19 @@
 
   <section id="faq">
     <div class="wrap">
-      <h2>Questions</h2>
+      <h2 data-no="Spørsmål">Questions</h2>
       <p class="sub">&nbsp;</p>
       <details>
-        <summary>Does it need a Premium membership?</summary>
-        <p>No, it works on the map for both Basic and Premium members.</p>
+        <summary data-no="Trenger jeg Premium-medlemskap?">Does it need a Premium membership?</summary>
+        <p data-no="Nei, det virker på kartet for både Basic- og Premium-medlemmer.">No, it works on the map for both Basic and Premium members.</p>
       </details>
       <details>
-        <summary>Does it send my data anywhere?</summary>
-        <p>No. Settings are stored locally in your browser. Map tiles are loaded directly from the tile services you select.</p>
+        <summary data-no="Sender det dataene mine noe sted?">Does it send my data anywhere?</summary>
+        <p data-no="Nei. Innstillingene lagres lokalt i nettleseren din. Kartflisene hentes direkte fra karttjenestene du velger.">No. Settings are stored locally in your browser. Map tiles are loaded directly from the tile services you select.</p>
       </details>
       <details>
-        <summary>Something broke after a geocaching.com update</summary>
-        <p>Please <a href="https://github.com/knutos/custom-tiles/issues">open an issue on GitHub</a> with your browser, userscript manager and which map page you were using.</p>
+        <summary data-no="Noe sluttet å virke etter en oppdatering av geocaching.com">Something broke after a geocaching.com update</summary>
+        <p data-no="&lt;a href=&quot;https://github.com/knutos/custom-tiles/issues&quot;&gt;Opprett en sak (issue) på GitHub&lt;/a&gt; og oppgi nettleser, brukerskript-behandler og hvilken kartside du brukte.">Please <a href="https://github.com/knutos/custom-tiles/issues">open an issue on GitHub</a> with your browser, userscript manager and which map page you were using.</p>
       </details>
     </div>
   </section>
@@ -327,10 +337,37 @@
 
 <footer>
   <div class="wrap">
-    <span>© 2026 Knut Olav Sunde · <a href="https://github.com/knutos/custom-tiles/blob/main/LICENSE">MIT License</a></span>
-    <span>Not affiliated with Groundspeak / Geocaching HQ.</span>
+    <span>© 2026 Knut Olav Sunde · <a href="https://github.com/knutos/custom-tiles/blob/main/LICENSE" data-no="MIT-lisens">MIT License</a></span>
+    <span data-no="Ikke tilknyttet Groundspeak / Geocaching HQ.">Not affiliated with Groundspeak / Geocaching HQ.</span>
   </div>
 </footer>
 
+<script>
+// English is in the page; Norwegian is in data-no attributes. The choice is remembered,
+// and ?lang=no / ?lang=en links work. Without a choice, a Norwegian browser gets Norwegian.
+(() => {
+  const META = {
+    en: { title: 'Geocaching Map – Custom Tile Layers', desc: 'A userscript that adds custom map layers and tools to the geocaching.com map.' },
+    no: { title: 'Geocaching Map – Custom Tile Layers', desc: 'Et brukerskript som gir geocaching.com-kartet egne kartlag og verktøy.' } };
+  const els = [...document.querySelectorAll('[data-no]')];
+  els.forEach(el => { el.dataset.en = el.innerHTML; });
+  const img = document.querySelector('img[data-no-alt]');
+  if (img) img.dataset.enAlt = img.alt;
+  function set(lang, remember) {
+    els.forEach(el => { el.innerHTML = lang === 'no' ? el.dataset.no : el.dataset.en; });
+    if (img) img.alt = lang === 'no' ? img.dataset.noAlt : img.dataset.enAlt;
+    document.documentElement.lang = lang === 'no' ? 'nb' : 'en';
+    document.title = META[lang].title;
+    document.querySelector('meta[name=description]').content = META[lang].desc;
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    if (remember) try { localStorage.setItem('lang', lang); } catch (e) { /* private mode */ }
+  }
+  let lang = new URLSearchParams(location.search).get('lang');
+  if (lang !== 'no' && lang !== 'en') { try { lang = localStorage.getItem('lang'); } catch (e) { lang = null; } }
+  if (lang !== 'no' && lang !== 'en') lang = /^(nb|nn|no)\b/i.test(navigator.language || '') ? 'no' : 'en';
+  set(lang, false);
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => set(b.dataset.lang, true)));
+})();
+</script>
 </body>
 </html>
