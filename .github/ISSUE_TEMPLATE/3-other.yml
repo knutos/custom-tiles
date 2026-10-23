@@ -1,0 +1,10 @@
+name: "💬 Other feedback / Andre innspill"
+description: "Questions, praise or anything else / Spørsmål, ros eller noe annet"
+labels: ["question"]
+body:
+  - type: textarea
+    id: text
+    attributes:
+      label: "Your message / Din melding"
+    validations:
+      required: true

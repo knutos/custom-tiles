@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "No GitHub account? Use Greasy Fork / Ingen GitHub-konto? Bruk Greasy Fork"
+    url: https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers/feedback
+    about: "Feedback on the script's Greasy Fork page / Tilbakemelding på skriptets side på Greasy Fork"

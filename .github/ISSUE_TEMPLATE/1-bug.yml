@@ -1,0 +1,49 @@
+name: "🐞 Bug report / Feilmelding"
+description: "Something doesn't work as it should / Noe virker ikke som det skal"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Write in English or Norwegian. / Takk for at du melder fra! Skriv på norsk eller engelsk.
+  - type: textarea
+    id: what
+    attributes:
+      label: "What happened? / Hva skjedde?"
+      description: "What did you expect, and what happened instead? / Hva forventet du, og hva skjedde i stedet?"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "How can it be reproduced? / Hvordan kan feilen gjenskapes?"
+      placeholder: |
+        1. Open / Åpne https://www.geocaching.com/map …
+        2. Click / Klikk …
+  - type: dropdown
+    id: page
+    attributes:
+      label: "Which page? / Hvilken side?"
+      multiple: true
+      options:
+        - /map
+        - /play/map
+        - "Cache page / Cacheside"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: "Script version / Skriptversjon"
+      description: "Shown in your userscript manager / Vises i brukerskript-behandleren"
+      placeholder: "1.41.0"
+  - type: input
+    id: browser
+    attributes:
+      label: "Browser and userscript manager / Nettleser og brukerskript-behandler"
+      placeholder: "Chrome 141, Tampermonkey 5.4"
+  - type: textarea
+    id: extra
+    attributes:
+      label: "Screenshots or console messages / Skjermbilder eller konsollmeldinger"
+      description: "Optional. Please remove personal information. / Valgfritt. Fjern gjerne personopplysninger."

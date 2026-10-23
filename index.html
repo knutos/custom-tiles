@@ -196,6 +196,9 @@
   .stats b { font: 600 15px "IBM Plex Mono", monospace; color: var(--forest); }
   .stats a { color: var(--ink-soft); font-size: 13px; }
 
+  /* Feedback */
+  .note { margin: 18px 0 0; font-size: 14px; color: var(--ink-soft); max-width: 72ch; }
+
   /* Language switch */
   .lang { position: absolute; top: 18px; right: 20px; z-index: 2; display: flex; border: 1px solid var(--line);
     border-radius: 999px; overflow: hidden; background: var(--card); }
@@ -389,6 +392,31 @@
     </div>
   </section>
 
+  <section id="feedback">
+    <div class="wrap">
+      <h2 data-no="Tilbakemelding">Feedback</h2>
+      <p class="sub" data-no="Fant du en feil, eller har du en idé? Skriv på norsk eller engelsk – alle innspill leses.">Found a bug, or have an idea? Write in English or Norwegian – every message is read.</p>
+      <div class="grid">
+        <a class="card" href="https://github.com/knutos/custom-tiles/issues/new?template=1-bug.yml">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6a4 4 0 0 1 8 0"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 10v10M2 13h4M18 13h4M3 7l3 2M21 7l-3 2M3 20l3-2M21 20l-3-2"/></svg></div>
+          <h3 data-no="Meld fra om en feil">Report a bug</h3>
+          <p data-no="Noe virker ikke som det skal.">Something doesn’t work as it should.</p>
+        </a>
+        <a class="card" href="https://github.com/knutos/custom-tiles/issues/new?template=2-idea.yml">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></div>
+          <h3 data-no="Foreslå en forbedring">Suggest an improvement</h3>
+          <p data-no="En idé til en ny funksjon eller en bedre måte å gjøre noe på.">An idea for a new feature or a better way to do something.</p>
+        </a>
+        <a class="card" href="https://github.com/knutos/custom-tiles/issues/new?template=3-other.yml">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></div>
+          <h3 data-no="Andre innspill">Other feedback</h3>
+          <p data-no="Spørsmål, ros eller noe annet.">Questions, praise or anything else.</p>
+        </a>
+      </div>
+      <p class="note" data-no="Innspillene sendes som saker på GitHub (krever en gratis GitHub-konto), og du kan &lt;a href=&quot;https://github.com/knutos/custom-tiles/issues&quot;&gt;se alle saker og hva som skjer med dem&lt;/a&gt;. Uten GitHub-konto kan du bruke &lt;a href=&quot;https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers/feedback&quot;&gt;tilbakemeldingssiden på Greasy Fork&lt;/a&gt;.">Messages are posted as issues on GitHub (needs a free GitHub account), and you can <a href="https://github.com/knutos/custom-tiles/issues">see all issues and what happens to them</a>. Without a GitHub account, use the <a href="https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers/feedback">feedback page on Greasy Fork</a>.</p>
+    </div>
+  </section>
+
   <section id="faq">
     <div class="wrap">
       <h2 data-no="Spørsmål">Questions</h2>
@@ -403,7 +431,7 @@
       </details>
       <details>
         <summary data-no="Noe sluttet å virke etter en oppdatering av geocaching.com">Something broke after a geocaching.com update</summary>
-        <p data-no="&lt;a href=&quot;https://github.com/knutos/custom-tiles/issues&quot;&gt;Opprett en sak (issue) på GitHub&lt;/a&gt; og oppgi nettleser, brukerskript-behandler og hvilken kartside du brukte.">Please <a href="https://github.com/knutos/custom-tiles/issues">open an issue on GitHub</a> with your browser, userscript manager and which map page you were using.</p>
+        <p data-no="&lt;a href=&quot;https://github.com/knutos/custom-tiles/issues/new?template=1-bug.yml&quot;&gt;Meld fra om feilen på GitHub&lt;/a&gt; og oppgi nettleser, brukerskript-behandler og hvilken kartside du brukte.">Please <a href="https://github.com/knutos/custom-tiles/issues/new?template=1-bug.yml">report it on GitHub</a> with your browser, userscript manager and which map page you were using.</p>
       </details>
     </div>
   </section>
