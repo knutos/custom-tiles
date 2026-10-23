@@ -32,6 +32,12 @@ and its additional info from `greasyfork/greasyfork-description-en.html` (Englis
 `greasyfork/greasyfork-description-no.html` (Norwegian) on `main`. A GitHub webhook to Greasy Fork
 makes it sync at once on every push; without it Greasy Fork checks about once a day.
 
+## Install counts
+
+The homepage shows the total and daily installs from Greasy Fork. The workflow
+`.github/workflows/greasyfork-stats.yml` fetches them every 6 hours into `stats.json` (and can be
+run by hand under *Actions*). Installs straight from GitHub Pages aren't counted – Pages has no statistics.
+
 ## Licence
 
 MIT – see [LICENSE](LICENSE).
