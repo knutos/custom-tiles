@@ -1,0 +1,15 @@
+name: "💡 Suggestion / Forbedringsforslag"
+description: "An idea for a new feature or an improvement / En idé til ny funksjon eller forbedring"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: "What would you like? / Hva ønsker du deg?"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why would it help? / Hvorfor ville det hjelpe?"
+      description: "When would you use it? / Når ville du brukt det?"
