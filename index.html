@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geocaching Map – Custom Tile Layers</title>
+<meta name="description" content="A userscript that adds custom map layers and tools to the geocaching.com map.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     EDIT THESE: GitHub user/repo and the script file name.
+     The install button links to SCRIPT_FILE relative to this page,
+     so place the .user.js file next to index.html in the repo.
+     ============================================================ */
+  :root {
+    --paper: #f4f1e8;
+    --paper-2: #ebe6d6;
+    --ink: #1f2a1f;
+    --ink-soft: #4b574a;
+    --forest: #2f5d3a;
+    --forest-deep: #1e3f27;
+    --contour: #b9a77f;
+    --accent: #d9662b;
+    --line: #d6cfb9;
+    --card: #fbfaf5;
+    --code-bg: #e7e1cf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #151a15;
+      --paper-2: #1b211b;
+      --ink: #e9e6da;
+      --ink-soft: #a9b0a3;
+      --forest: #7fb38a;
+      --forest-deep: #a6d4ae;
+      --contour: #3f4a39;
+      --accent: #f08a4f;
+      --line: #2c352b;
+      --card: #1c231c;
+      --code-bg: #242c23;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #151a15; --paper-2: #1b211b; --ink: #e9e6da; --ink-soft: #a9b0a3;
+    --forest: #7fb38a; --forest-deep: #a6d4ae; --contour: #3f4a39; --accent: #f08a4f;
+    --line: #2c352b; --card: #1c231c; --code-bg: #242c23;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.6 "IBM Plex Sans", system-ui, sans-serif;
+  }
+  a { color: var(--forest); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- Hero with contour lines ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    padding: 72px 0 64px;
+  }
+  .hero svg.contours {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    color: var(--contour); pointer-events: none;
+  }
+  .hero .wrap { position: relative; }
+  .tag {
+    display: inline-block;
+    font: 500 12px/1 "IBM Plex Mono", monospace;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--forest);
+    border: 1px solid var(--forest);
+    padding: 6px 10px; border-radius: 999px;
+    background: var(--paper);
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 800;
+    font-size: clamp(36px, 7vw, 68px);
+    line-height: 1.02;
+    letter-spacing: -.02em;
+    margin: 20px 0 16px;
+    max-width: 14ch;
+  }
+  h1 .dash { color: var(--accent); }
+  .lede { font-size: clamp(17px, 2.2vw, 20px); color: var(--ink-soft); max-width: 46ch; margin: 0 0 32px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 22px; border-radius: 10px;
+    font-weight: 600; text-decoration: none;
+    border: 2px solid var(--forest);
+    transition: transform .12s ease, background .12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--forest); color: var(--paper); }
+  .btn-primary:hover { background: var(--forest-deep); border-color: var(--forest-deep); }
+  .btn-ghost { color: var(--forest); background: var(--paper); }
+  .meta { font: 13px "IBM Plex Mono", monospace; color: var(--ink-soft); margin-top: 18px; }
+
+  /* ---------- Sections ---------- */
+  section { padding: 64px 0; border-bottom: 1px solid var(--line); }
+  h2 {
+    font-family: "Fraunces", Georgia, serif; font-weight: 600;
+    font-size: clamp(26px, 4vw, 36px); margin: 0 0 8px; letter-spacing: -.01em;
+  }
+  .sub { color: var(--ink-soft); margin: 0 0 32px; }
+
+  /* Screenshot */
+  .shot {
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    background: var(--paper-2); box-shadow: 0 20px 40px -24px rgba(0,0,0,.35);
+  }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot .placeholder {
+    aspect-ratio: 16 / 9; display: grid; place-items: center; text-align: center;
+    color: var(--ink-soft); font: 14px "IBM Plex Mono", monospace; padding: 16px;
+  }
+  .shot figcaption { padding: 12px 16px; font-size: 14px; color: var(--ink-soft); border-top: 1px solid var(--line); }
+
+  /* Features */
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px;
+  }
+  .card .ico {
+    width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--paper-2); color: var(--forest); margin-bottom: 14px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+  /* Steps */
+  ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: s; display: grid; gap: 14px; }
+  ol.steps li {
+    counter-increment: s; position: relative;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px 18px 68px;
+  }
+  ol.steps li::before {
+    content: counter(s); position: absolute; left: 20px; top: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    font: 600 15px "IBM Plex Mono", monospace;
+    background: var(--forest); color: var(--paper);
+  }
+  ol.steps strong { display: block; }
+  ol.steps span { color: var(--ink-soft); font-size: 15px; }
+  code {
+    font: 14px "IBM Plex Mono", monospace; background: var(--code-bg);
+    padding: 2px 6px; border-radius: 5px; overflow-wrap: anywhere;
+  }
+
+  /* FAQ */
+  details {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 10px;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--ink-soft); margin: 10px 0 0; }
+
+  footer { padding: 32px 0 48px; color: var(--ink-soft); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <!-- Decorative contour lines -->
+  <svg class="contours" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="none" stroke="currentColor" stroke-width="1.4">
+      <path d="M820 300c0-90 70-150 160-150s150 60 150 140-60 160-160 160-150-60-150-150z"/>
+      <path d="M770 300c0-120 95-200 210-200s200 80 200 190-85 210-210 210-200-80-200-200z"/>
+      <path d="M720 305c0-150 120-255 260-255s255 105 255 240-110 265-265 265-250-100-250-250z"/>
+      <path d="M665 310c0-180 145-310 315-310s310 130 310 290-135 320-320 320-305-120-305-300z"/>
+      <path d="M610 315c0-215 170-365 370-365s365 155 365 345-160 375-375 375-360-140-360-355z"/>
+      <path d="M555 320c0-250 195-420 425-420s420 180 420 400-185 430-430 430-415-160-415-410z"/>
+      <path d="M-40 520c120-40 220-10 320 20s210 40 300-10"/>
+      <path d="M-40 560c130-35 240-5 340 25s220 35 320-15"/>
+      <path d="M-40 600c140-30 260 0 360 30s230 30 340-20"/>
+    </g>
+    <g fill="var(--accent)"><circle cx="980" cy="295" r="6"/></g>
+  </svg>
+
+  <div class="wrap">
+    <span class="tag">Userscript · geocaching.com</span>
+    <h1>Geocaching Map <span class="dash">–</span> Custom Tile Layers</h1>
+    <p class="lede">Adds custom map layers and handy tools to the geocaching.com map, so you can plan your caching on the background map that actually suits the terrain.</p>
+    <div class="cta">
+      <!-- EDIT: file name of the script in the repo -->
+      <a class="btn btn-primary" href="geocaching-custom-tiles.user.js">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Install script
+      </a>
+      <!-- EDIT: GitHub repo URL -->
+      <a class="btn btn-ghost" href="https://github.com/knutos/custom-tiles">View on GitHub</a>
+    </div>
+    <!-- EDIT: version number -->
+    <p class="meta">v1.0.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="wrap">
+      <figure class="shot" style="margin:0">
+        <!-- EDIT: add screenshot.png next to index.html. The placeholder shows until it exists. -->
+        <img src="screenshot.png" alt="The geocaching.com map with a custom topographic layer selected"
+             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',textContent:'Add screenshot.png to the repo to show it here'}))">
+        <figcaption>The geocaching.com map with a custom background layer.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>What it does</h2>
+      <p class="sub">Small additions to the map you already use, without leaving geocaching.com.</p>
+      <!-- EDIT: adjust the feature cards to match the script -->
+      <div class="grid">
+        <div class="card">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg></div>
+          <h3>Custom tile layers</h3>
+          <p>Switch the background to topographic maps, aerial photos or any other tile service.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></div>
+          <h3>Add your own sources</h3>
+          <p>Configure any XYZ or WMTS tile URL and it appears in the layer picker.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <h3>Both map pages</h3>
+          <p>Works on the classic search map and the new play map.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+          <h3>Remembers your choice</h3>
+          <p>Your selected layer is kept between visits.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="sub">Takes about a minute.</p>
+      <ol class="steps">
+        <li>
+          <strong>Install a userscript manager</strong>
+          <span><a href="https://www.tampermonkey.net/">Tampermonkey</a> or <a href="https://violentmonkey.github.io/">Violentmonkey</a>, available for Chrome, Firefox, Edge and Safari.</span>
+        </li>
+        <li>
+          <strong>Click “Install script”</strong>
+          <span>Your userscript manager opens and asks you to confirm the installation.</span>
+        </li>
+        <li>
+          <strong>Open the geocaching.com map</strong>
+          <span>The new layers appear in the map’s layer picker. Updates are installed automatically.</span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <p class="sub">&nbsp;</p>
+      <details>
+        <summary>Does it need a Premium membership?</summary>
+        <p>No, it works on the map for both Basic and Premium members.</p>
+      </details>
+      <details>
+        <summary>Does it send my data anywhere?</summary>
+        <p>No. Settings are stored locally in your browser. Map tiles are loaded directly from the tile services you select.</p>
+      </details>
+      <details>
+        <summary>Something broke after a geocaching.com update</summary>
+        <p>Please <a href="https://github.com/knutos/custom-tiles/issues">open an issue on GitHub</a> with your browser, userscript manager and which map page you were using.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Knut Olav Sunde · <a href="https://github.com/knutos/custom-tiles/blob/main/LICENSE">MIT License</a></span>
+    <span>Not affiliated with Groundspeak / Geocaching HQ.</span>
+  </div>
+</footer>
+
+</body>
+</html>
