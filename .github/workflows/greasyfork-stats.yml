@@ -1,0 +1,42 @@
+# Fetches the install counts from Greasy Fork and saves them in stats.json for the homepage.
+name: Greasy Fork install counts
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'   # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: greasyfork-stats
+  cancel-in-progress: true
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch counts
+        run: |
+          set -euo pipefail
+          curl -fsSL -A 'custom-tiles homepage stats (github.com/knutos/custom-tiles)' \
+            https://greasyfork.org/scripts/600873.json -o gf.json
+          jq '{total: .total_installs, daily: .daily_installs}' gf.json > new.json
+          rm gf.json
+          # Only write (and commit) when the numbers changed.
+          if [ -f stats.json ] && [ "$(jq -c '{total, daily}' stats.json)" = "$(jq -c . new.json)" ]; then
+            rm new.json; echo "unchanged"; exit 0
+          fi
+          jq --arg t "$(date -u +%Y-%m-%dT%H:%MZ)" '. + {updated: $t}' new.json > stats.json
+          rm new.json
+          cat stats.json
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add stats.json
+          git diff --cached --quiet && exit 0
+          git commit -m 'Update Greasy Fork install counts'
+          git push
