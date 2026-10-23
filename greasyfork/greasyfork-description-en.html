@@ -1,0 +1,107 @@
+<h2>Your own maps and handy tools on the geocaching.com maps</h2>
+
+<p>This script turns the geocaching.com maps into a flexible map workbench. Choose Kartverket topographic maps, OpenStreetMap, aerial photos or <b>any map service you add yourself</b>, and get place search, coordinates in every common format, measuring, waypoint projection and 161&nbsp;m circles around traditional caches and caches with solved coordinates – all in <b>one tidy toolbar</b> at the right edge of the map.</p>
+
+<p>Works on <code>www.geocaching.com/map</code> and <code>www.geocaching.com/play/map</code>. Your chosen map is also shown on the small map on cache pages. The interface is available in <b>English and Norwegian</b>.</p>
+
+<hr>
+
+<h3>Features</h3>
+
+<h4>Maps and overlays</h4>
+<ul>
+  <li><b>Built-in background maps:</b> Kartverket Topo, Kartverket Gråtone, Kartverket Toporaster, OpenTopoMap, Esri World Imagery, OpenStreetMap and Esri World Topo – or keep the geocaching.com map.</li>
+  <li><b>Overlays:</b> Kartverket hiking and ski routes, Kartverket property boundaries and Esri hillshade – as many as you like at once.</li>
+  <li><b>Dimming towards white:</b> one slider fades the background map (by at most 50&nbsp;%) so the caches stand out; another sets the opacity of the overlays (50–100&nbsp;%). The geocaching.com map is hidden while your own background is selected, so it never shows through.</li>
+  <li><b>Cache icons always on top</b> of your maps.</li>
+  <li>The layer panel has <b>three tabs</b> – geocaching.com's own maps, background maps and overlays – so the lists stay short.</li>
+  <li><b>Drag maps up and down</b> to set your own order; the overlay at the top of the list is drawn on top.</li>
+  <li>Remove maps you never use – including geocaching.com's own – and bring them back whenever you like.</li>
+</ul>
+
+<h4>Add your own map services</h4>
+<p>Paste almost any map link and press <b>Detect</b>. The layer editor understands:</p>
+<ul>
+  <li><b>XYZ / TMS</b> tile addresses with <code>{z}</code>, <code>{x}</code> and <code>{y}</code> (also <code>{-y}</code>, <code>{s}</code> and quadkeys)</li>
+  <li>a <b>single map tile</b> copied from the browser's developer tools</li>
+  <li><b>WMTS</b> and <b>WMS</b> services – the layer list is fetched for you</li>
+  <li><b>ArcGIS</b> addresses ending in <code>/MapServer</code></li>
+</ul>
+<p>Preview the layer on the map before saving, and import or export your layers as a file to move them to another computer or share them.</p>
+
+<h4>Find a place</h4>
+<ul>
+  <li>One combined list as you type: <b>Norwegian place names and addresses</b> (Kartverket), <b>places abroad</b> (OpenStreetMap via Photon) and <b>coordinates</b>.</li>
+  <li>Press <kbd>/</kbd> on the map to open the search, <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> to pick a result.</li>
+  <li>A <b>home button</b> takes you to your saved home address with one click.</li>
+</ul>
+
+<h4>Coordinates</h4>
+<ul>
+  <li>The coordinates under the mouse are shown at the bottom right – click to switch format. The <b>zoom level</b> is shown above them: type a number to zoom. Hide the readout with its ✕, and show it again in Settings.</li>
+  <li><b>Right-click the map</b> for a popup with the position (always opens in DMM). Click the line to switch format, and copy with one click. <b>Google Street View</b> opens Street View at the point.</li>
+  <li><b>Snaps to geocaches:</b> right-click on or next to a cache and the popup uses the cache's coordinates and shows its GC code and name. <b>Click the GC code to open the cache page</b> in a new tab. The popup also shows the cache's <b>favourite points</b> (♥). On <code>/play/map</code> our popup replaces the site's right-click menu (configurable).</li>
+</ul>
+<table>
+  <thead><tr><th>Format</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>DMM</td><td><code>N 59° 54.834 E 010° 45.132</code></td></tr>
+    <tr><td>DD</td><td><code>59.913900, 10.752200</code></td></tr>
+    <tr><td>DMS</td><td><code>N 59° 54' 50.0" E 10° 45' 07.9"</code></td></tr>
+    <tr><td>UTM (automatic zone)</td><td><code>32V 597980E 6643119N</code></td></tr>
+    <tr><td>UTM 32 / 33 / 35 (fixed zone)</td><td><code>33V 262560E 6649444N</code></td></tr>
+  </tbody>
+</table>
+<p>UTM is computed with the Krüger series, accurate to about a millimetre.</p>
+
+<h4>Measuring, projection and 161&nbsp;m circles</h4>
+<ul>
+  <li><b>Measure</b> distance and bearing by clicking points on the map.</li>
+  <li><b>Project a waypoint</b> from any point: type bearing and distance (m, km or ft) and see the result on the map as you type.</li>
+  <li><b>161&nbsp;m circles</b> wherever something is placed (from zoom level 15): <b>traditional caches</b> at their exact coordinates, <b>caches with solved (corrected) coordinates</b> at the solved position, <b>visible physical stages and final locations</b> of multis, mysteries, Wherigos and letterboxes (read from the cache page). Where no cache icon shows the spot, a <b>clickable mark</b> opens the cache page. The marks at solved caches can also be shown <b>without circles</b> (own toolbar button). Hovering a solved cache shows <b>Final location</b> – also your own and unfound ones, where the site's icon and popup are kept. Or draw a single circle anywhere.</li>
+  <li><b>Hide all geocaches</b> (and their 161&nbsp;m circles) with one click for a clean map, and show them again.</li>
+  <li><b>Favourite points:</b> a red ♥ and the number above caches on the map from zoom 15 – only for caches the site shows, from a minimum you choose in Settings. Turn them on and off with the heart button in the toolbar.</li>
+  <li><b>Follows the site's filters:</b> caches you leave out in the sidebar on <code>/map</code> (My Finds, My Hides, cache types) lose their circles, marks and favourite points too.</li>
+  <li>Pins, my location, fullscreen, and one button to clear all drawings.</li>
+</ul>
+
+<h4>One toolbar</h4>
+<p>The site's own zoom, location and map-style buttons are folded into the same toolbar, so there are no duplicate buttons. All icons are simple line icons, and all dialogs share one clean style.</p>
+<ul>
+  <li>Put the toolbar on the <b>right</b> (default) or <b>left</b>, or centred at the <b>top</b> or <b>bottom</b> – in <b>one or two rows</b>. <b>Drag</b> it by its grip to another edge, or choose in <b>Settings</b>.</li>
+  <li>It keeps clear of the site's <b>Search for geocaches</b> panel and follows it as it opens and closes.</li>
+  <li><b>Settings</b> (gear button): toolbar position, language, and whether to show geocaching.com's own location and map-style buttons (its zoom buttons are always hidden).</li>
+  <li>The toolbar is <b>centred</b> along its edge and keeps clear of other controls.</li>
+  <li>The layer panel and all dialogs open <b>beside the toolbar</b>, never on top of it or other controls, and can be <b>dragged</b> anywhere.</li>
+</ul>
+
+<hr>
+
+<h3>Supported pages</h3>
+<table>
+  <thead><tr><th>Page</th><th>What you get</th></tr></thead>
+  <tbody>
+    <tr><td><code>www.geocaching.com/map/…</code></td><td>Everything: toolbar, layers, search and tools</td></tr>
+    <tr><td><code>www.geocaching.com/play/map…</code></td><td>Everything</td></tr>
+    <tr><td><code>www.geocaching.com/geocache/…</code><br><code>…/seek/cache_details.aspx…</code></td><td>Your chosen background map and overlays on the small map, keeping the site's own extent</td></tr>
+  </tbody>
+</table>
+
+<h3>Privacy</h3>
+<p>The script collects and sends no personal data (to recognise your own caches it compares their owner name with your user name, in your browser only) and has no server of its own. It only contacts the map servers of the layers you switch on, Kartverket (<code>ws.geonorge.no</code>) and Photon (<code>photon.komoot.io</code>) when you search, a map service's capabilities address when you add a WMS/WMTS layer, geocaching.com's own cache search for the area in view (when the 161&nbsp;m circles, the marks or the favourite points are on), and – with the circles on – the cache pages of multis, mysteries, Wherigos and letterboxes in view (for their visible stages), and – from zoom 15 or when you right-click – the pages of caches the search left out (typically your own; at most 20 per view, 60 with My Hides off, once per visit), to read their exact coordinates. Your location is only requested when you click the location button, and Google Street View only opens when you click it. All settings are stored in your browser. The script needs no special permissions (<code>@grant none</code>).</p>
+
+<h3>Good to know</h3>
+<ul>
+  <li>Only map services in Web Mercator (EPSG:3857) can be shown, because the geocaching.com map uses that projection.</li>
+  <li>Right-clicking a cache gives its exact coordinates – your corrected ones for solved caches – once geocaching.com's cache search has answered for the area. Caches the search leaves out, such as your own, are read from their cache page – in the background from zoom 15, or on the first right-click. Physical stages whose coordinates the owner has hidden cannot be found.</li>
+  <li>Something not working after a site update? Open the browser console (<kbd>F12</kbd>) on the map page and type <code>gcctReport()</code>. A short report without personal data is copied to the clipboard – please include it in your feedback. For problems with the 161&nbsp;m circles, <code>gcctCacheDebug()</code> shows what the cache search returned (field names and counts only), <code>gcctStageTest('GC…')</code> shows the stages found on one cache page, and <code>gcctSnapTest('GC…')</code> shows what the script knows about one cache when right-click doesn't snap.</li>
+</ul>
+
+<h3>Data sources and credits</h3>
+<ul>
+  <li><b>Kartverket</b> – topographic maps, Tur- og friluftsruter, Matrikkelen (CC BY 4.0), place-name and address search (Geonorge)</li>
+  <li><b>OpenStreetMap contributors</b> – OpenStreetMap, OpenTopoMap (with SRTM); place search abroad via <b>Photon</b> by komoot</li>
+  <li><b>Esri</b> – World Imagery, World Topo Map, World Hillshade</li>
+</ul>
+<p><small>Each map service has its own terms of use; the credit for the layers in view is shown on the map. Geocaching and geocaching.com are trademarks of Groundspeak, Inc. This script is an independent add-on and not affiliated with Groundspeak.</small></p>
+<p><small>License: MIT.</small></p>

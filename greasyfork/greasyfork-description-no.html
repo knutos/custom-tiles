@@ -1,0 +1,107 @@
+<h2>Egne kart og nyttige verktøy på geocaching.com-kartene</h2>
+
+<p>Dette skriptet gjør geocaching.com-kartene til en fleksibel kartarbeidsplass. Velg Kartverkets topografiske kart, OpenStreetMap, flyfoto eller <b>hvilken som helst karttjeneste du legger til selv</b>, og få stedssøk, koordinater i alle vanlige formater, måling, projisering av veipunkter og 161&nbsp;m-sirkler rundt tradisjonelle og løste cacher – samlet i <b>én ryddig verktøylinje</b> langs høyre kant av kartet.</p>
+
+<p>Virker på <code>www.geocaching.com/map</code> og <code>www.geocaching.com/play/map</code>. Kartet du har valgt, vises også på det lille kartet på cachesidene. Brukergrensesnittet finnes på <b>norsk og engelsk</b>.</p>
+
+<hr>
+
+<h3>Funksjoner</h3>
+
+<h4>Kart og overlegg</h4>
+<ul>
+  <li><b>Innebygde bakgrunnskart:</b> Kartverket Topo, Kartverket Gråtone, Kartverket Toporaster, OpenTopoMap, Esri flyfoto, OpenStreetMap og Esri topografisk – eller behold geocaching.com-kartet.</li>
+  <li><b>Overlegg:</b> Kartverkets turruter og skiløyper, Kartverkets eiendomsgrenser og terrengskygge fra Esri – så mange du vil samtidig.</li>
+  <li><b>Demping mot hvitt:</b> én glidebryter bleker bakgrunnskartet (med høyst 50&nbsp;%) så cachene trer fram, en annen styrer synligheten for overleggene (50–100&nbsp;%). Geocaching.com-kartet skjules mens ditt eget bakgrunnskart er valgt, så det skinner aldri gjennom.</li>
+  <li><b>Cacheikonene ligger alltid øverst</b>, over kartene dine.</li>
+  <li>Kartlagpanelet har <b>tre faner</b> – geocaching.coms egne kart, bakgrunnskart og overlegg – så listene holder seg korte.</li>
+  <li><b>Dra kartene opp og ned</b> for å bestemme rekkefølgen selv; overlegget øverst i listen tegnes øverst.</li>
+  <li>Fjern kart du aldri bruker – også geocaching.coms egne – og hent dem tilbake når du vil.</li>
+</ul>
+
+<h4>Legg til dine egne karttjenester</h4>
+<p>Lim inn nesten hvilken som helst kartlenke og trykk <b>Gjenkjenn</b>. Redigeringsdialogen forstår:</p>
+<ul>
+  <li><b>XYZ / TMS</b>-flisadresser med <code>{z}</code>, <code>{x}</code> og <code>{y}</code> (også <code>{-y}</code>, <code>{s}</code> og quadkeys)</li>
+  <li><b>én enkelt kartflis</b> kopiert fra nettleserens utviklerverktøy</li>
+  <li><b>WMTS</b>- og <b>WMS</b>-tjenester – lagoversikten hentes automatisk</li>
+  <li><b>ArcGIS</b>-adresser som slutter på <code>/MapServer</code></li>
+</ul>
+<p>Forhåndsvis laget på kartet før du lagrer, og importer eller eksporter lagene dine som fil for å flytte dem til en annen datamaskin eller dele dem.</p>
+
+<h4>Finn et sted</h4>
+<ul>
+  <li>Én samlet liste mens du skriver: <b>stedsnavn og adresser i Norge</b> (Kartverket), <b>steder i utlandet</b> (OpenStreetMap via Photon) og <b>koordinater</b>.</li>
+  <li>Trykk <kbd>/</kbd> på kartet for å åpne søket, og <kbd>↑</kbd> <kbd>↓</kbd> og <kbd>Enter</kbd> for å velge et treff.</li>
+  <li>En <b>hjemknapp</b> tar deg til den lagrede hjemadressen med ett klikk.</li>
+</ul>
+
+<h4>Koordinater</h4>
+<ul>
+  <li>Koordinatene under musepekeren vises nederst til høyre – klikk for å bytte format. <b>Zoomnivået</b> står over: skriv et tall for å zoome. Skjul visningen med ✕, og vis den igjen i Innstillinger.</li>
+  <li><b>Høyreklikk på kartet</b> for en boble med posisjonen (åpnes alltid i DMM). Klikk på linjen for å bytte format, og kopier med ett klikk. <b>Google Street View</b> åpner Street View ved punktet.</li>
+  <li><b>Festes til geocacher:</b> høyreklikk på eller like ved en cache, så bruker boblen cachens koordinater og viser GC-kode og navn. <b>Klikk på GC-koden for å åpne cachesiden</b> i en ny fane. Boblen viser også cachens <b>favorittpoeng</b> (♥). På <code>/play/map</code> erstatter vår boble nettstedets høyreklikkmeny (kan endres).</li>
+</ul>
+<table>
+  <thead><tr><th>Format</th><th>Eksempel</th></tr></thead>
+  <tbody>
+    <tr><td>DMM</td><td><code>N 59° 54.834 E 010° 45.132</code></td></tr>
+    <tr><td>DD</td><td><code>59.913900, 10.752200</code></td></tr>
+    <tr><td>DMS</td><td><code>N 59° 54' 50.0" E 10° 45' 07.9"</code></td></tr>
+    <tr><td>UTM (automatisk sone)</td><td><code>32V 597980E 6643119N</code></td></tr>
+    <tr><td>UTM 32 / 33 / 35 (fast sone)</td><td><code>33V 262560E 6649444N</code></td></tr>
+  </tbody>
+</table>
+<p>UTM beregnes med Krüger-rekkene og er nøyaktig til omtrent en millimeter.</p>
+
+<h4>Måling, projisering og 161&nbsp;m-sirkler</h4>
+<ul>
+  <li><b>Mål</b> avstand og retning ved å klikke punkter på kartet.</li>
+  <li><b>Projiser et veipunkt</b> fra et hvilket som helst punkt: skriv retning og avstand (m, km eller ft) og se resultatet på kartet mens du skriver.</li>
+  <li><b>161&nbsp;m-sirkler</b> der noe er utplassert (fra zoomnivå 15): <b>tradisjonelle cacher</b> på de nøyaktige koordinatene, <b>cacher med løste (korrigerte) koordinater</b> på den løste posisjonen, <b>synlige fysiske steg og endelige plasseringer</b> i multier, mysterier, Wherigoer og letterboxer (lest fra cachesiden). Der ikke noe cacheikon viser stedet, åpner et <b>klikkbart merke</b> cachesiden. Merkene ved løste cacher kan også vises <b>uten sirkler</b> (egen knapp i verktøylinjen). Holder du musen over en løst cache, står det <b>Endelig plassering</b> – også på dine egne og ufunne, der nettstedets ikon og boble beholdes. Eller tegn én sirkel hvor som helst.</li>
+  <li><b>Skjul alle geocacher</b> (og 161&nbsp;m-sirklene deres) med ett klikk for et rent kart, og vis dem igjen.</li>
+  <li><b>Favorittpoeng:</b> rødt ♥ og antallet over cachene på kartet fra zoom 15 – bare for cacher nettstedet viser, fra et minste antall du velger i Innstillinger. Slås av og på med hjerteknappen i verktøylinjen.</li>
+  <li><b>Følger nettstedets filtre:</b> cacher du utelater i sidepanelet på <code>/map</code> (Mine funn, Mine gjemte, cachetyper) mister også sirkler, merker og favorittpoeng.</li>
+  <li>Merkenåler, min posisjon, fullskjerm og én knapp som fjerner alle tegninger.</li>
+</ul>
+
+<h4>Én verktøylinje</h4>
+<p>Nettstedets egne knapper for zoom, posisjon og kartstil foldes inn i den samme verktøylinjen, så det blir ingen doble knapper. Alle ikonene er enkle strekikoner, og alle dialogene har samme rene stil.</p>
+<ul>
+  <li>Plasser verktøylinjen til <b>høyre</b> (standard) eller <b>venstre</b>, eller midt <b>øverst</b> eller <b>nederst</b> – i <b>én eller to rekker</b>. <b>Dra</b> den etter håndtaket til en annen kant, eller velg i <b>Innstillinger</b>.</li>
+  <li>Den holder seg klar av nettstedets panel <b>Search for geocaches</b> og følger det når det åpnes og lukkes.</li>
+  <li><b>Innstillinger</b> (tannhjulet): verktøylinjens plassering, språk og om geocaching.coms egne knapper for posisjon og kartstil skal vises (zoomknappene er alltid skjult).</li>
+  <li>Verktøylinjen <b>sentreres</b> langs kanten og holder seg klar av andre knapper.</li>
+  <li>Kartlagpanelet og alle dialogene åpnes <b>ved siden av verktøylinjen</b>, aldri over den eller andre knapper, og kan <b>dras</b> hvor som helst.</li>
+</ul>
+
+<hr>
+
+<h3>Sider som støttes</h3>
+<table>
+  <thead><tr><th>Side</th><th>Hva du får</th></tr></thead>
+  <tbody>
+    <tr><td><code>www.geocaching.com/map/…</code></td><td>Alt: verktøylinje, kartlag, søk og verktøy</td></tr>
+    <tr><td><code>www.geocaching.com/play/map…</code></td><td>Alt</td></tr>
+    <tr><td><code>www.geocaching.com/geocache/…</code><br><code>…/seek/cache_details.aspx…</code></td><td>Det valgte bakgrunnskartet og overleggene på det lille kartet, med nettstedets eget utsnitt</td></tr>
+  </tbody>
+</table>
+
+<h3>Personvern</h3>
+<p>Skriptet samler ikke inn eller sender personopplysninger (for å kjenne igjen dine egne cacher sammenligner det eiernavnet med brukernavnet ditt, bare i nettleseren) og har ingen egen server. Det kontakter bare kartserverne til lagene du slår på, Kartverket (<code>ws.geonorge.no</code>) og Photon (<code>photon.komoot.io</code>) når du søker, adressen til en karttjenestes lagoversikt når du legger til et WMS/WMTS-lag, geocaching.coms eget cachesøk for området du ser på (når 161&nbsp;m-sirklene, merkene eller favorittpoengene er på), og – med sirklene på – cachesidene til multier, mysterier, Wherigoer og letterboxer i bildet (for de synlige stegene), og – fra zoom 15 eller når du høyreklikker – sidene til cacher søket utelot (typisk dine egne; høyst 20 per utsnitt, 60 med Mine gjemte av, én gang per besøk), for å lese de nøyaktige koordinatene. Posisjonen din hentes bare når du klikker på posisjonsknappen, og Google Street View åpnes bare når du klikker på det. Alle innstillinger lagres i nettleseren. Skriptet trenger ingen spesielle tillatelser (<code>@grant none</code>).</p>
+
+<h3>Greit å vite</h3>
+<ul>
+  <li>Bare karttjenester i Web Mercator (EPSG:3857) kan vises, fordi geocaching.com-kartet bruker den projeksjonen.</li>
+  <li>Høyreklikk på en cache gir de nøyaktige koordinatene – dine korrigerte for løste cacher – så snart geocaching.coms cachesøk har svart for området. Cacher som søket utelater, for eksempel dine egne, leses fra cachesiden – i bakgrunnen fra zoom 15, eller ved første høyreklikk. Fysiske steg der eieren har skjult koordinatene, kan ikke finnes.</li>
+  <li>Virker noe ikke etter en endring på nettstedet? Åpne nettleserkonsollen (<kbd>F12</kbd>) på kartsiden og skriv <code>gcctReport()</code>. En kort rapport uten personopplysninger kopieres til utklippstavlen – ta den gjerne med i tilbakemeldingen. Ved problemer med 161&nbsp;m-sirklene viser <code>gcctCacheDebug()</code> hva cachesøket svarte (bare feltnavn og antall), <code>gcctStageTest('GC…')</code> viser stegene som ble funnet på én cacheside, og <code>gcctSnapTest('GC…')</code> viser hva skriptet vet om én cache når høyreklikk ikke fester seg.</li>
+</ul>
+
+<h3>Datakilder og kreditering</h3>
+<ul>
+  <li><b>Kartverket</b> – topografiske kart, Tur- og friluftsruter, Matrikkelen (CC BY 4.0), søk etter stedsnavn og adresser (Geonorge)</li>
+  <li><b>OpenStreetMap-bidragsytere</b> – OpenStreetMap, OpenTopoMap (med SRTM); stedssøk i utlandet via <b>Photon</b> fra komoot</li>
+  <li><b>Esri</b> – World Imagery, World Topo Map, World Hillshade</li>
+</ul>
+<p><small>Hver karttjeneste har egne bruksvilkår; krediteringen for lagene som vises, står på kartet. Geocaching og geocaching.com er varemerker for Groundspeak, Inc. Dette skriptet er et uavhengig tillegg og har ingen tilknytning til Groundspeak.</small></p>
+<p><small>Lisens: MIT.</small></p>
