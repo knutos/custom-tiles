@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.40.0
+// @version      1.41.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -305,6 +305,10 @@
     "Location unavailable: {e}": "Posisjonen er ikke tilgjengelig: {e}",
     "Find a place": "Finn et sted",
     "Place name, address or coordinates": "Stedsnavn, adresse eller koordinater",
+    "Place name, address, coordinates or GC code": "Stedsnavn, adresse, koordinater eller GC-kode",
+    "Posted coordinates": "Publiserte koordinater",
+    "Solved coordinates": "Løste koordinater",
+    "Places in Norway, addresses and places abroad appear as you type. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.": "Steder i Norge, adresser og steder i utlandet vises mens du skriver. En GC-kode finner geocachen. Bruk <b>↑</b> <b>↓</b> og <b>Enter</b> for å velge. Tips: trykk <b>/</b> på kartet for å åpne denne boksen.",
     "Search the whole world (OpenStreetMap)": "Søk i hele verden (OpenStreetMap)",
     "Coordinates": "Koordinater",
     "Places in Norway": "Steder i Norge",
@@ -3230,6 +3234,7 @@
       .gcct-results em.tag-place{background:#dafbe1;color:#116329}
       .gcct-results em.tag-addr{background:#ddf4ff;color:#0550ae}
       .gcct-results em.tag-abroad{background:#fbefff;color:#6639ba}
+      .gcct-results em.tag-gc{background:#fff1e5;color:#953800}
       .gcct-results .gm.err{color:#a40e26}
       .gcct-crosshair, .gcct-crosshair .leaflet-interactive{cursor:crosshair!important}
       .gcct-stage{display:flex!important;align-items:center;justify-content:center;border-radius:50%;background:#336699;color:#fff;
@@ -4409,6 +4414,26 @@
       }).filter(r => r && r.name && isFinite(r.lat) && isFinite(r.lng)).slice(0, 6);
     }
 
+    // A geocache by its GC code: from what the script already knows, otherwise from the cache page
+    // (read like when you open it yourself). Solved coordinates are offered too when you have them.
+    async function searchGC(code, signal) {
+      code = code.toUpperCase();
+      let i = CACHE_INFO.get(code) || {}, posted = i.posted, corrected = i.solved ? i.corrected : null, name = i.name;
+      if (!posted) {
+        const r = await fetch('/geocache/' + encodeURIComponent(code), { credentials: 'same-origin', signal });
+        if (!r.ok) return [];
+        const html = await r.text(), pc = pageCoords(html);
+        posted = pc.posted; corrected = pc.corrected || corrected;
+        const nm = html.match(/id="ctl00_ContentBody_CacheName"[^>]*>([^<]{1,120})</);
+        if (nm && !name) { const el = document.createElement('textarea'); el.innerHTML = nm[1].trim(); name = el.value; }
+      }
+      const out = [];
+      const row = (q, what) => out.push({ kind: 'gc', code, name: code + (name ? ' · ' + name : ''), sub: `${what} · ${fmtDMM(q.lat, q.lng)}`, lat: q.lat, lng: q.lng, zoom: 17 });
+      if (corrected) row(corrected, T('Solved coordinates'));
+      if (posted) row(posted, T('Posted coordinates'));
+      return out;
+    }
+
     let lastSearch = '';
     // --- Home address ----------------------------------------------------------
     function setHome(h) {
@@ -4428,10 +4453,10 @@
     function openSearch(opts = {}) {
       const homeMode = !!opts.home, home = load('gcct.home', null);
       const d = api.openDialog(homeMode ? T('Set home address') : T('Find a place'), `
-        <input class="gcct-q" placeholder="${T('Place name, address or coordinates')}" value="${homeMode ? '' : esc(lastSearch)}">
+        <input class="gcct-q" placeholder="${T(homeMode ? 'Place name, address or coordinates' : 'Place name, address, coordinates or GC code')}" value="${homeMode ? '' : esc(lastSearch)}">
         <p class="hint">${homeMode
           ? T('Search for your address and pick it from the list. You can also right-click the map and choose “Set as home”.')
-          : T('Places in Norway, addresses and places abroad appear as you type. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.')}</p>
+          : T('Places in Norway, addresses and places abroad appear as you type. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.')}</p>
         ${homeMode && home ? `<p class="hint homeline">${icon('home', 16)} <b>${esc(home.name)}</b> &nbsp;<button data-a="clearhome">${T('Remove home address')}</button></p>` : ''}
         <div class="gcct-results"></div>`);
       const ch = d.querySelector('[data-a=clearhome]');
@@ -4442,7 +4467,7 @@
       };
       const q = d.querySelector('.gcct-q'), out = d.querySelector('.gcct-results');
       const SOURCES = [['place', searchNorwayPlaces, 2, 'Kartverket'], ['addr', searchNorwayAddresses, 2, 'Kartverket'], ['abroad', searchAbroad, 3, 'Photon']];
-      const TAG = { coord: () => T('Coordinates'), place: () => T('Place'), addr: () => T('Address'), abroad: () => T('Abroad') };
+      const TAG = { gc: () => T('Geocache'), coord: () => T('Coordinates'), place: () => T('Place'), addr: () => T('Address'), abroad: () => T('Abroad') };
       let res = {}, pending = 0, failed = [], items = [], sel = -1, seq = 0, ctrl = null, timer = null, picked = null;
 
       // Rank all hits together, best match first, whatever service they came from:
@@ -4460,7 +4485,8 @@
           if (n.split(/[\s,\-/]+/).some(w => w.startsWith(t))) return 2;
           return n.includes(t) ? 3 : 4;
         };
-        const kindOrder = hasNumber ? { coord: 0, addr: 1, place: 2, abroad: 3 } : { coord: 0, place: 1, addr: 2, abroad: 3 };
+        if (list.length && list.every(r => r.kind === 'gc')) return list;      // solved first, then posted
+        const kindOrder = hasNumber ? { gc: 0, coord: 0, addr: 1, place: 2, abroad: 3 } : { gc: 0, coord: 0, place: 1, addr: 2, abroad: 3 };
         return list.map((r, i) => ({ r, k: [match(r), kindOrder[r.kind] ?? 9, r.zoom || 15, i] }))
           .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2] || a.k[3] - b.k[3])
           .map(x => x.r);
@@ -4476,7 +4502,7 @@
       }
       function draw() {
         // One ranked list mixing coordinates, places in Norway, addresses and places abroad.
-        items = rank(['coord', 'place', 'addr', 'abroad'].flatMap(k => res[k] || []), q.value);
+        items = rank(['gc', 'coord', 'place', 'addr', 'abroad'].flatMap(k => res[k] || []), q.value);
         let html = items.map((r, i) => `<div class="gr" data-i="${i}"><b>${esc(r.name)}</b>
           <span><em class="tag tag-${r.kind}">${esc(TAG[r.kind]())}</em>${esc(r.sub || '')}</span></div>`).join('');
         const text = q.value.trim();
@@ -4503,7 +4529,14 @@
         res = {}; failed = []; pending = 0; sel = 0; picked = null;
         const ll = text && parseCoord(text);
         if (ll) res.coord = [{ kind: 'coord', name: fmtDMM(ll[0], ll[1]), sub: `${fmtDD(ll[0], ll[1])} · UTM ${fmtUTM(ll[0], ll[1])}`, lat: ll[0], lng: ll[1], zoom: 16 }];
-        if (!ll) SOURCES.forEach(([key, fn, minLen, label]) => {
+        const gc = !homeMode && /^GC[0-9A-Z]{1,7}$/i.test(text.replace(/\s+/g, '')) ? text.replace(/\s+/g, '') : null;
+        if (gc) {
+          pending++;
+          searchGC(gc, signal).then(list => { if (my === seq) res.gc = list; })
+            .catch(e => { if (my === seq && e.name !== 'AbortError') failed.push('geocaching.com'); })
+            .finally(() => { if (my === seq) { pending--; draw(); } });
+        }
+        if (!ll && !gc) SOURCES.forEach(([key, fn, minLen, label]) => {
           if (text.length < minLen) return;
           pending++;
           fn(text, signal).then(list => { if (my === seq) res[key] = list; })

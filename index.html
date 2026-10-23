@@ -136,6 +136,9 @@
   }
   .card h3 { margin: 0 0 6px; font-size: 17px; }
   .card p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+  a.card { display: block; color: inherit; text-decoration: none; transition: border-color .15s; }
+  a.card:hover { border-color: var(--forest); }
+  a.card h3 { color: var(--forest); }
 
   /* Steps */
   ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: s; display: grid; gap: 14px; }
@@ -201,9 +204,10 @@
       </a>
       <!-- EDIT: GitHub repo URL -->
       <a class="btn btn-ghost" href="https://github.com/knutos/custom-tiles">View on GitHub</a>
+      <a class="btn btn-ghost" href="https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers">Greasy Fork</a>
     </div>
     <!-- EDIT: version number -->
-    <p class="meta">v1.40.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
+    <p class="meta">v1.41.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
   </div>
 </header>
 
@@ -277,6 +281,27 @@
           <span>The new layers appear in the map’s layer picker. Updates are installed automatically.</span>
         </li>
       </ol>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap">
+      <h2>Documentation</h2>
+      <p class="sub">Everything the script does, with screenshots.</p>
+      <div class="grid">
+        <a class="card" href="docs/Geocaching-Map-Custom-Tile-Layers-Guide.pdf">
+          <h3>User guide (English)</h3>
+          <p>PDF · all features, settings and technical details.</p>
+        </a>
+        <a class="card" href="docs/Geocaching-Map-Custom-Tile-Layers-Brukerveiledning.pdf">
+          <h3>Brukerveiledning (norsk)</h3>
+          <p>PDF · alle funksjoner, innstillinger og tekniske detaljer.</p>
+        </a>
+        <a class="card" href="docs/Geocaching-Map-Custom-Tile-Layers-Presentasjon.pdf">
+          <h3>Presentasjon (norsk)</h3>
+          <p>PDF · also as <span style="white-space:nowrap">PowerPoint (.pptx)</span> in the docs folder.</p>
+        </a>
+      </div>
     </div>
   </section>
 
