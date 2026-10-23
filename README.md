@@ -17,7 +17,9 @@ Userscript that adds custom map layers and tools to the geocaching.com maps (`/m
 
 ## Releasing
 
-1. Raise `@version` in the script, and the version on the homepage (`index.html`, the `meta` line).
+1. Raise `@version` in the script, and the version on the homepage (`index.html`, the `meta` line – in the text and in its Norwegian `data-no`).
+
+The homepage is in English with Norwegian in `data-no` attributes; the English/Norsk switch at the top swaps them (remembered, and `?lang=no` links work).
 2. Push to `main`. GitHub Pages publishes the homepage and the script, and installed copies update from there.
 3. Greasy Fork syncs from the raw file on `main` (see below).
 
