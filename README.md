@@ -17,6 +17,7 @@ Userscript that adds custom map layers and tools to the geocaching.com maps (`/m
 
 ## Releasing
 
+1. Add the release's highlights at the top of **What's new** (`#news` in `index.html`, English text plus Norwegian `data-no`) and move the *Latest* label.
 1. Raise `@version` in the script, and the version on the homepage (`index.html`, the `meta` line – in the text and in its Norwegian `data-no`).
 
 The homepage is in English with Norwegian in `data-no` attributes; the English/Norsk switch at the top swaps them (remembered, and `?lang=no` links work).
