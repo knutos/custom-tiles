@@ -171,6 +171,20 @@
 
   footer { padding: 32px 0 48px; color: var(--ink-soft); font-size: 14px; }
   footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+  /* What's new */
+  .news { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--line); }
+  .news .rel { position: relative; padding: 0 0 22px 24px; }
+  .news .rel::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--paper); border: 2px solid var(--forest); }
+  .news .rel:first-child::before { background: var(--accent); border-color: var(--accent); }
+  .news .ver { font: 600 14px "IBM Plex Mono", monospace; color: var(--forest); margin-bottom: 6px; }
+  .news .new { font: 600 11px "IBM Plex Sans", sans-serif; text-transform: uppercase; letter-spacing: .04em;
+    color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 8px; margin-left: 8px; vertical-align: 1px; }
+  .news ul { margin: 0; padding-left: 18px; color: var(--ink-soft); }
+  .news li li { margin: 3px 0; }
+  .news .heart { color: #d1242f; }
+  .news li li b { color: var(--ink); font-weight: 600; }
+
   /* Language switch */
   .lang { position: absolute; top: 18px; right: 20px; z-index: 2; display: flex; border: 1px solid var(--line);
     border-radius: 999px; overflow: hidden; background: var(--card); }
@@ -230,6 +244,50 @@
              onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',textContent:'Add screenshot.png to the repo to show it here'}))">
         <figcaption data-no="Et eget kartlag på geocaching.com, med favorittpoeng over cachene, skriptets verktøylinje øverst og koordinatvisningen.">A custom map layer on geocaching.com, with favourite points above the caches, the script’s toolbar along the top and the coordinate readout.</figcaption>
       </figure>
+    </div>
+  </section>
+
+  <section id="news">
+    <div class="wrap">
+      <h2 data-no="Nytt">What’s new</h2>
+      <p class="sub" data-no="Høydepunkter fra de siste versjonene.">Highlights from recent versions.</p>
+      <!-- Add the newest release at the top; mark it with the "Latest" label. -->
+      <ol class="news">
+        <li class="rel">
+          <div class="ver">v1.41 <span class="new" data-no="Nyest">Latest</span></div>
+          <ul>
+            <li data-no="Finn en geocache med &lt;b&gt;GC-koden&lt;/b&gt; i &lt;i&gt;Finn et sted&lt;/i&gt; – gå til publiserte eller løste koordinater.">Find a geocache by its <b>GC code</b> in <i>Find a place</i> – jump to its posted or solved coordinates.</li>
+          </ul>
+        </li>
+        <li class="rel">
+          <div class="ver">v1.40</div>
+          <ul>
+            <li data-no="Ny &lt;b&gt;hjerteknapp&lt;/b&gt; i verktøylinjen slår favorittpoeng på kartet av og på.">New <b>heart button</b> in the toolbar turns favourite points on the map on and off.</li>
+          </ul>
+        </li>
+        <li class="rel">
+          <div class="ver">v1.39</div>
+          <ul>
+            <li data-no="&lt;b&gt;Favorittpoeng&lt;/b&gt; (&lt;span class=&quot;heart&quot;&gt;♥&lt;/span&gt; og antallet) over cachene på kartet og i høyreklikkboblen."><b>Favourite points</b> (<span class="heart">♥</span> and the number) above the caches on the map and in the right-click popup.</li>
+            <li data-no="Sirkler, merker og hjerter følger &lt;b&gt;filtrene i sidepanelet&lt;/b&gt; på /map – Mine funn, Mine gjemte og cachetyper.">Circles, marks and hearts follow the site’s <b>sidebar filters</b> on /map – My Finds, My Hides and cache types.</li>
+            <li data-no="Vår høyreklikkboble også på /play/map, festet til cachene.">Our right-click popup on /play/map too, snapping to the caches.</li>
+          </ul>
+        </li>
+        <li class="rel">
+          <div class="ver">v1.35–1.38</div>
+          <ul>
+            <li data-no="Plasser &lt;b&gt;verktøylinjen&lt;/b&gt; langs hvilken som helst kant av kartet, i én eller to rekker – eller dra den dit.">Put the <b>toolbar</b> on any edge of the map, in one or two rows – or drag it there.</li>
+            <li data-no="Ny dialog for &lt;b&gt;innstillinger&lt;/b&gt;; dialogene åpnes ved siden av verktøylinjen og kan dras hvor som helst.">New <b>Settings</b> dialog; dialogs open beside the toolbar and can be dragged anywhere.</li>
+          </ul>
+        </li>
+        <li class="rel">
+          <div class="ver">v1.32–1.34</div>
+          <ul>
+            <li data-no="Høyreklikk &lt;b&gt;festes til cachene&lt;/b&gt;, også dine egne med korrigerte koordinater; &lt;i&gt;Endelig plassering&lt;/i&gt; når du peker på løste cacher.">Right-click <b>snaps to caches</b>, including your own at corrected coordinates; <i>Final location</i> when you point at solved caches.</li>
+            <li data-no="Merker ved løste cacher uten sirkler, &lt;b&gt;Google Street View&lt;/b&gt; i høyreklikkmenyen og en knapp som &lt;b&gt;skjuler alle geocacher&lt;/b&gt;.">Marks at solved caches without circles, <b>Google Street View</b> in the right-click menu and a button that <b>hides all geocaches</b>.</li>
+          </ul>
+        </li>
+      </ol>
     </div>
   </section>
 
