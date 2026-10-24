@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.6
+// @version      1.41.7
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2590,6 +2590,24 @@
       const o2 = sel.querySelector('option[value="2"]');
       if (o2) o2.textContent = T('Two lines') + (auto ? T(' (automatic)') : '');
       sel.value = String(auto ? 2 : (state.tbCols || 1));
+      fitSelects(sel.closest('.gcct-dlg'));
+    }
+    // Widen a dialog so the chosen text in each of its menus is shown in full (two menus share a row).
+    function fitSelects(d) {
+      if (!d) return;
+      try {
+        const ctx = (fitSelects.c ||= document.createElement('canvas').getContext('2d'));
+        let extra = 0;
+        d.querySelectorAll('select').forEach(sel => {
+          const cs = getComputedStyle(sel), o = sel.options[sel.selectedIndex];
+          if (!o) return;
+          ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          const need = ctx.measureText(o.textContent).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 28;   // + the arrow
+          const lack = need - sel.clientWidth;
+          if (lack > 0) extra = Math.max(extra, lack * (sel.closest('.row2') ? 2 : 1));
+        });
+        if (extra > 0) d.style.width = Math.min(innerWidth - 20, Math.ceil(d.getBoundingClientRect().width + extra)) + 'px';
+      } catch (e) { /* keep the width */ }
     }
     function openSettings() {
       const side = state.tbSide || 'right', lines = state.tbCols || 1;
