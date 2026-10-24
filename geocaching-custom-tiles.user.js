@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.42.1
+// @version      1.42.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3820,6 +3820,24 @@
         const sf = siteFilter();
         if (drawn) drawn.forEach(code => { if (!filteredOut(code, sf, iconAt.get(code))) consider(CACHE_INFO.get(code), code); });
         else CACHE_INFO.forEach((i, code) => { if (!filteredOut(code, sf)) consider(i, code); });
+        // Caches on (almost) the same spot: their labels are stacked instead of drawn on top of each other –
+        // D/T downwards, hearts upwards.
+        const stack = (m, w, h) => {
+          const out = new Map(), placed = [];
+          [...m.entries()].map(([k, x]) => ({ k, x, p: map.latLngToContainerPoint(x.ll) }))
+            .sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x || (a.k < b.k ? -1 : 1))
+            .forEach(e => {
+              let n = 0;
+              while (placed.some(q => Math.abs(q.x - e.p.x) < w && Math.abs(q.y - (e.p.y + n * h)) < h)) n++;
+              placed.push({ x: e.p.x, y: e.p.y + n * h });
+              out.set(`${e.k}|${n}`, Object.assign({}, e.x, { n }));
+            });
+          return out;
+        };
+        const dtStacked = stack(wantDt, 34, 14);
+        wantDt.clear(); dtStacked.forEach((v, k) => wantDt.set(k, v));
+        const favStacked = stack(want, 30, 17);
+        want.clear(); favStacked.forEach((v, k) => want.set(k, v));
         // D/T labels below the icons, kept apart from the hearts.
         const dsig = [...wantDt.keys()].sort().join(';');
         if (force || dsig !== dtSig) {
@@ -3828,7 +3846,7 @@
           wantDt.forEach((x, k) => {
             if (dtLive.has(k)) return;
             const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false,
-              icon: L.divIcon({ className: 'gcct-dtlbl', html: `<span>${x.txt}</span>`, iconSize: null, iconAnchor: [0, -12] }) });
+              icon: L.divIcon({ className: 'gcct-dtlbl', html: `<span>${x.txt}</span>`, iconSize: null, iconAnchor: [0, -12 - x.n * 14] }) });
             m.__gcct = true;
             dtLayer.addLayer(m);
             dtLive.set(k, m);
@@ -3841,7 +3859,7 @@
         want.forEach((x, k) => {
           if (favLive.has(k)) return;
           const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false,
-            icon: L.divIcon({ className: 'gcct-favlbl', html: `<span><i>♥</i>${x.fav}</span>`, iconSize: null, iconAnchor: [0, 27] }) });
+            icon: L.divIcon({ className: 'gcct-favlbl', html: `<span><i>♥</i>${x.fav}</span>`, iconSize: null, iconAnchor: [0, 27 + x.n * 17] }) });
           m.__gcct = true;
           favLayer.addLayer(m);
           favLive.set(k, m);
