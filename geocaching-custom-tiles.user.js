@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.0
+// @version      1.41.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -1891,6 +1891,7 @@
       .gcct-dock.horiz.cols2 > .gcct .gcct-btn{width:42px}
       .gcct-panel.up{top:auto;bottom:0}
       .gcct-dock.no-site > .gcct-bar,.gcct-dock > .gcct-site{border-radius:0 0 var(--r) var(--r);overflow:hidden}
+      .gcct-dock.horiz.no-site > .gcct-bar{border-radius:0 var(--r) var(--r) 0}
       .gcct-site{display:flex;flex-direction:column;align-items:center;border-top:6px solid var(--soft);background:#fff}
       .gcct-site > .leaflet-control{margin:0!important;float:none!important;clear:none!important;position:static!important;
         box-shadow:none!important;border:0!important;border-radius:0!important;background:transparent!important}
@@ -2823,6 +2824,8 @@
       if (document.fullscreenElement && !document.fullscreenElement.contains(el)) return 0;   // hidden in full screen
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height || r.right <= mr.left + 8) return 0;
+      // A closed panel may stay in place, only faded out or made invisible.
+      if (!panelShown(el)) return 0;
       // Only while it really lies on top of the map: a collapsed panel may still be there, behind it.
       const y = Math.max(mr.top, r.top) + (Math.min(mr.bottom, r.bottom) - Math.max(mr.top, r.top)) / 2;
       const x = Math.max(mr.left + 4, r.right - Math.min(60, r.width / 2));
@@ -2832,6 +2835,16 @@
       if (!top || top === mapEl || mapEl.contains(top)) return 0;
       if (!(el === top || el.contains(top) || (top.contains(el) && !top.contains(mapEl)))) return 0;
       return Math.max(0, Math.round(r.right - mr.left));
+    }
+    function panelShown(el) {
+      try {
+        if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+        for (let q = el; q && q !== document.body; q = q.parentElement) {
+          const cs = getComputedStyle(q);
+          if (+cs.opacity < 0.1 || cs.visibility === 'hidden' || cs.display === 'none') return false;
+        }
+      } catch (e) { /* assume shown */ }
+      return true;
     }
     function findLeftPanel(mr) {
       {
@@ -2855,6 +2868,15 @@
         return best;
       }
     }
+    // Is the map drawn on top of this element (at the middle of the part that lies over the map)?
+    function coveredByMap(el, root, mr) {
+      try {
+        const q = el.getBoundingClientRect();
+        const x = (Math.max(q.left, mr.left) + Math.min(q.right, mr.right)) / 2, y = (Math.max(q.top, mr.top) + Math.min(q.bottom, mr.bottom)) / 2;
+        const top = (document.elementsFromPoint(x, y) || []).find(t => !ourUi(t));
+        return !!top && (top === root || root.contains(top)) && !(el === top || el.contains(top));
+      } catch (e) { return false; }
+    }
     // The site's (and other scripts') buttons that our controls must not cover, as screen rectangles.
     function collectObstacles(els) {
       const mine = el => !!(el.closest && el.closest('.gcct, .gcct-bar, .gcct-coord, .gcct-dlg, .gcct-toast, .gcct-dock'));
@@ -2875,9 +2897,29 @@
           return [...el.querySelectorAll('button, a, [role="button"]')].some(b => !b.closest('[data-gcct-hidden], [data-gcct-proxied]'));
         })
         .filter(el => el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : getComputedStyle(el).visibility !== 'hidden')
+        // Only what is really on top of the map: a closed side panel's buttons may still lie there, under it.
+        .filter(el => root.contains(el) || !coveredByMap(el, root, mr))
         .map(el => el.getBoundingClientRect())
         .filter(r => r.width > 0 && r.height > 0 && r.width < 300 && r.height < 500);
     }
+    // gcctDockDebug() in the console: what the toolbar placement sees (element names and positions only).
+    window.gcctDockDebug = function () {
+      const R = r => r && [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)];
+      const name = el => el ? (el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.') : '')) : null;
+      const mr = map.getContainer().getBoundingClientRect(), d = dock.getBoundingClientRect();
+      const root = map.getContainer();
+      const els = [...document.querySelectorAll('.leaflet-control, button, a, [role="button"], [class*="zoom" i], [class*="control" i]')]
+        .filter(el => { const q = el.getBoundingClientRect(); return q.width && q.right > mr.left && q.left < mr.right && q.bottom > d.top - 8 && q.top < d.bottom + 8; });
+      const out = { side: state.tbSide, window: [innerWidth, innerHeight], map: R(mr), visibleMap: Object.values(visibleMapRect()).map(Math.round),
+        dock: R(d), dockParent: name(dock.parentElement), parentPaddingLeft: dock.parentElement && dock.parentElement.style.paddingLeft,
+        translate: dock.style.translate, leftPanel: name(leftPanelEl), leftPanelRect: leftPanelEl && R(leftPanelEl.getBoundingClientRect()),
+        panelOffset: panelOffsetOf(leftPanelEl, mr), foundPanelNow: name(findLeftPanel(mr)),
+        panelStyle: leftPanelEl && (() => { const cs = getComputedStyle(leftPanelEl); return { opacity: cs.opacity, visibility: cs.visibility, transform: cs.transform, pointerEvents: cs.pointerEvents, shown: panelShown(leftPanelEl) }; })(),
+        obstacles: collectObstacles([dock]).map(R),
+        inDockRow: els.slice(0, 25).map(el => ({ el: name(el), rect: R(el.getBoundingClientRect()), insideMap: root.contains(el), underMap: !root.contains(el) && coveredByMap(el, root, mr) })) };
+      console.log('[gcct] dock', out);
+      return out;
+    };
     // The part of the map that is actually on screen (the map element can reach below the window).
     function visibleMapRect() {
       const r = map.getContainer().getBoundingClientRect();
@@ -2892,7 +2934,22 @@
       dock.style.translate = '';
       dock.style.marginRight = '';
       dock.style.marginTop = vertical ? '10px' : '';
+      // At the top and bottom the toolbar's row starts beside the side panel: set that first, so the
+      // position below is measured from where the row really begins.
+      if (!vertical && dock.parentElement) {
+        const off0 = panelOffsetOf(leftPanelEl, map.getContainer().getBoundingClientRect());
+        dock.parentElement.style.paddingLeft = off0 + 'px';
+      }
       if (side === 'left') dock.style.marginLeft = 10 + leftPanelOffset() + 'px'; else dock.style.marginLeft = '';
+      // One row that doesn't fit (a narrow window, or beside an open side panel): two rows instead, for now.
+      if (state.tbCols !== 2) {
+        dock.classList.remove('cols2');
+        const r1 = dock.getBoundingClientRect();
+        const mapLeft = map.getContainer().getBoundingClientRect().left;
+        const avail = vertical ? vr.bottom - vr.top - 20
+          : vr.right - Math.max(vr.left, mapLeft + panelOffsetOf(leftPanelEl, map.getContainer().getBoundingClientRect())) - 20;
+        if (r1.width && (vertical ? r1.height : r1.width) > avail) dock.classList.add('cols2');
+      }
       const r = dock.getBoundingClientRect();
       if (!r.width || !r.height) return true;
       const obs = collectObstacles([dock]);
