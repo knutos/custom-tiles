@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.5
+// @version      1.41.6
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -137,7 +137,7 @@
     "Drag to move the toolbar to another edge": "Dra for å flytte verktøylinjen til en annen kant",
     "One line": "Én rekke",
     "Two lines": "To rekker",
-    " (automatic – no room for one)": " (automatisk – ikke plass til én)",
+    " (automatic)": " (automatisk)",
     "Right, one column": "Høyre, én kolonne",
     "Right, two columns": "Høyre, to kolonner",
     "Left, one column": "Venstre, én kolonne",
@@ -2588,7 +2588,7 @@
       let auto = false;
       try { auto = state.tbCols !== 2 && dock.classList.contains('cols2'); } catch (e) { /* toolbar not made yet */ }
       const o2 = sel.querySelector('option[value="2"]');
-      if (o2) o2.textContent = T('Two lines') + (auto ? T(' (automatic – no room for one)') : '');
+      if (o2) o2.textContent = T('Two lines') + (auto ? T(' (automatic)') : '');
       sel.value = String(auto ? 2 : (state.tbCols || 1));
     }
     function openSettings() {
