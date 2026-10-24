@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.4
+// @version      1.41.8
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -137,6 +137,7 @@
     "Drag to move the toolbar to another edge": "Dra for å flytte verktøylinjen til en annen kant",
     "One line": "Én rekke",
     "Two lines": "To rekker",
+    " (automatic)": " (automatisk)",
     "Right, one column": "Høyre, én kolonne",
     "Right, two columns": "Høyre, to kolonner",
     "Left, one column": "Venstre, én kolonne",
@@ -2579,6 +2580,39 @@
     }
 
     // Settings: toolbar position, the site's own map buttons, language – one dialog from the toolbar.
+    // "Buttons in" shows what the toolbar really looks like: two rows when one doesn't fit right now
+    // (the saved choice is kept, so it goes back to one row when there is room).
+    function syncLinesSelect() {
+      const sel = document.querySelector('.gcct-dlg select[data-a=tbcols]');
+      if (!sel) return;
+      let auto = false;
+      try { auto = state.tbCols !== 2 && dock.classList.contains('cols2'); } catch (e) { /* toolbar not made yet */ }
+      const o2 = sel.querySelector('option[value="2"]');
+      if (o2) o2.textContent = T('Two lines') + (auto ? T(' (automatic)') : '');
+      sel.value = String(auto ? 2 : (state.tbCols || 1));
+      fitSelects(sel.closest('.gcct-dlg'));
+    }
+    // Widen a dialog so the chosen text in each of its menus is shown in full (two menus share a row).
+    function fitSelects(d) {
+      if (!d) return;
+      try {
+        const ctx = (fitSelects.c ||= document.createElement('canvas').getContext('2d'));
+        let extra = 0;
+        d.querySelectorAll('select').forEach(sel => {
+          const cs = getComputedStyle(sel), o = sel.options[sel.selectedIndex];
+          if (!o) return;
+          ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          const need = ctx.measureText(o.textContent).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 28;   // + the arrow
+          const lack = need - sel.clientWidth;
+          if (lack > 0) extra = Math.max(extra, lack * (sel.closest('.row2') ? 2 : 1));
+        });
+        // offsetWidth: the opening animation scales the dialog, so its on-screen size is not the real one yet.
+        if (extra > 0) {
+          d.style.width = Math.min(innerWidth - 20, Math.ceil(d.offsetWidth + extra)) + 'px';
+          if (!d.dataset.moved) placeDialog(d);                  // in one go, before it is drawn
+        }
+      } catch (e) { /* keep the width */ }
+    }
     function openSettings() {
       const side = state.tbSide || 'right', lines = state.tbCols || 1;
       const dflt = T(' (default)');
@@ -2598,7 +2632,8 @@
         <div class="btns"><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true });
       d.querySelector('[data-a=cancel]').onclick = closeDialog;
       d.querySelector('[data-a=tbside]').onchange = e => { state.tbSide = e.target.value; save(STORE_STATE, state); applyToolbarLayout(); };
-      d.querySelector('[data-a=tbcols]').onchange = e => { state.tbCols = +e.target.value; save(STORE_STATE, state); applyToolbarLayout(); };
+      d.querySelector('[data-a=tbcols]').onchange = e => { state.tbCols = +e.target.value; save(STORE_STATE, state); applyToolbarLayout(); syncLinesSelect(); };
+      syncLinesSelect();
       d.querySelector('[data-a=coords]').onchange = e => setCoordsVisible(e.target.checked);
       const favSave = () => { save(STORE_STATE, state); if (window.__gcctRefreshFav) window.__gcctRefreshFav(); };
       d.querySelector('[data-a=favshow]').onchange = e => { state.favShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
@@ -3047,6 +3082,7 @@
         hideSiteZoom();
         adoptSiteControls();                          // re-check visibility after hiding duplicates
         if (!placeDock()) layoutGroup([dock], state.tbSide !== 'bottom', tbOnLeft());
+        syncLinesSelect();
         lastDockSig = dockSig();
         if (!(toolsUi && toolsUi.coordEl && toolsUi.coordEl.parentElement === cornerEl('topleft'))) layoutGroup([toolsUi && toolsUi.coordEl], false);
         fixCoordOverlap();
