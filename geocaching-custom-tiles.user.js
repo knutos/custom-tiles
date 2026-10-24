@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.2
+// @version      1.41.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2823,6 +2823,8 @@
       if (document.fullscreenElement && !document.fullscreenElement.contains(el)) return 0;   // hidden in full screen
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height || r.right <= mr.left + 8) return 0;
+      // A closed panel may stay in place, only faded out or made invisible.
+      if (!panelShown(el)) return 0;
       // Only while it really lies on top of the map: a collapsed panel may still be there, behind it.
       const y = Math.max(mr.top, r.top) + (Math.min(mr.bottom, r.bottom) - Math.max(mr.top, r.top)) / 2;
       const x = Math.max(mr.left + 4, r.right - Math.min(60, r.width / 2));
@@ -2832,6 +2834,16 @@
       if (!top || top === mapEl || mapEl.contains(top)) return 0;
       if (!(el === top || el.contains(top) || (top.contains(el) && !top.contains(mapEl)))) return 0;
       return Math.max(0, Math.round(r.right - mr.left));
+    }
+    function panelShown(el) {
+      try {
+        if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+        for (let q = el; q && q !== document.body; q = q.parentElement) {
+          const cs = getComputedStyle(q);
+          if (+cs.opacity < 0.1 || cs.visibility === 'hidden' || cs.display === 'none') return false;
+        }
+      } catch (e) { /* assume shown */ }
+      return true;
     }
     function findLeftPanel(mr) {
       {
@@ -2901,6 +2913,7 @@
         dock: R(d), dockParent: name(dock.parentElement), parentPaddingLeft: dock.parentElement && dock.parentElement.style.paddingLeft,
         translate: dock.style.translate, leftPanel: name(leftPanelEl), leftPanelRect: leftPanelEl && R(leftPanelEl.getBoundingClientRect()),
         panelOffset: panelOffsetOf(leftPanelEl, mr), foundPanelNow: name(findLeftPanel(mr)),
+        panelStyle: leftPanelEl && (() => { const cs = getComputedStyle(leftPanelEl); return { opacity: cs.opacity, visibility: cs.visibility, transform: cs.transform, pointerEvents: cs.pointerEvents, shown: panelShown(leftPanelEl) }; })(),
         obstacles: collectObstacles([dock]).map(R),
         inDockRow: els.slice(0, 25).map(el => ({ el: name(el), rect: R(el.getBoundingClientRect()), insideMap: root.contains(el), underMap: !root.contains(el) && coveredByMap(el, root, mr) })) };
       console.log('[gcct] dock', out);
@@ -2920,6 +2933,12 @@
       dock.style.translate = '';
       dock.style.marginRight = '';
       dock.style.marginTop = vertical ? '10px' : '';
+      // At the top and bottom the toolbar's row starts beside the side panel: set that first, so the
+      // position below is measured from where the row really begins.
+      if (!vertical && dock.parentElement) {
+        const off0 = panelOffsetOf(leftPanelEl, map.getContainer().getBoundingClientRect());
+        dock.parentElement.style.paddingLeft = off0 + 'px';
+      }
       if (side === 'left') dock.style.marginLeft = 10 + leftPanelOffset() + 'px'; else dock.style.marginLeft = '';
       // One row that doesn't fit (a narrow window, or beside an open side panel): two rows instead, for now.
       if (state.tbCols !== 2) {
