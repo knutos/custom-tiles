@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.8
+// @version      1.41.9
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3388,6 +3388,7 @@
       .gcct-dlg .homeline{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
       .gcct-pop .snap{display:flex;align-items:center;gap:8px;margin:0 34px 8px 0;padding:6px 8px 6px 10px;border-radius:var(--rc);background:var(--acc-bg);color:var(--ink);font-size:13px}
       .gcct-pop .snap svg{flex:none;color:var(--acc)}
+      .gcct-pop .snap .gcct-fav{color:var(--acc)}               /* blue in the popup; red on the map */
       .gcct-pop .snap .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .gcct-pop .snap a.gc{font-weight:700;color:var(--acc)!important;text-decoration:none;cursor:pointer!important;pointer-events:auto!important}
       .gcct-pop .snap a.gc:hover{text-decoration:underline}
