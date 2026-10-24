@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.42.4
+// @version      1.42.5
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3336,7 +3336,8 @@
       .leaflet-container .gcct-dock .gcct-bar a:not(.active):not(.disabled):hover,.leaflet-container .gcct-dock .gcct .gcct-btn:hover{color:var(--tb-ink-h,#005e35)!important}
       .leaflet-container .gcct-dock .gcct-bar a svg,.leaflet-container .gcct-dock .gcct-btn svg{color:inherit!important;stroke:currentColor!important}
       .gcct-bar a:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
-      .gcct-bar a.active{background:var(--acc-bg);color:var(--acc);box-shadow:inset 3px 0 0 var(--acc)}
+      .gcct-bar a.active{background:color-mix(in srgb,var(--tb-ink,#007d46) 12%,#fff);color:var(--tb-ink,#007d46);box-shadow:inset 3px 0 0 var(--tb-ink,#007d46)}
+      .leaflet-container .gcct-dock .gcct-bar a.active:not(.danger){color:var(--tb-ink,#007d46)!important}   /* on: the toolbar's green */
       .gcct-bar a.active.danger{background:var(--danger-bg);color:var(--danger);box-shadow:inset 3px 0 0 var(--danger)}
       .gcct-bar a.sep{border-top:6px solid var(--soft)}
       .gcct-bar a.disabled{color:#b6bcc3;cursor:default;background:#fff}
