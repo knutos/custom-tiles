@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.42.0
+// @version      1.42.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -1968,6 +1968,7 @@
       .gcct-dlg .status.err{background:var(--danger-bg);color:#a40e26}
       .gcct-dlg .status.ok{background:#dafbe1;color:#116329}
       .gcct-dlg .btns{display:flex;gap:8px;align-items:center;margin:18px -20px -18px;padding:12px 20px;border-top:1px solid var(--line);background:var(--soft)}
+      .gcct-dlg .bd > .btns:last-child{position:sticky;bottom:-18px;z-index:2}   /* the buttons stay in view; the rest scrolls */
       .gcct-dlg .btns .sp{flex:1}
       .gcct-dlg a{color:var(--acc)}`;
     document.head.appendChild(css);
