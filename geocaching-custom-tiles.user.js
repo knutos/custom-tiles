@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.9
+// @version      1.42.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -124,6 +124,9 @@
     "Show ♥ and the number by caches on the map (from zoom 15)": "Vis ♥ og antallet ved cachene på kartet (fra zoom 15)",
     "From": "Fra",
     "favourite points": "favorittpoeng",
+    "Show difficulty/terrain (D/T) below caches on the map (from zoom 15)": "Vis vanskelighet/terreng (D/T) under cachene på kartet (fra zoom 15)",
+    "Difficulty/terrain (D/T) below the caches on the map (from zoom {z}, on/off)": "Vanskelighet/terreng (D/T) under cachene på kartet (fra zoom {z}, av/på)",
+    "D/T is shown from zoom level {z}. Zoom in to see it.": "D/T vises fra zoomnivå {z}. Zoom inn for å se det.",
     "Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours": "Høyreklikk på /play/map åpner nettstedets egen meny (logg, legg i liste, GPX) i stedet for vår",
     "Show the zoom and coordinates at the bottom": "Vis zoom og koordinater nederst",
     "Hide the zoom and coordinates (show them again in Settings)": "Skjul zoom og koordinater (vis dem igjen i Innstillinger)",
@@ -352,6 +355,7 @@
 
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
+    dt: '<path d="m2 20 7-12 4 6.5 2.5-3.5L22 20Z"/><path d="M7.5 20h9"/>',
     heart: '<path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.8 6.8 4.6c2.1-.1 3.9 1.1 5.2 3 1.3-1.9 3.1-3.1 5.2-3 3.4.2 5.3 3.6 4.1 6.7-1.8 4.6-9.3 9.2-9.3 9.2Z"/>',
     layers: '<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/>',
@@ -513,12 +517,21 @@
     // Exact posted coordinates (the old map only lets us estimate them from the cache icon).
     const posted = toLL(o.postedCoordinates) || toLL(o.postedCoords) || toLL(o.coordinates) || toLL(o.location) ||
       (o.latitude != null && o.longitude != null ? toLL(o) : null) || prev.posted || null;
+    // Difficulty and terrain: a number, or { text: 1.5, value: "1_5" } on the old map.
+    const dtNum = v => {
+      if (v == null) return null;
+      if (typeof v === 'object') v = v.text ?? v.value ?? v.rating;
+      const n = parseFloat(String(v).replace('_', '.').replace(',', '.'));
+      return isFinite(n) && n >= 1 && n <= 5 ? n : null;
+    };
+    const diff = dtNum(o.difficulty ?? o.difficultyRating ?? o.diff) ?? prev.diff ?? null;
+    const terr = dtNum(o.terrain ?? o.terrainRating ?? o.terr) ?? prev.terr ?? null;
     // Favourite points, whatever the site calls the field.
     let fav = prev.fav;
     for (const k in o) {
       if (/^(favou?rite|fav)(s|points?|count|pointcount|score)?$/i.test(k) && isFinite(o[k]) && o[k] !== null && o[k] !== '') { fav = Number(o[k]); break; }
     }
-    CACHE_INFO.set(code, Object.assign({}, prev, { type, solved, corrected, name, found, owned, ownerName, posted, fav, fromPage: fromSearch ? false : prev.fromPage }));
+    CACHE_INFO.set(code, Object.assign({}, prev, { type, solved, corrected, name, found, owned, ownerName, posted, fav, diff, terr, fromPage: fromSearch ? false : prev.fromPage }));
     if (fromSearch) inSearch.add(code);
     if (type != null && type !== -1 && typeStore[code] !== type) { typeStore[code] = type; saveTypes(); }
     if (src === 'net') { seenThisVisit.add(code); infoStats.records++; if (infoStats.keys.size < 60) Object.keys(o).forEach(k => infoStats.keys.size < 60 && infoStats.keys.add(k)); }
@@ -766,6 +779,10 @@
     if (pc.posted) i.posted = pc.posted;
     const fv = html.match(/class="favorite-value"[^>]*>\s*(\d+)/i) || html.match(/(\d+)\s*(?:Favorites|Favoritter)\b/i);
     if (fv && i.fav == null) i.fav = Number(fv[1]);
+    // D/T from the star images: stars1_5.gif = 1.5.
+    const star = id => { const m = html.match(new RegExp(id + '[\\s\\S]{0,400}?stars(\\d)(?:_(5))?\\.')); return m ? Number(m[1]) + (m[2] ? 0.5 : 0) : null; };
+    if (i.diff == null) i.diff = star('uxLegendScale');
+    if (i.terr == null) i.terr = star('Localize12');
     const nm = html.match(/id="ctl00_ContentBody_CacheName"[^>]*>([^<]{1,120})</);
     if (nm && !i.name) { const el = document.createElement('textarea'); el.innerHTML = nm[1].trim(); i.name = el.value; }
     const searched = inSearch.has(code);
@@ -1951,6 +1968,7 @@
       .gcct-dlg .status.err{background:var(--danger-bg);color:#a40e26}
       .gcct-dlg .status.ok{background:#dafbe1;color:#116329}
       .gcct-dlg .btns{display:flex;gap:8px;align-items:center;margin:18px -20px -18px;padding:12px 20px;border-top:1px solid var(--line);background:var(--soft)}
+      .gcct-dlg .bd > .btns:last-child{position:sticky;bottom:-18px;z-index:2}   /* the buttons stay in view; the rest scrolls */
       .gcct-dlg .btns .sp{flex:1}
       .gcct-dlg a{color:var(--acc)}`;
     document.head.appendChild(css);
@@ -2626,6 +2644,7 @@
         <div class="favset"><b>${T('Favourite points')}</b>
           <label class="chk"><input type="checkbox" data-a="favshow" ${state.favShow !== false ? 'checked' : ''}> ${T('Show ♥ and the number by caches on the map (from zoom 15)').replace('♥', '<span class="gcct-fav">♥</span>')}</label>
           <label class="chk fmin">${T('From')} <input type="number" data-a="favmin" min="0" step="1" value="${state.favMin ?? 10}"> ${T('favourite points')}</label></div>
+        <label class="chk"><input type="checkbox" data-a="dtshow" ${state.dtShow !== false ? 'checked' : ''}> ${T('Show difficulty/terrain (D/T) below caches on the map (from zoom 15)')}</label>
         <label class="chk"><input type="checkbox" data-a="coords" ${state.showCoords !== false ? 'checked' : ''}> ${T('Show the zoom and coordinates at the bottom')}</label>
         <label class="chk"><input type="checkbox" data-a="sw" ${state.showSiteSwitcher ? 'checked' : ''}> ${T('Show geocaching.com’s own map buttons too')}</label>
         <label class="chk"><input type="checkbox" data-a="sitemenu" ${state.siteRightClick ? 'checked' : ''}> ${T('Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours')}</label>
@@ -2637,6 +2656,7 @@
       d.querySelector('[data-a=coords]').onchange = e => setCoordsVisible(e.target.checked);
       const favSave = () => { save(STORE_STATE, state); if (window.__gcctRefreshFav) window.__gcctRefreshFav(); };
       d.querySelector('[data-a=favshow]').onchange = e => { state.favShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
+      d.querySelector('[data-a=dtshow]').onchange = e => { state.dtShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=favmin]').oninput = e => { const v = Number(e.target.value); if (isFinite(v) && v >= 0) { state.favMin = Math.round(v); favSave(); } };
       d.querySelector('[data-a=sitemenu]').onchange = e => { state.siteRightClick = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sw]').onchange = e => {
@@ -2670,6 +2690,14 @@
 
     const toolsUi = addTools(L, { openDialog, closeDialog, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
       favSettings: () => ({ show: state.favShow !== false, min: state.favMin ?? 10 }),
+      dtSettings: () => ({ show: state.dtShow !== false }),
+      setDtShow: on => {
+        state.dtShow = !!on;
+        save(STORE_STATE, state);
+        const cb = document.querySelector('.gcct-dlg input[data-a=dtshow]');
+        if (cb) cb.checked = !!on;
+        if (window.__gcctRefreshFav) window.__gcctRefreshFav();
+      },
       // The toolbar's heart button: the same setting as the checkbox in Settings.
       setFavShow: on => {
         state.favShow = !!on;
@@ -3346,7 +3374,11 @@
         text-shadow:0 0 1px #fff}
       .gcct-favlbl i{font-style:normal;color:#d1242f;font-size:16.5px;line-height:16px}
       .gcct-favlbl span{transform:translateX(-50%)}            /* centred over the cache icon */
-      .gcct-nocache .gcct-favlbl{visibility:hidden!important}
+      .gcct-nocache .gcct-favlbl,.gcct-nocache .gcct-dtlbl{visibility:hidden!important}
+      .gcct-dtlbl{pointer-events:none!important}
+      .gcct-dtlbl span{display:inline-block;transform:translateX(-50%);color:#1f2328;white-space:nowrap;
+        font:700 11px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+        -webkit-text-stroke:3px #fff;paint-order:stroke fill;text-shadow:0 0 1px #fff}
       .leaflet-pane .gcct-popup,.leaflet-pane .gcct-popup *{pointer-events:auto}
       .gcct-solved.gcct-ghost{background:transparent!important;border:0!important;box-shadow:none!important;opacity:0}
       .gcct-solved:hover{transform:scale(1.15)}
@@ -3747,11 +3779,19 @@
     // Kept light so the site's own cache drawing is never held up: nothing happens while the map moves,
     // the cache list is asked for once after a move, and labels are only added or removed when they change.
     let favMoving = false, favLive = new Map();
+    // Difficulty/terrain ("1.5/2") just below each cache icon, from the same zoom and for the same caches.
+    const dtLayer = L.layerGroup().addTo(map);
+    dtLayer.__gcct = true;
+    let dtLive = new Map(), dtSig = '';
     function refreshFav(force, askGrid) {
       try {
         if (favMoving && !force) return;
         const on = api.favSettings ? api.favSettings() : { show: false };
-        if (!on.show || map.getZoom() < FAV_MIN_ZOOM) { if (favLive.size) { favLayer.clearLayers(); favLive = new Map(); favSig = ''; } return; }
+        const dt = api.dtSettings ? api.dtSettings() : { show: false };
+        const zOk = map.getZoom() >= FAV_MIN_ZOOM;
+        if ((!on.show || !zOk) && favLive.size) { favLayer.clearLayers(); favLive = new Map(); favSig = ''; }
+        if ((!dt.show || !zOk) && dtLive.size) { dtLayer.clearLayers(); dtLive = new Map(); dtSig = ''; }
+        if (!zOk || (!on.show && !dt.show)) return;
         const b = map.getBounds(), view = b.pad ? b.pad(0.1) : b;
         const grid = cacheGrid();
         if (grid && askGrid) requestMissingGrids(grid);   // the old map loads its cache list lazily
@@ -3766,17 +3806,34 @@
           if (gl && gl.size) drawn = gl;
           if (iconAt.size) { drawn = drawn || new Set(); iconAt.forEach((v, k) => drawn.add(k)); }
         }
-        const want = new Map();
+        const want = new Map(), wantDt = new Map();
         const consider = (i, code) => {
-          if (!i || i.fav == null || i.fav < on.min) return;
+          if (!i) return;
           const q = (i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code));
           if (!q) return;
           const ll = L.latLng(q.lat, q.lng);
-          if (view.contains(ll)) want.set(`${code}|${i.fav}|${q.lat.toFixed(6)},${q.lng.toFixed(6)}`, { ll, fav: i.fav });
+          if (!view.contains(ll)) return;
+          const at = `${q.lat.toFixed(6)},${q.lng.toFixed(6)}`;
+          if (on.show && i.fav != null && i.fav >= on.min) want.set(`${code}|${i.fav}|${at}`, { ll, fav: i.fav });
+          if (dt.show && i.diff != null && i.terr != null) wantDt.set(`${code}|${i.diff}/${i.terr}|${at}`, { ll, txt: `${i.diff}/${i.terr}` });
         };
         const sf = siteFilter();
         if (drawn) drawn.forEach(code => { if (!filteredOut(code, sf, iconAt.get(code))) consider(CACHE_INFO.get(code), code); });
         else CACHE_INFO.forEach((i, code) => { if (!filteredOut(code, sf)) consider(i, code); });
+        // D/T labels below the icons, kept apart from the hearts.
+        const dsig = [...wantDt.keys()].sort().join(';');
+        if (force || dsig !== dtSig) {
+          dtSig = dsig;
+          dtLive.forEach((m, k) => { if (!wantDt.has(k)) { dtLayer.removeLayer(m); dtLive.delete(k); } });
+          wantDt.forEach((x, k) => {
+            if (dtLive.has(k)) return;
+            const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false,
+              icon: L.divIcon({ className: 'gcct-dtlbl', html: `<span>${x.txt}</span>`, iconSize: null, iconAnchor: [0, -12] }) });
+            m.__gcct = true;
+            dtLayer.addLayer(m);
+            dtLive.set(k, m);
+          });
+        }
         const sig = [on.min, [...want.keys()].sort().join(';')].join('|');
         if (!force && sig === favSig) return;
         favSig = sig;
@@ -4434,7 +4491,15 @@
           if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('Favourite points are shown from zoom level {z}. Zoom in to see them.', { z: FAV_MIN_ZOOM }));
         });
         favBtn.classList.toggle('active', favOn());
-        window.__gcctFavBtnSync = () => favBtn.classList.toggle('active', favOn());
+        const dtOn = () => !!(api.dtSettings && api.dtSettings().show);
+        const dtBtn = add(null, 'dt', () => T('Difficulty/terrain (D/T) below the caches on the map (from zoom {z}, on/off)', { z: FAV_MIN_ZOOM }), () => {
+          const on = !dtOn();
+          if (api.setDtShow) api.setDtShow(on);
+          dtBtn.classList.toggle('active', on);
+          if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('D/T is shown from zoom level {z}. Zoom in to see it.', { z: FAV_MIN_ZOOM }));
+        });
+        dtBtn.classList.toggle('active', dtOn());
+        window.__gcctFavBtnSync = () => { favBtn.classList.toggle('active', favOn()); dtBtn.classList.toggle('active', dtOn()); };
         const hidOn = () => !!(cacheHider && cacheHider.on());
         const hideBtn = add(null, 'eyeoff', () => T(hidOn() ? 'Show the geocaches again' : 'Hide all geocaches'), () => {
           if (cacheHider) cacheHider.set(!hidOn());

@@ -233,7 +233,7 @@
   <div class="wrap">
     <span class="tag" data-no="Brukerskript · geocaching.com">Userscript · geocaching.com</span>
     <h1>Geocaching Map <span class="dash">–</span> Custom Tile Layers</h1>
-    <p class="lede" data-no="Bruk hvilket som helst XYZ-, TMS-, WMS- eller WMTS-kart som bakgrunn på geocaching.com-kartene – se cachenes favorittpoeng rett på kartet, og få stedssøk, koordinat- og måleverktøy og 161&amp;nbsp;m-sirkler.">Use any XYZ, TMS, WMS or WMTS map as a background on the geocaching.com maps – see every cache’s favourite points right on the map, plus place search, coordinate and measuring tools and 161&nbsp;m circles.</p>
+    <p class="lede" data-no="Bruk hvilket som helst XYZ-, TMS-, WMS- eller WMTS-kart som bakgrunn på geocaching.com-kartene – se cachenes favorittpoeng og D/T rett på kartet, og få stedssøk, koordinat- og måleverktøy og 161&amp;nbsp;m-sirkler.">Use any XYZ, TMS, WMS or WMTS map as a background on the geocaching.com maps – see every cache’s favourite points and D/T right on the map, plus place search, coordinate and measuring tools and 161&nbsp;m circles.</p>
     <div class="cta">
       <!-- EDIT: file name of the script in the repo -->
       <a class="btn btn-primary" href="geocaching-custom-tiles.user.js">
@@ -245,7 +245,7 @@
       <a class="btn btn-ghost" href="https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers">Greasy Fork</a>
     </div>
     <!-- EDIT: version number -->
-    <p class="meta" data-no="v1.41.9 · MIT-lisens · Virker på &lt;code&gt;/map&lt;/code&gt; og &lt;code&gt;/play/map&lt;/code&gt;">v1.41.9 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
+    <p class="meta" data-no="v1.42.1 · MIT-lisens · Virker på &lt;code&gt;/map&lt;/code&gt; og &lt;code&gt;/play/map&lt;/code&gt;">v1.42.1 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
     <p class="stats" id="stats" hidden>
       <span><b id="st-total"></b> <span data-no="installasjoner totalt">total installs</span></span>
       <span><b id="st-daily"></b> <span data-no="daglige installasjoner">daily installs</span></span>
@@ -273,7 +273,13 @@
       <!-- Add the newest release at the top; mark it with the "Latest" label. -->
       <ol class="news">
         <li class="rel">
-          <div class="ver">v1.41 <span class="new" data-no="Nyest">Latest</span></div>
+          <div class="ver">v1.42 <span class="new" data-no="Nyest">Latest</span></div>
+          <ul>
+            <li data-no="&lt;b&gt;D/T&lt;/b&gt; (vanskelighet/terreng) under hver cache på kartet, f.eks. 1.5/2 – slås av og på med en egen knapp i verktøylinjen."><b>D/T</b> (difficulty/terrain) below every cache on the map, e.g. 1.5/2 – turned on and off with its own toolbar button.</li>
+          </ul>
+        </li>
+        <li class="rel">
+          <div class="ver">v1.41</div>
           <ul>
             <li data-no="Finn en geocache med &lt;b&gt;GC-koden&lt;/b&gt; i &lt;i&gt;Finn et sted&lt;/i&gt; – gå til publiserte eller løste koordinater.">Find a geocache by its <b>GC code</b> in <i>Find a place</i> – jump to its posted or solved coordinates.</li>
           </ul>
@@ -325,6 +331,11 @@
           <div class="ico" style="color:#d1242f"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.8 6.8 4.6c2.1-.1 3.9 1.1 5.2 3 1.3-1.9 3.1-3.1 5.2-3 3.4.2 5.3 3.6 4.1 6.7-1.8 4.6-9.3 9.2-9.3 9.2Z"/></svg></div>
           <h3 data-no="Favorittpoeng">Favourite points</h3>
           <p data-no="Hjerte og antall over hver cache på kartet – finn de beste cachene med et blikk.">A heart and the number above every cache on the map – spot the best caches at a glance.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 20 7-12 4 6.5 2.5-3.5L22 20Z"/><path d="M7.5 20h9"/></svg></div>
+          <h3 data-no="D/T på kartet">D/T on the map</h3>
+          <p data-no="Vanskelighet og terreng under hver cache – se hva som passer deg uten å åpne cachesidene.">Difficulty and terrain below every cache – see what suits you without opening the cache pages.</p>
         </div>
         <div class="card">
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
