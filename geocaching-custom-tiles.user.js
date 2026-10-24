@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.42.2
+// @version      1.42.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -303,6 +303,7 @@
     "Measure distance & bearing (click points, double-click for new line, Esc to stop)": "Mål avstand og retning (klikk punkter, dobbeltklikk for ny linje, Esc for å stoppe)",
     "161 m circles around all geocaches (from zoom {z}). Right-click the map for a single circle anywhere.": "161 m-sirkler rundt alle geocacher (fra zoom {z}). Høyreklikk på kartet for én sirkel hvor som helst.",
     "Show my location": "Vis min posisjon",
+    "Hide my location": "Skjul min posisjon",
     "Fullscreen": "Fullskjerm",
     "Exit fullscreen": "Avslutt fullskjerm",
     "Clear all drawings": "Fjern alle tegninger",
@@ -3892,6 +3893,7 @@
       liveMarks = next;
     }
     let fsBtn = null, zoomInBtn = null, zoomOutBtn = null, homeBtn = null;
+    let locShown = [], locBtn = null;       // your location on the map, and its button
     const labelled = [];   // [element, () => title] – re-labelled when the language changes
     // Grey out zoom buttons at the map's limits.
     function updZoomBtns() {
@@ -4526,11 +4528,12 @@
           hideBtn.title = T(hidOn() ? 'Show the geocaches again' : 'Hide all geocaches');
           hideBtn.setAttribute('aria-label', hideBtn.title);
         });
-        add(null, 'locate', 'Show my location', locate).classList.add('sep');
+        locBtn = add(null, 'locate', () => T(locShown.length ? 'Hide my location' : 'Show my location'), locate);
+        locBtn.classList.add('sep');
         homeBtn = add(null, 'home', () => { const h = load('gcct.home', null); return h ? T('Go home: {name}  (right-click the button to change)', { name: h.name }) : T('Set your home address'); }, goHome);
         homeBtn.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openSearch({ home: true }); });
         fsBtn = add(null, 'expand', () => T(document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'), fullscreen);
-        add(null, 'eraser', 'Clear all drawings', () => { tools.clearLayers(); circles.length = 0; finishMeasure(); }).classList.add('sep');
+        add(null, 'eraser', 'Clear all drawings', () => { tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); }).classList.add('sep');
         add(null, 'gear', 'Settings', () => api.openSettings && api.openSettings()).classList.add('sep');
         return bar;
       },
@@ -4760,10 +4763,26 @@
       openSearch();
     });
 
+    // Your location: one click shows it (blue dot and accuracy circle), the next click removes it again.
+    function setLocActive(on) {
+      if (!locBtn) return;
+      locBtn.classList.toggle('active', on);
+      locBtn.title = T(on ? 'Hide my location' : 'Show my location');
+      locBtn.setAttribute('aria-label', locBtn.title);
+    }
     function locate() {
+      locShown = locShown.filter(l => !tools.hasLayer || tools.hasLayer(l));     // "Clear all drawings" may have removed it
+      if (locShown.length) {
+        locShown.forEach(l => { try { tools.removeLayer(l); } catch (e) { /* already gone */ } });
+        locShown = [];
+        setLocActive(false);
+        return;
+      }
       map.once('locationfound', e => {
-        geoCircle(e.latlng, e.accuracy, { color: '#1976d2', weight: 1, fillOpacity: 0.1 }).addTo(tools);
-        pin(e.latlng, '#1976d2');
+        locShown.forEach(l => { try { tools.removeLayer(l); } catch (err) { /* ignore */ } });
+        const c = geoCircle(e.latlng, e.accuracy, { color: '#1976d2', weight: 1, fillOpacity: 0.1 }).addTo(tools);
+        locShown = [c, pin(e.latlng, '#1976d2')];
+        setLocActive(true);
       });
       map.once('locationerror', e => toast(T('Location unavailable: {e}', { e: e.message })));
       map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true });
