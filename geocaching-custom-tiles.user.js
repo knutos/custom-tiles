@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.41.1
+// @version      1.41.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2921,6 +2921,15 @@
       dock.style.marginRight = '';
       dock.style.marginTop = vertical ? '10px' : '';
       if (side === 'left') dock.style.marginLeft = 10 + leftPanelOffset() + 'px'; else dock.style.marginLeft = '';
+      // One row that doesn't fit (a narrow window, or beside an open side panel): two rows instead, for now.
+      if (state.tbCols !== 2) {
+        dock.classList.remove('cols2');
+        const r1 = dock.getBoundingClientRect();
+        const mapLeft = map.getContainer().getBoundingClientRect().left;
+        const avail = vertical ? vr.bottom - vr.top - 20
+          : vr.right - Math.max(vr.left, mapLeft + panelOffsetOf(leftPanelEl, map.getContainer().getBoundingClientRect())) - 20;
+        if (r1.width && (vertical ? r1.height : r1.width) > avail) dock.classList.add('cols2');
+      }
       const r = dock.getBoundingClientRect();
       if (!r.width || !r.height) return true;
       const obs = collectObstacles([dock]);
