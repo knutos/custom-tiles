@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.43.3
+// @version      1.43.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4578,15 +4578,8 @@
           if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('D/T is shown from zoom level {z}. Zoom in to see it.', { z: FAV_MIN_ZOOM }));
         });
         dtBtn.classList.toggle('active', dtOn());
-        const ftfOn = () => !!(api.ftfSettings && api.ftfSettings().show);
-        const ftfBtn = add(null, 'ftf', () => T('Caches nobody has found yet – FTF (from zoom {z}, on/off)', { z: FAV_MIN_ZOOM }), () => {
-          const on = !ftfOn();
-          if (api.setFtfShow) api.setFtfShow(on);
-          ftfBtn.classList.toggle('active', on);
-          if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('FTF marks are shown from zoom level {z}. Zoom in to see them.', { z: FAV_MIN_ZOOM }));
-        });
-        ftfBtn.classList.toggle('active', ftfOn());
-        window.__gcctFavBtnSync = () => { favBtn.classList.toggle('active', favOn()); dtBtn.classList.toggle('active', dtOn()); ftfBtn.classList.toggle('active', ftfOn()); };
+        // (FTF marks are turned on and off in Settings only.)
+        window.__gcctFavBtnSync = () => { favBtn.classList.toggle('active', favOn()); dtBtn.classList.toggle('active', dtOn()); };
         const hidOn = () => !!(cacheHider && cacheHider.on());
         const hideBtn = add(null, 'eyeoff', () => T(hidOn() ? 'Show the geocaches again' : 'Hide all geocaches'), () => {
           if (cacheHider) cacheHider.set(!hidOn());
