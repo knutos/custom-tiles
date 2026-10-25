@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.43.2
+// @version      1.43.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3409,7 +3409,7 @@
       .gcct-favlbl span{transform:translateX(-50%)}            /* centred over the cache icon */
       .gcct-nocache .gcct-favlbl,.gcct-nocache .gcct-dtlbl,.gcct-nocache .gcct-ftflbl{visibility:hidden!important}
       .gcct-ftflbl{pointer-events:none!important}
-      .gcct-ftflbl span{display:inline-block;transform:translateY(-50%);background:#ffd33d;color:#1f2328;border:1.5px solid #fff;border-radius:6px;
+      .gcct-ftflbl span{display:inline-block;transform:translateY(-50%);background:#d1242f;color:#fff;border:1.5px solid #fff;border-radius:6px;
         padding:0 4px;font:800 10px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
       .gcct-dtlbl{pointer-events:none!important}
       .gcct-dtlbl span{display:inline-block;transform:translateX(-50%);color:#1f2328;white-space:nowrap;
@@ -3884,7 +3884,7 @@
         wantDt.clear(); dtStacked.forEach((v, k) => wantDt.set(k, v));
         const favStacked = stack(want, 30, 17);
         want.clear(); favStacked.forEach((v, k) => want.set(k, v));
-        // FTF beside the icon, on its right.
+        // FTF as a red badge on the icon's upper right corner.
         const fsig = [...wantFtf.keys()].sort().join(';');
         if (force || fsig !== ftfSig) {
           ftfSig = fsig;
@@ -3892,7 +3892,7 @@
           wantFtf.forEach((x, k) => {
             if (ftfLive.has(k)) return;
             const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, title: T('Never found – first to find is still open'),
-              icon: L.divIcon({ className: 'gcct-ftflbl', html: '<span>FTF</span>', iconSize: null, iconAnchor: [-14, 0] }) });
+              icon: L.divIcon({ className: 'gcct-ftflbl', html: '<span>FTF</span>', iconSize: null, iconAnchor: [-5, 7] }) });
             m.__gcct = true;
             ftfLayer.addLayer(m);
             ftfLive.set(k, m);
