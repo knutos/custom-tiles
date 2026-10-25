@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.43.0
+// @version      1.43.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -533,7 +533,10 @@
     const diff = dtNum(o.difficulty ?? o.difficultyRating ?? o.diff) ?? prev.diff ?? null;
     const terr = dtNum(o.terrain ?? o.terrainRating ?? o.terr) ?? prev.terr ?? null;
     // Never found by anyone: the cache search gives the date of the last find, empty when there is none.
-    const neverFound = 'lastFoundDate' in o ? !o.lastFoundDate : prev.neverFound;
+    // (The answer may leave the field out altogether when there is no find – a cache-search result then
+    // counts as never found too.)
+    const searchLike = fromSearch || ('geocacheType' in o && 'favoritePoints' in o && ('postedCoordinates' in o || 'placedDate' in o));
+    const neverFound = 'lastFoundDate' in o ? !o.lastFoundDate : (searchLike ? true : prev.neverFound);
     const status = o.cacheStatus != null ? o.cacheStatus : prev.status;
     // Favourite points, whatever the site calls the field.
     let fav = prev.fav;
@@ -4104,7 +4107,7 @@
         likelyOwn: window.__gcctLikelyOwn ? window.__gcctLikelyOwn(code) : null,
         filteredOut: window.__gcctFilteredOut ? window.__gcctFilteredOut(code) : null,
         snapTargetsForCode: lastSnapList.filter(c => c.code === code).map(c => r(c.ll)),
-        circlesOn: autoOn, zoom: map.getZoom(), fav: i && i.fav, favSettings: api.favSettings ? api.favSettings() : null,
+        circlesOn: autoOn, zoom: map.getZoom(), fav: i && i.fav, dt: i ? [i.diff, i.terr] : null, neverFound: i ? i.neverFound : null, status: i ? i.status : null, favSettings: api.favSettings ? api.favSettings() : null,
         search: Object.assign({}, searchState), searchedAreas: searched.length,
         marks: lastSolved.filter(m => m.code === code).map(m => ({ at: r(m.ll), invisible: !!m.ghost })),
         markElements: [...document.querySelectorAll('.gcct-solved')].filter(el => (el.title || '').startsWith(code)).map(el => ({ title: el.title, ghost: el.classList.contains('gcct-ghost'), size: [el.offsetWidth, el.offsetHeight], pointerEvents: getComputedStyle(el).pointerEvents })) };
