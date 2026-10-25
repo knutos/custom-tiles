@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.42.5
+// @version      1.43.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -127,6 +127,10 @@
     "Show difficulty/terrain (D/T) below caches on the map (from zoom 15)": "Vis vanskelighet/terreng (D/T) under cachene på kartet (fra zoom 15)",
     "Difficulty/terrain (D/T) below the caches on the map (from zoom {z}, on/off)": "Vanskelighet/terreng (D/T) under cachene på kartet (fra zoom {z}, av/på)",
     "D/T is shown from zoom level {z}. Zoom in to see it.": "D/T vises fra zoomnivå {z}. Zoom inn for å se det.",
+    "Mark caches nobody has found yet (FTF) on the map (from zoom 15)": "Merk cacher ingen har funnet ennå (FTF) på kartet (fra zoom 15)",
+    "Caches nobody has found yet – FTF (from zoom {z}, on/off)": "Cacher ingen har funnet ennå – FTF (fra zoom {z}, av/på)",
+    "FTF marks are shown from zoom level {z}. Zoom in to see them.": "FTF-merker vises fra zoomnivå {z}. Zoom inn for å se dem.",
+    "Never found – first to find is still open": "Aldri funnet – første funn er fortsatt ledig",
     "Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours": "Høyreklikk på /play/map åpner nettstedets egen meny (logg, legg i liste, GPX) i stedet for vår",
     "Show the zoom and coordinates at the bottom": "Vis zoom og koordinater nederst",
     "Hide the zoom and coordinates (show them again in Settings)": "Skjul zoom og koordinater (vis dem igjen i Innstillinger)",
@@ -356,6 +360,7 @@
 
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
+    ftf: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
     dt: '<path d="m2 20 7-12 4 6.5 2.5-3.5L22 20Z"/><path d="M7.5 20h9"/>',
     heart: '<path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.8 6.8 4.6c2.1-.1 3.9 1.1 5.2 3 1.3-1.9 3.1-3.1 5.2-3 3.4.2 5.3 3.6 4.1 6.7-1.8 4.6-9.3 9.2-9.3 9.2Z"/>',
     layers: '<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
@@ -423,7 +428,7 @@
   // by one with the same request the site uses for its cache pop-up. Types are remembered in the
   // browser; solved coordinates only for the session, since you can change them.
   // ---------------------------------------------------------------------------
-  const SCRIPT_VERSION = '1.39.22';
+  const SCRIPT_VERSION = (() => { try { return GM_info.script.version; } catch (e) { return '?'; } })();
   try { localStorage.removeItem('gcct.physical'); } catch (e) { /* the old "Physical here" marks (removed in 1.33) */ }
   const TRADITIONAL = 2;
 
@@ -527,12 +532,28 @@
     };
     const diff = dtNum(o.difficulty ?? o.difficultyRating ?? o.diff) ?? prev.diff ?? null;
     const terr = dtNum(o.terrain ?? o.terrainRating ?? o.terr) ?? prev.terr ?? null;
+    // Never found by anyone: the cache search gives the date of the last find, empty when there is none.
+    // (The answer may leave the field out altogether when there is no find – a cache-search result then
+    // counts as never found too.)
+    const searchLike = fromSearch || ('geocacheType' in o && 'favoritePoints' in o && ('postedCoordinates' in o || 'placedDate' in o));
+    // A missing find is not always empty: an "empty" date (year 1) or one before the cache was placed counts too.
+    const lastFound = 'lastFoundDate' in o ? o.lastFoundDate : prev.lastFound;
+    const placed = o.placedDate || prev.placed;
+    const noFind = d => {
+      if (!d) return true;
+      const t = Date.parse(d);
+      if (!isFinite(t) || t < Date.UTC(2000, 0, 1)) return true;
+      const p = placed && Date.parse(placed);
+      return !!(p && isFinite(p) && t < p);
+    };
+    const neverFound = 'lastFoundDate' in o ? noFind(o.lastFoundDate) : (searchLike ? true : prev.neverFound);
+    const status = o.cacheStatus != null ? o.cacheStatus : prev.status;
     // Favourite points, whatever the site calls the field.
     let fav = prev.fav;
     for (const k in o) {
       if (/^(favou?rite|fav)(s|points?|count|pointcount|score)?$/i.test(k) && isFinite(o[k]) && o[k] !== null && o[k] !== '') { fav = Number(o[k]); break; }
     }
-    CACHE_INFO.set(code, Object.assign({}, prev, { type, solved, corrected, name, found, owned, ownerName, posted, fav, diff, terr, fromPage: fromSearch ? false : prev.fromPage }));
+    CACHE_INFO.set(code, Object.assign({}, prev, { type, solved, corrected, name, found, owned, ownerName, posted, fav, diff, terr, neverFound, status, lastFound, placed, fromPage: fromSearch ? false : prev.fromPage }));
     if (fromSearch) inSearch.add(code);
     if (type != null && type !== -1 && typeStore[code] !== type) { typeStore[code] = type; saveTypes(); }
     if (src === 'net') { seenThisVisit.add(code); infoStats.records++; if (infoStats.keys.size < 60) Object.keys(o).forEach(k => infoStats.keys.size < 60 && infoStats.keys.add(k)); }
@@ -2646,6 +2667,7 @@
           <label class="chk"><input type="checkbox" data-a="favshow" ${state.favShow !== false ? 'checked' : ''}> ${T('Show ♥ and the number by caches on the map (from zoom 15)').replace('♥', '<span class="gcct-fav">♥</span>')}</label>
           <label class="chk fmin">${T('From')} <input type="number" data-a="favmin" min="0" step="1" value="${state.favMin ?? 10}"> ${T('favourite points')}</label></div>
         <label class="chk"><input type="checkbox" data-a="dtshow" ${state.dtShow !== false ? 'checked' : ''}> ${T('Show difficulty/terrain (D/T) below caches on the map (from zoom 15)')}</label>
+        <label class="chk"><input type="checkbox" data-a="ftfshow" ${state.ftfShow !== false ? 'checked' : ''}> ${T('Mark caches nobody has found yet (FTF) on the map (from zoom 15)')}</label>
         <label class="chk"><input type="checkbox" data-a="coords" ${state.showCoords !== false ? 'checked' : ''}> ${T('Show the zoom and coordinates at the bottom')}</label>
         <label class="chk"><input type="checkbox" data-a="sw" ${state.showSiteSwitcher ? 'checked' : ''}> ${T('Show geocaching.com’s own map buttons too')}</label>
         <label class="chk"><input type="checkbox" data-a="sitemenu" ${state.siteRightClick ? 'checked' : ''}> ${T('Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours')}</label>
@@ -2658,6 +2680,7 @@
       const favSave = () => { save(STORE_STATE, state); if (window.__gcctRefreshFav) window.__gcctRefreshFav(); };
       d.querySelector('[data-a=favshow]').onchange = e => { state.favShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=dtshow]').onchange = e => { state.dtShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
+      d.querySelector('[data-a=ftfshow]').onchange = e => { state.ftfShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=favmin]').oninput = e => { const v = Number(e.target.value); if (isFinite(v) && v >= 0) { state.favMin = Math.round(v); favSave(); } };
       d.querySelector('[data-a=sitemenu]').onchange = e => { state.siteRightClick = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sw]').onchange = e => {
@@ -2692,6 +2715,14 @@
     const toolsUi = addTools(L, { openDialog, closeDialog, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
       favSettings: () => ({ show: state.favShow !== false, min: state.favMin ?? 10 }),
       dtSettings: () => ({ show: state.dtShow !== false }),
+      ftfSettings: () => ({ show: state.ftfShow !== false }),
+      setFtfShow: on => {
+        state.ftfShow = !!on;
+        save(STORE_STATE, state);
+        const cb = document.querySelector('.gcct-dlg input[data-a=ftfshow]');
+        if (cb) cb.checked = !!on;
+        if (window.__gcctRefreshFav) window.__gcctRefreshFav();
+      },
       setDtShow: on => {
         state.dtShow = !!on;
         save(STORE_STATE, state);
@@ -3376,7 +3407,10 @@
         text-shadow:0 0 1px #fff}
       .gcct-favlbl i{font-style:normal;color:#d1242f;font-size:16.5px;line-height:16px}
       .gcct-favlbl span{transform:translateX(-50%)}            /* centred over the cache icon */
-      .gcct-nocache .gcct-favlbl,.gcct-nocache .gcct-dtlbl{visibility:hidden!important}
+      .gcct-nocache .gcct-favlbl,.gcct-nocache .gcct-dtlbl,.gcct-nocache .gcct-ftflbl{visibility:hidden!important}
+      .gcct-ftflbl{pointer-events:none!important}
+      .gcct-ftflbl span{display:inline-block;transform:translateY(-50%);background:#d1242f;color:#fff;border:1.5px solid #fff;border-radius:6px;
+        padding:0 4px;font:800 10px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
       .gcct-dtlbl{pointer-events:none!important}
       .gcct-dtlbl span{display:inline-block;transform:translateX(-50%);color:#1f2328;white-space:nowrap;
         font:700 11px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -3785,15 +3819,22 @@
     const dtLayer = L.layerGroup().addTo(map);
     dtLayer.__gcct = true;
     let dtLive = new Map(), dtSig = '';
+    // "FTF" on the right of caches nobody has found yet.
+    const ftfLayer = L.layerGroup().addTo(map);
+    ftfLayer.__gcct = true;
+    let ftfLive = new Map(), ftfSig = '';
+    const EVENT_TYPES = new Set([6, 13, 453, 1304, 3653, 3773, 3774, 4738, 7005]);   // events: attended, not found
     function refreshFav(force, askGrid) {
       try {
         if (favMoving && !force) return;
         const on = api.favSettings ? api.favSettings() : { show: false };
         const dt = api.dtSettings ? api.dtSettings() : { show: false };
+        const ftf = api.ftfSettings ? api.ftfSettings() : { show: false };
         const zOk = map.getZoom() >= FAV_MIN_ZOOM;
         if ((!on.show || !zOk) && favLive.size) { favLayer.clearLayers(); favLive = new Map(); favSig = ''; }
         if ((!dt.show || !zOk) && dtLive.size) { dtLayer.clearLayers(); dtLive = new Map(); dtSig = ''; }
-        if (!zOk || (!on.show && !dt.show)) return;
+        if ((!ftf.show || !zOk) && ftfLive.size) { ftfLayer.clearLayers(); ftfLive = new Map(); ftfSig = ''; }
+        if (!zOk || (!on.show && !dt.show && !ftf.show)) return;
         const b = map.getBounds(), view = b.pad ? b.pad(0.1) : b;
         const grid = cacheGrid();
         if (grid && askGrid) requestMissingGrids(grid);   // the old map loads its cache list lazily
@@ -3808,7 +3849,7 @@
           if (gl && gl.size) drawn = gl;
           if (iconAt.size) { drawn = drawn || new Set(); iconAt.forEach((v, k) => drawn.add(k)); }
         }
-        const want = new Map(), wantDt = new Map();
+        const want = new Map(), wantDt = new Map(), wantFtf = new Map();
         const consider = (i, code) => {
           if (!i) return;
           const q = (i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code));
@@ -3818,6 +3859,9 @@
           const at = `${q.lat.toFixed(6)},${q.lng.toFixed(6)}`;
           if (on.show && i.fav != null && i.fav >= on.min) want.set(`${code}|${i.fav}|${at}`, { ll, fav: i.fav });
           if (dt.show && i.diff != null && i.terr != null) wantDt.set(`${code}|${i.diff}/${i.terr}|${at}`, { ll, txt: `${i.diff}/${i.terr}` });
+          // FTF: active caches (not events) that nobody has found yet.
+          if (ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true)
+            wantFtf.set(`${code}|ftf|${at}`, { ll });
         };
         const sf = siteFilter();
         if (drawn) drawn.forEach(code => { if (!filteredOut(code, sf, iconAt.get(code))) consider(CACHE_INFO.get(code), code); });
@@ -3840,6 +3884,20 @@
         wantDt.clear(); dtStacked.forEach((v, k) => wantDt.set(k, v));
         const favStacked = stack(want, 30, 17);
         want.clear(); favStacked.forEach((v, k) => want.set(k, v));
+        // FTF as a red badge on the icon's upper right corner.
+        const fsig = [...wantFtf.keys()].sort().join(';');
+        if (force || fsig !== ftfSig) {
+          ftfSig = fsig;
+          ftfLive.forEach((m, k) => { if (!wantFtf.has(k)) { ftfLayer.removeLayer(m); ftfLive.delete(k); } });
+          wantFtf.forEach((x, k) => {
+            if (ftfLive.has(k)) return;
+            const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, title: T('Never found – first to find is still open'),
+              icon: L.divIcon({ className: 'gcct-ftflbl', html: '<span>FTF</span>', iconSize: null, iconAnchor: [-5, 7] }) });
+            m.__gcct = true;
+            ftfLayer.addLayer(m);
+            ftfLive.set(k, m);
+          });
+        }
         // D/T labels below the icons, kept apart from the hearts.
         const dsig = [...wantDt.keys()].sort().join(';');
         if (force || dsig !== dtSig) {
@@ -4059,7 +4117,7 @@
         likelyOwn: window.__gcctLikelyOwn ? window.__gcctLikelyOwn(code) : null,
         filteredOut: window.__gcctFilteredOut ? window.__gcctFilteredOut(code) : null,
         snapTargetsForCode: lastSnapList.filter(c => c.code === code).map(c => r(c.ll)),
-        circlesOn: autoOn, zoom: map.getZoom(), fav: i && i.fav, favSettings: api.favSettings ? api.favSettings() : null,
+        circlesOn: autoOn, zoom: map.getZoom(), fav: i && i.fav, dt: i ? [i.diff, i.terr] : null, neverFound: i ? i.neverFound : null, lastFoundDate: i ? i.lastFound : null, placedDate: i ? i.placed : null, status: i ? i.status : null, favSettings: api.favSettings ? api.favSettings() : null,
         search: Object.assign({}, searchState), searchedAreas: searched.length,
         marks: lastSolved.filter(m => m.code === code).map(m => ({ at: r(m.ll), invisible: !!m.ghost })),
         markElements: [...document.querySelectorAll('.gcct-solved')].filter(el => (el.title || '').startsWith(code)).map(el => ({ title: el.title, ghost: el.classList.contains('gcct-ghost'), size: [el.offsetWidth, el.offsetHeight], pointerEvents: getComputedStyle(el).pointerEvents })) };
@@ -4520,6 +4578,7 @@
           if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('D/T is shown from zoom level {z}. Zoom in to see it.', { z: FAV_MIN_ZOOM }));
         });
         dtBtn.classList.toggle('active', dtOn());
+        // (FTF marks are turned on and off in Settings only.)
         window.__gcctFavBtnSync = () => { favBtn.classList.toggle('active', favOn()); dtBtn.classList.toggle('active', dtOn()); };
         const hidOn = () => !!(cacheHider && cacheHider.on());
         const hideBtn = add(null, 'eyeoff', () => T(hidOn() ? 'Show the geocaches again' : 'Hide all geocaches'), () => {
