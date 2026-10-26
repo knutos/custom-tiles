@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.43.4
+// @version      1.44.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -190,6 +190,8 @@
     "Cancel": "Avbryt",
     "Geocache": "Geocache",
     "Use clicked point": "Bruk klikkpunktet",
+    "Remove pin": "Fjern merkenålen",
+    "Your pin": "Merkenål",
     "Zoom": "Zoom",
     "Zoom level – type a number to zoom": "Zoomnivå – skriv et tall for å zoome",
     "Hide all geocaches": "Skjul alle geocacher",
@@ -3543,8 +3545,10 @@
     updZoom();
 
     // --- Helpers -----------------------------------------------------------
+    const pins = [];                 // pins on the map – right-clicking one snaps to it, like to a cache
     function pin(ll, color = ACCENT) {
       const m = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(tools);
+      pins.push(m);
       m.bindPopup(() => coordPopup(m.getLatLng()), POPUP_OPTS);
       return m;
     }
@@ -3591,7 +3595,7 @@
         const nm = String(snap.name || '').replace(snap.code || '\u0000', '').replace(/^[\s·:–-]+/, '').trim();
         const sn = document.createElement('div');
         sn.className = 'snap';
-        sn.innerHTML = `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
+        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t"><b>${esc(T('Your pin'))}</b></span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
         const use = document.createElement('button');
         use.type = 'button'; use.className = 'lnk'; use.textContent = T('Use clicked point');
         use.onclick = e => { e.stopPropagation(); openCoordPopup(snap.clicked, false); };
@@ -3627,7 +3631,8 @@
       const acts = document.createElement('div');
       acts.className = 'acts';
       const btn = (ico, t, fn) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = icon(ico, 16) + `<span>${esc(t)}</span>`; b.onclick = () => { map.closePopup(); fn(); }; acts.appendChild(b); };
-      btn('pin', T('Pin'), () => pin(ll));
+      if (snap && snap.kind === 'pin') btn('x', T('Remove pin'), () => { tools.removeLayer(snap.marker); });
+      else btn('pin', T('Pin'), () => pin(ll));
       btn('compass', T('Project…'), () => projectFrom(ll));
       if (circles.some(o => o.c.distanceTo(ll) <= 161)) btn('x', T('Remove circle'), () => removeCircleAt(ll));
       else btn('ring', T('161 m circle'), () => circle161(ll));
@@ -3637,7 +3642,28 @@
       box.appendChild(acts);
       return box;
     }
+    // The pin nearest the clicked point, within snapping reach (pixels), or null.
+    function nearestPin(ll) {
+      try {
+        for (let i = pins.length - 1; i >= 0; i--) if (!tools.hasLayer || !tools.hasLayer(pins[i])) pins.splice(i, 1);
+        const at = map.latLngToContainerPoint(ll);
+        let best = null, bd = Infinity;
+        pins.forEach(m => { const pt = map.latLngToContainerPoint(m.getLatLng()), d = Math.hypot(pt.x - at.x, pt.y - at.y); if (d <= SNAP_PX && d < bd) { bd = d; best = m; } });
+        return best ? { m: best, d: bd } : null;
+      } catch (e) { return null; }
+    }
     function openCoordPopup(clicked, allowSnap = true) {
+      // A pin you have set wins when it is at least as near as any cache.
+      const pn = allowSnap ? nearestPin(clicked) : null;
+      if (pn) {
+        const cc = nearestCache(clicked), at = map.latLngToContainerPoint(clicked);
+        const cd = cc ? Math.hypot(map.latLngToContainerPoint(cc.ll).x - at.x, map.latLngToContainerPoint(cc.ll).y - at.y) : Infinity;
+        if (pn.d <= cd) {
+          const ll = pn.m.getLatLng();
+          L.popup(POPUP_OPTS).setLatLng(ll).setContent(coordPopup(ll, { clicked, kind: 'pin', marker: pn.m, ll })).openOn(map);
+          return;
+        }
+      }
       const c = allowSnap ? nearestCache(clicked) : null;
       // Position only estimated from the icon (e.g. your own caches, which the site's search leaves out):
       // read the exact posted / corrected coordinates from the cache page first – waiting briefly, so the
