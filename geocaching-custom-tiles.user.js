@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.44.1
+// @version      1.45.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3876,9 +3876,9 @@
           if (iconAt.size) { drawn = drawn || new Set(); iconAt.forEach((v, k) => drawn.add(k)); }
         }
         const want = new Map(), wantDt = new Map(), wantFtf = new Map();
-        const consider = (i, code) => {
+        const consider = (i, code, atMark) => {
           if (!i) return;
-          const q = (i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code));
+          const q = atMark || ((i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code)));
           if (!q) return;
           const ll = L.latLng(q.lat, q.lng);
           if (!view.contains(ll)) return;
@@ -3886,12 +3886,16 @@
           if (on.show && i.fav != null && i.fav >= on.min) want.set(`${code}|${i.fav}|${at}`, { ll, fav: i.fav });
           if (dt.show && i.diff != null && i.terr != null) wantDt.set(`${code}|${i.diff}/${i.terr}|${at}`, { ll, txt: `${i.diff}/${i.terr}` });
           // FTF: active caches (not events) that nobody has found yet.
-          if (ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true)
+          if (!atMark && ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true)
             wantFtf.set(`${code}|ftf|${at}`, { ll });
         };
         const sf = siteFilter();
         if (drawn) drawn.forEach(code => { if (!filteredOut(code, sf, iconAt.get(code))) consider(CACHE_INFO.get(code), code); });
         else CACHE_INFO.forEach((i, code) => { if (!filteredOut(code, sf)) consider(i, code); });
+        // The visible marks at solved caches you have found (the site's icon is back at the posted
+        // coordinates): the hearts and D/T there too, while the marks are shown.
+        if ((autoOn || marksOn) && map.getZoom() >= AUTO_MIN_ZOOM)
+          lastSolved.forEach(m => { if (!m.ghost && !filteredOut(m.code, sf, m.ll)) consider(CACHE_INFO.get(m.code), m.code, m.ll); });
         // Caches on (almost) the same spot: their labels are stacked instead of drawn on top of each other –
         // D/T downwards, hearts upwards.
         const stack = (m, w, h) => {
@@ -4426,7 +4430,11 @@
     }
     function refreshAuto(force) {
       try {
-        if (!(autoOn || marksOn) || map.getZoom() < AUTO_MIN_ZOOM) { autoLayer.clearLayers(); syncMarks([]); autoSig = ''; return; }
+        if (!(autoOn || marksOn) || map.getZoom() < AUTO_MIN_ZOOM) {
+          autoLayer.clearLayers(); syncMarks([]); autoSig = '';
+          if (lastSolved.length) { lastSolved = []; if (window.__gcctFavKick) window.__gcctFavKick(); }
+          return;
+        }
         const grid = cacheGrid();
         let all, extra = '';
         if (grid) {
@@ -4528,6 +4536,7 @@
           ...lastStages.map(m => [`w|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.kind}|${m.name}|${nameOf(m.code)}`, () => stageMark(m)]),
         ]);
         lastSolved = solvedMarks;
+        if (window.__gcctFavKick) window.__gcctFavKick();          // hearts and D/T at the marks
       } catch (e) { console.error('[gcct] auto circles failed', e); }
     }
     function setAuto(on) {
