@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.49.3
+// @version      1.49.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -195,6 +195,8 @@
     "Pin name": "Navn på merkenålen",
     "Click to rename": "Klikk for å gi nytt navn",
     "Drag to resize": "Dra for å endre høyden",
+    "Looking up {code} …": "Slår opp {code} …",
+    "{code} not found.": "Fant ikke {code}.",
     "Route": "Rute",
     "Route: pick geocaches and pins, and export them as a GPX route": "Rute: velg geocacher og merkenåler, og eksporter dem som en GPX-rute",
     "Search code or name …": "Søk etter kode eller navn …",
@@ -5262,17 +5264,38 @@
         return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
           : '<span class="rt-ic rt-ic-dot"></span>';
       };
+      // A full GC code is looked up anywhere in the world (from what the script knows, else the cache page).
+      const looked = new Map();                       // code -> 'busy' | [candidates] | 'none'
+      function lookUp(code) {
+        if (looked.has(code)) return;
+        looked.set(code, 'busy');
+        searchGC(code).then(rows => {
+          const i = CACHE_INFO.get(code) || {};
+          looked.set(code, rows.length ? rows.map((r, k) => ({ key: 'c:' + code, kind: 'cache', code, name: (r.name || '').replace(code, '').replace(/^[\s·]+/, ''),
+            lat: r.lat, lng: r.lng, solved: rows.length > 1 && k === 0, found: i.found === true, type: i.type })).slice(0, 1) : 'none');
+        }).catch(() => looked.set(code, 'none')).finally(() => { if (routeOpen()) drawList(); });
+      }
       function drawList() {
         const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
         const inRoute = new Set(route.map(r => r.key));
         let c = routeCandidates();
         if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
+        const gc = /^gc[0-9a-z]{1,7}$/.test(text) ? text.toUpperCase() : null;
+        let extra = '', pre = [];
+        if (gc && !c.some(x => x.code === gc)) {
+          const st = looked.get(gc);
+          if (Array.isArray(st)) pre = st;
+          else if (st === 'none') extra = `<div class="gm">${esc(T('{code} not found.', { code: gc }))}</div>`;
+          else { extra = `<div class="gm">${esc(T('Looking up {code} …', { code: gc }))}</div>`; lookUp(gc); }
+        }
         c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
         c.sort((a, b) => a.d - b.d);
-        c = c.slice(0, 100);
+        pre.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
+        c = pre.concat(c.slice(0, 100));
         list.innerHTML = c.length ? c.map((x, i) => `<div class="rt-row${inRoute.has(x.key) ? ' in' : ''}" data-i="${i}">
             <span class="rt-t">${typeIcon(x)}${title(x)} ${tag(x)}</span><span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${fmtDist(x.d)}${inRoute.has(x.key) ? ' · ' + esc(T('In the route')) : ''}</span></div>`).join('')
-          : `<div class="gm">${esc(T('Nothing found.'))}</div>`;
+          : (extra ? '' : `<div class="gm">${esc(T('Nothing found.'))}</div>`);
+        if (extra) list.insertAdjacentHTML('afterbegin', extra);
         list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
           addStop(c[+el.dataset.i]);
         });
