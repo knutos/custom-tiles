@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.47.0
+// @version      1.47.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -193,6 +193,7 @@
     "Remove pin": "Fjern merkenålen",
     "Your pin": "Merkenål",
     "Pin name": "Navn på merkenålen",
+    "Click to rename": "Klikk for å gi nytt navn",
     "Download GPX": "Last ned GPX",
     "All pins as GPX ({n})": "Alle merkenåler som GPX ({n})",
     "Pin {n}": "Nål {n}",
@@ -3496,6 +3497,8 @@
       .gcct-pop .snap .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .gcct-pop .snap a.gc{font-weight:700;color:var(--acc)!important;text-decoration:none;cursor:pointer!important;pointer-events:auto!important}
       .gcct-pop .snap a.gc:hover{text-decoration:underline}
+      .gcct-pop .snap .pinname-t{cursor:text;border-bottom:1px dashed transparent}
+      .gcct-pop .snap .pinname-t:hover{border-bottom-color:var(--acc)}
       .gcct-pop .snap input.pinname{width:100%;min-width:0;box-sizing:border-box;font:600 13px/1.3 inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px}
       .gcct-pop .snap i{font-style:normal;color:var(--muted);cursor:help}
       .gcct-pop .snap button.lnk{flex:none;min-height:0;padding:2px 6px;border:0;background:none;color:var(--acc);text-decoration:underline;font-size:12.5px;cursor:pointer}
@@ -3671,18 +3674,31 @@
         const nm = String(snap.name || '').replace(snap.code || '\u0000', '').replace(/^[\s·:–-]+/, '').trim();
         const sn = document.createElement('div');
         sn.className = 'snap';
-        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t">${snap.marker && snap.marker.__pin ? `<input class="pinname" title="${esc(T('Pin name'))}" value="${esc(snap.marker.__pin.name)}">` : `<b>${esc(T('Your pin'))}</b>`}</span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
+        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t">${snap.marker && snap.marker.__pin ? `<b class="pinname-t" title="${esc(T('Click to rename'))}">${esc(snap.marker.__pin.name)}</b>` : `<b>${esc(T('Your pin'))}</b>`}</span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
         const use = document.createElement('button');
         use.type = 'button'; use.className = 'lnk'; use.textContent = T('Use clicked point');
         use.onclick = e => { e.stopPropagation(); openCoordPopup(snap.clicked, false); };
         sn.appendChild(use);
         box.appendChild(sn);
-        const pn = sn.querySelector('.pinname');
-        if (pn) {
-          ['mousedown', 'dblclick', 'keydown', 'contextmenu'].forEach(ev => pn.addEventListener(ev, e => e.stopPropagation()));
-          pn.addEventListener('change', () => renamePin(snap.marker, pn.value));
-          pn.addEventListener('keydown', e => { if (e.key === 'Enter') { renamePin(snap.marker, pn.value); pn.blur(); } });
-        }
+        // The pin's name: click it to rename (Enter or clicking elsewhere keeps it, Esc cancels).
+        const pt = sn.querySelector('.pinname-t');
+        if (pt) pt.addEventListener('click', e => {
+          e.stopPropagation();
+          const inp = document.createElement('input');
+          inp.className = 'pinname'; inp.title = T('Pin name'); inp.value = snap.marker.__pin.name;
+          ['mousedown', 'click', 'dblclick', 'contextmenu'].forEach(ev => inp.addEventListener(ev, x => x.stopPropagation()));
+          let done = false;
+          const finish = keep => {
+            if (done) return; done = true;
+            if (keep) renamePin(snap.marker, inp.value);
+            pt.textContent = snap.marker.__pin.name;
+            inp.replaceWith(pt);
+          };
+          inp.addEventListener('keydown', x => { x.stopPropagation(); if (x.key === 'Enter') finish(true); else if (x.key === 'Escape') finish(false); });
+          inp.addEventListener('blur', () => finish(true));
+          pt.replaceWith(inp);
+          inp.focus(); inp.select();
+        });
       }
       // One line with the coordinates, always opening in DMM; click it to switch notation / system.
       const r = document.createElement('div');
