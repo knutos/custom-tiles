@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.48.2
+// @version      1.49.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -194,6 +194,7 @@
     "Your pin": "Merkenål",
     "Pin name": "Navn på merkenålen",
     "Click to rename": "Klikk for å gi nytt navn",
+    "Drag to resize": "Dra for å endre høyden",
     "Route": "Rute",
     "Route: pick geocaches and pins, and export them as a GPX route": "Rute: velg geocacher og merkenåler, og eksporter dem som en GPX-rute",
     "Search code or name …": "Søk etter kode eller navn …",
@@ -2012,6 +2013,13 @@
         display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);
         padding:0;font-size:14px;line-height:1.5;cursor:auto;text-align:left;animation:gcct-in .14s ease-out}
       .gcct-dlg.sm{width:min(400px,calc(100vw - 20px))}
+      .gcct-dlg .rz{position:absolute;left:14px;right:14px;height:9px;cursor:ns-resize;z-index:5;touch-action:none}
+      .gcct-dlg .rz-top{top:-2px}
+      .gcct-dlg .rz-bottom{bottom:-2px}
+      .gcct-dlg .rz-bottom::after{content:"";position:absolute;left:50%;bottom:4px;width:36px;height:3px;margin-left:-18px;border-radius:2px;background:var(--line);opacity:.9}
+      .gcct-dlg .rz:hover::after,.gcct-dlg .rz-bottom:hover::after{background:var(--acc)}
+      .gcct-dlg.sized .bd{flex:1 1 auto}
+      .gcct-route.sized .rt-list,.gcct-route.sized .rt-route,.gcct-route.sized .rt-tbl{max-height:none}
       .gcct-dlg .hd{flex:none;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 20px;border-bottom:1px solid var(--line);cursor:move;user-select:none}
       .gcct-dlg h3{flex:1;margin:0;font-size:16.5px;font-weight:650;line-height:1.3;color:var(--ink)}
       .gcct-dlg .bd{flex:1 1 auto;min-height:0;overflow:auto;padding:16px 20px 18px;overscroll-behavior:contain}
@@ -2340,6 +2348,40 @@
         ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.addEventListener(ev, up, true));
       });
     }
+    // Drag the top or bottom edge of a dialog to make it taller or shorter, upwards or downwards.
+    function resizeBy(box) {
+      ['top', 'bottom'].forEach(edge => {
+        const h = document.createElement('div');
+        h.className = 'rz rz-' + edge;
+        h.title = T('Drag to resize');
+        box.appendChild(h);
+        h.addEventListener('pointerdown', e => {
+          if (e.button !== 0) return;
+          e.preventDefault(); e.stopPropagation();
+          const r = box.getBoundingClientRect(), y0 = e.clientY, vh = window.innerHeight, MIN = 160;
+          // From here on the dialog has a fixed top and height (also when it started anchored at the bottom).
+          Object.assign(box.style, { top: r.top + 'px', bottom: 'auto', height: r.height + 'px', maxHeight: 'none' });
+          box.dataset.moved = '1';
+          box.classList.add('sized');
+          const mv = ev => {
+            if (ev.buttons === 0) return up();
+            const dy = ev.clientY - y0;
+            if (edge === 'bottom') box.style.height = Math.max(MIN, Math.min(vh - r.top - 4, r.height + dy)) + 'px';
+            else {
+              const top = Math.max(4, Math.min(r.bottom - MIN, r.top + dy));
+              box.style.top = top + 'px';
+              box.style.height = (r.bottom - top) + 'px';
+            }
+          };
+          const up = () => {
+            window.removeEventListener('pointermove', mv, true);
+            ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.removeEventListener(ev, up, true));
+          };
+          window.addEventListener('pointermove', mv, true);
+          ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.addEventListener(ev, up, true));
+        });
+      });
+    }
     function openDialog(title, html, opts = {}) {
       closeDialog();
       // Custom element name: no site CSS selector targets it.
@@ -2354,6 +2396,7 @@
       d.querySelector('.x').onclick = closeDialog;
       // Drag the dialog by its header – anywhere in the window.
       dragBy(d, d.querySelector('.hd'));
+      resizeBy(d);
       // Attach to the page (not the map) so the site's sidebar can't cover it.
       // In fullscreen only the fullscreen element is visible, so attach there instead.
       dialogParent().appendChild(d);
