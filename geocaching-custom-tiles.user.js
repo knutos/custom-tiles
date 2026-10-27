@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.44.1
+// @version      1.45.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3420,11 +3420,11 @@
       .leaflet-pane .gcct-popup,.leaflet-pane .gcct-popup *{pointer-events:auto}
       .gcct-solved.gcct-ghost{background:transparent!important;border:0!important;box-shadow:none!important;opacity:0}
       .gcct-solved:hover{transform:scale(1.15)}
-      .gcct-solved .ic{position:absolute;left:1px;top:1px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+      .gcct-solved .ic{position:absolute;left:1px;top:1px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
         background:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.45);box-sizing:border-box;overflow:hidden}
             .gcct-solved .fb{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#336699;color:#fff;
-        font:600 14px/1 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-            .gcct-solved .tick{position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border-radius:50%;background:#1f7a34;color:#fff;
+        font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+            .gcct-solved .tick{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:50%;background:#1f7a34;color:#fff;
         border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
       .gcct-solved svg{display:block;pointer-events:none}
       .gcct-label{background:rgba(255,255,255,.96);border:1px solid ${ACCENT};border-radius:6px;box-shadow:0 1px 3px rgba(16,24,40,.15);
@@ -3876,9 +3876,9 @@
           if (iconAt.size) { drawn = drawn || new Set(); iconAt.forEach((v, k) => drawn.add(k)); }
         }
         const want = new Map(), wantDt = new Map(), wantFtf = new Map();
-        const consider = (i, code) => {
+        const consider = (i, code, atMark) => {
           if (!i) return;
-          const q = (i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code));
+          const q = atMark || ((i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code)));
           if (!q) return;
           const ll = L.latLng(q.lat, q.lng);
           if (!view.contains(ll)) return;
@@ -3886,12 +3886,16 @@
           if (on.show && i.fav != null && i.fav >= on.min) want.set(`${code}|${i.fav}|${at}`, { ll, fav: i.fav });
           if (dt.show && i.diff != null && i.terr != null) wantDt.set(`${code}|${i.diff}/${i.terr}|${at}`, { ll, txt: `${i.diff}/${i.terr}` });
           // FTF: active caches (not events) that nobody has found yet.
-          if (ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true)
+          if (!atMark && ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true)
             wantFtf.set(`${code}|ftf|${at}`, { ll });
         };
         const sf = siteFilter();
         if (drawn) drawn.forEach(code => { if (!filteredOut(code, sf, iconAt.get(code))) consider(CACHE_INFO.get(code), code); });
         else CACHE_INFO.forEach((i, code) => { if (!filteredOut(code, sf)) consider(i, code); });
+        // The visible marks at solved caches you have found (the site's icon is back at the posted
+        // coordinates): the hearts and D/T there too, while the marks are shown.
+        if ((autoOn || marksOn) && map.getZoom() >= AUTO_MIN_ZOOM)
+          lastSolved.forEach(m => { if (!m.ghost && !filteredOut(m.code, sf, m.ll)) consider(CACHE_INFO.get(m.code), m.code, m.ll); });
         // Caches on (almost) the same spot: their labels are stacked instead of drawn on top of each other –
         // D/T downwards, hearts upwards.
         const stack = (m, w, h) => {
@@ -4290,9 +4294,9 @@
         return g;
       }
       // A round blue badge with a question mark (solved puzzle), and a small green tick for "found".
-      const html = `<span class="ic"><span class="fb">?</span></span>${i.found === true ? `<span class="tick">${icon('check', 9)}</span>` : ''}`;
+      const html = `<span class="ic"><span class="fb">?</span></span>${i.found === true ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
       const m = L.marker(ll, {
-        icon: L.divIcon({ className: 'gcct-solved', html, iconSize: [26, 26], iconAnchor: [13, 13] }),
+        icon: L.divIcon({ className: 'gcct-solved', html, iconSize: [24, 24], iconAnchor: [12, 12] }),
         title: `${code}${name ? ' · ' + name : ''} – ${T('Final location')}`, keyboard: false, riseOnHover: true,
       });
       m.__gcct = true;
@@ -4426,7 +4430,11 @@
     }
     function refreshAuto(force) {
       try {
-        if (!(autoOn || marksOn) || map.getZoom() < AUTO_MIN_ZOOM) { autoLayer.clearLayers(); syncMarks([]); autoSig = ''; return; }
+        if (!(autoOn || marksOn) || map.getZoom() < AUTO_MIN_ZOOM) {
+          autoLayer.clearLayers(); syncMarks([]); autoSig = '';
+          if (lastSolved.length) { lastSolved = []; if (window.__gcctFavKick) window.__gcctFavKick(); }
+          return;
+        }
         const grid = cacheGrid();
         let all, extra = '';
         if (grid) {
@@ -4528,6 +4536,7 @@
           ...lastStages.map(m => [`w|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.kind}|${m.name}|${nameOf(m.code)}`, () => stageMark(m)]),
         ]);
         lastSolved = solvedMarks;
+        if (window.__gcctFavKick) window.__gcctFavKick();          // hearts and D/T at the marks
       } catch (e) { console.error('[gcct] auto circles failed', e); }
     }
     function setAuto(on) {
