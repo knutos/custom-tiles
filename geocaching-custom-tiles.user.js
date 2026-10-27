@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.48.1
+// @version      1.48.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3531,7 +3531,16 @@
       .gcct-pop .snap a.gc:hover{text-decoration:underline}
       .gcct-pinlbl{pointer-events:none!important;width:auto!important;height:auto!important}
       .gcct-pinlbl .gcct-label{display:inline-block;transform:translateY(-100%)}
-      .gcct-route .rt-list{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc);margin-bottom:12px}
+      /* The route window fits any screen: the list of caches and the route share the height there is,
+         each scrolling on its own, and the buttons always stay in view. */
+      .gcct-route .bd{display:flex;flex-direction:column;overflow:hidden}
+      .gcct-route .bd > *{flex:none}
+      .gcct-route .rt-list{flex:1 1 0;min-height:84px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc);margin-bottom:10px}
+      .gcct-route .rt-pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+      .gcct-route .rt-pv .rt-tbl{flex:1 1 auto;min-height:90px}
+      .gcct-route .bd > .btns{position:static;margin-top:12px}
+      @media (max-height:720px){ .gcct-route > .bd > .hint{display:none} .gcct-route .rt-h{margin-top:0} }
+      @media (max-width:540px){ .gcct-route th,.gcct-route td{padding:4px!important} .gcct-route th{white-space:normal!important} .gcct-route td.rt-go{overflow-wrap:anywhere} .gcct-route td.mono{font-size:10.5px!important} .gcct-route .rt-desc{font-size:10.5px} }
       .gcct-route .rt-row{display:flex;flex-direction:column;gap:1px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
       .gcct-route .rt-row:last-child{border-bottom:0}
       .gcct-route .rt-row:hover{background:var(--hover)}
@@ -3544,7 +3553,7 @@
       .gcct-route em.tag-found{background:#dafbe1;color:#116329}
       .gcct-route .rt-h{margin:4px 0 6px;font-size:14px}
       .gcct-route .rt-sum{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
-      .gcct-route .rt-route{margin:0 0 4px;padding-left:0;list-style:none;max-height:200px;overflow:auto}
+      .gcct-route .rt-route{flex:1 1 0;min-height:64px;max-height:260px;margin:0 0 4px;padding-left:0;list-style:none;overflow:auto}
       .gcct-route .rt-n{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8250df;color:#fff;font-size:11px;font-weight:700;margin-right:4px}
       .gcct-route .rt-route li{display:flex;align-items:center;gap:4px;padding:2px 0}
       .gcct-route .rt-route li .rt-t{flex:1}
@@ -3556,7 +3565,7 @@
       .gcct-route .rt-go{cursor:pointer}
       .gcct-route .rt-go:hover b{text-decoration:underline}
       .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
-      .gcct-route .rt-tbl{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
+      .gcct-route .rt-tbl{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
       .gcct-route table{border-collapse:collapse;width:100%;font-size:12.5px}
       .gcct-route th{position:sticky;top:0;background:var(--soft);text-align:left;font-weight:600;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
       .gcct-route td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -5240,10 +5249,10 @@
           const leg = i ? distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
           tot += leg;
           return `<tr data-i="${i}"><td><span class="rt-n">${i + 1}</span></td><td class="rt-go"><b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
-            <td class="mono">${esc(fmtDMM(r.lat, r.lng))}</td><td class="num">${i ? legText(i) : '–'}</td><td class="num">${i ? fmtDist(tot) : '–'}</td></tr>`;
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
         pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
-          <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th><th class="num">${esc(T('Total'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+          <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
           <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))} · ${esc(T('Straight-line distances; the way there is usually longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         fitRoute();
