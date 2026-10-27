@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.45.2
+// @version      1.45.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -440,6 +440,30 @@
   let typeStore = {};
   try { typeStore = JSON.parse(localStorage.getItem('gcct.cacheTypes') || '{}') || {}; } catch (e) { typeStore = {}; }
   Object.entries(typeStore).forEach(([c, t]) => CACHE_INFO.set(c, { type: t, solved: false, corrected: null }));
+  // Your solved caches, remembered between visits (in this browser only): the site's search only knows a
+  // cache when its posted coordinates are in view, but a puzzle's or Wherigo's final can be far from them.
+  // So the mark at the solved position shows even where the posted coordinates are off the map.
+  const SOLVED_KEY = 'gcct.solvedCaches', SOLVED_TTL = 60 * 864e5;
+  let solvedStore = {};
+  try { solvedStore = JSON.parse(localStorage.getItem(SOLVED_KEY) || '{}') || {}; } catch (e) { solvedStore = {}; }
+  Object.entries(solvedStore).forEach(([c, e]) => {
+    if (!e || !e.c || Date.now() - (e.ts || 0) > SOLVED_TTL) { delete solvedStore[c]; return; }
+    const prev = CACHE_INFO.get(c) || {};
+    CACHE_INFO.set(c, Object.assign({}, prev, { type: e.t ?? prev.type ?? null, solved: true, corrected: { lat: e.c[0], lng: e.c[1] },
+      posted: e.p ? { lat: e.p[0], lng: e.p[1] } : prev.posted, found: e.f, owned: e.o, name: e.n || prev.name, fav: e.fav, diff: e.d, terr: e.te, fromStore: true }));
+  });
+  let solvedSaveTimer = null;
+  function rememberSolved(code, i) {
+    try {
+      if (i.solved && i.corrected) {
+        solvedStore[code] = { c: [+i.corrected.lat.toFixed(6), +i.corrected.lng.toFixed(6)], p: i.posted ? [+i.posted.lat.toFixed(6), +i.posted.lng.toFixed(6)] : null,
+          f: i.found, o: i.owned, n: i.name, t: i.type, fav: i.fav, d: i.diff, te: i.terr, ts: Date.now() };
+      } else if (solvedStore[code]) delete solvedStore[code];          // no longer solved
+      else return;
+      clearTimeout(solvedSaveTimer);
+      solvedSaveTimer = setTimeout(() => { try { localStorage.setItem(SOLVED_KEY, JSON.stringify(solvedStore)); } catch (e) { /* full or blocked */ } }, 1000);
+    } catch (e) { /* ignore */ }
+  }
   let typeSaveTimer = null;
   function saveTypes() {
     clearTimeout(typeSaveTimer);
@@ -484,7 +508,9 @@
     } catch (e) { return null; }
   }
   function recordCache(code, o, src, fromSearch) {
-    const prev = CACHE_INFO.get(code) || { type: null, solved: false, corrected: null };
+    let prev = CACHE_INFO.get(code) || { type: null, solved: false, corrected: null };
+    // A remembered solved cache that the search now answers for: the search's answer decides again.
+    if (fromSearch && prev.fromStore) prev = Object.assign({}, prev, { solved: false, corrected: null, fromStore: false });
     const t = typeOf(o.geocacheType ?? o.cacheType ?? o.geocacheTypeId ?? o.cacheTypeId ?? o.typeId ?? o.type);
     const type = t != null && t !== -1 ? t : (prev.type ?? t);
     let { solved, corrected } = prev;
@@ -556,7 +582,7 @@
       if (/^(favou?rite|fav)(s|points?|count|pointcount|score)?$/i.test(k) && isFinite(o[k]) && o[k] !== null && o[k] !== '') { fav = Number(o[k]); break; }
     }
     CACHE_INFO.set(code, Object.assign({}, prev, { type, solved, corrected, name, found, owned, ownerName, posted, fav, diff, terr, neverFound, status, lastFound, placed, fromPage: fromSearch ? false : prev.fromPage }));
-    if (fromSearch) inSearch.add(code);
+    if (fromSearch) { inSearch.add(code); rememberSolved(code, CACHE_INFO.get(code)); }
     if (type != null && type !== -1 && typeStore[code] !== type) { typeStore[code] = type; saveTypes(); }
     if (src === 'net') { seenThisVisit.add(code); infoStats.records++; if (infoStats.keys.size < 60) Object.keys(o).forEach(k => infoStats.keys.size < 60 && infoStats.keys.add(k)); }
   }
@@ -4500,7 +4526,7 @@
         // Solved caches whose icon is not on the map at all right now (zoomed in away from it).
         const hiddenBySite = siteHides(grid);
         CACHE_INFO.forEach((i, code) => {
-          if (done.has(code) || !i.solved || !i.corrected || !(seenThisVisit.has(code) || i.fromPage)) return;
+          if (done.has(code) || !i.solved || !i.corrected || !(seenThisVisit.has(code) || i.fromPage || i.fromStore)) return;
           // Filtered out in the site's sidebar (type, my finds, my hides …): no circle or mark either.
           if (filteredOut(code, sf, i.posted) || hiddenBySite(code, i.found === true ? i.posted : i.corrected)) return;
           const sp = L.latLng(i.corrected.lat, i.corrected.lng);
