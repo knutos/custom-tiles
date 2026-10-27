@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.45.1
+// @version      1.45.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3420,11 +3420,11 @@
       .leaflet-pane .gcct-popup,.leaflet-pane .gcct-popup *{pointer-events:auto}
       .gcct-solved.gcct-ghost{background:transparent!important;border:0!important;box-shadow:none!important;opacity:0}
       .gcct-solved:hover{transform:scale(1.15)}
-      .gcct-solved .ic{position:absolute;left:1px;top:1px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+      .gcct-solved .ic{position:absolute;left:1px;top:1px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
         background:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.45);box-sizing:border-box;overflow:hidden}
             .gcct-solved .fb{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#336699;color:#fff;
-        font:600 12px/1 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-            .gcct-solved .tick{position:absolute;right:-3px;bottom:-3px;width:11px;height:11px;border-radius:50%;background:#1f7a34;color:#fff;
+        font:600 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+            .gcct-solved .tick{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:50%;background:#1f7a34;color:#fff;
         border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
       .gcct-solved svg{display:block;pointer-events:none}
       .gcct-label{background:rgba(255,255,255,.96);border:1px solid ${ACCENT};border-radius:6px;box-shadow:0 1px 3px rgba(16,24,40,.15);
@@ -4296,7 +4296,7 @@
       // A round blue badge with a question mark (solved puzzle), and a small green tick for "found".
       const html = `<span class="ic"><span class="fb">?</span></span>${i.found === true ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
       const m = L.marker(ll, {
-        icon: L.divIcon({ className: 'gcct-solved', html, iconSize: [22, 22], iconAnchor: [11, 11] }),
+        icon: L.divIcon({ className: 'gcct-solved', html, iconSize: [24, 24], iconAnchor: [12, 12] }),
         title: `${code}${name ? ' · ' + name : ''} – ${T('Final location')}`, keyboard: false, riseOnHover: true,
       });
       m.__gcct = true;
