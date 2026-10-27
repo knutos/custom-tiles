@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.49.0
+// @version      1.49.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3606,6 +3606,9 @@
       .gcct-dlg.gcct-route{width:min(580px,calc(100vw - 20px))}
       .gcct-route .rt-gpx{display:inline-flex;align-items:center;gap:6px}
       .gcct-route .rt-go{cursor:pointer}
+      .gcct-route .rt-ic{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:6px;object-fit:contain}
+      .gcct-route .rt-ic-pin{color:#c52a7a;display:inline-flex;align-items:center;justify-content:center}
+      .gcct-route .rt-ic-dot::before{content:"";display:block;width:10px;height:10px;margin:4px;border-radius:50%;background:#8c959f}
       .gcct-route .rt-go:hover b{text-decoration:underline}
       .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
       .gcct-route .rt-tbl{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
@@ -5193,7 +5196,7 @@
         const q = i && (i.solved && i.corrected ? i.corrected : i.posted || knownPos.get(code));
         if (!q || !isFinite(q.lat)) return;
         seen.add(code);
-        out.push({ key: 'c:' + code, kind: 'cache', code, name: i.name || '', lat: +q.lat, lng: +q.lng, solved: !!(i.solved && i.corrected), found: i.found === true, dt: i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : '' });
+        out.push({ key: 'c:' + code, kind: 'cache', code, name: i.name || '', lat: +q.lat, lng: +q.lng, solved: !!(i.solved && i.corrected), found: i.found === true, type: i.type, dt: i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : '' });
       });
       knownPos.forEach((q, code) => { if (!seen.has(code)) out.push({ key: 'c:' + code, kind: 'cache', code, name: q.name || '', lat: q.lat, lng: q.lng }); });
       return out;
@@ -5252,6 +5255,13 @@
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
       const tag = c => c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
+      // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
+      const typeIcon = c => {
+        if (c.kind === 'pin') return `<span class="rt-ic rt-ic-pin">${icon('pin', 14)}</span>`;
+        const t = c.type != null ? c.type : (CACHE_INFO.get(c.code) || {}).type;
+        return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
+          : '<span class="rt-ic rt-ic-dot"></span>';
+      };
       function drawList() {
         const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
         const inRoute = new Set(route.map(r => r.key));
@@ -5261,14 +5271,14 @@
         c.sort((a, b) => a.d - b.d);
         c = c.slice(0, 100);
         list.innerHTML = c.length ? c.map((x, i) => `<div class="rt-row${inRoute.has(x.key) ? ' in' : ''}" data-i="${i}">
-            <span class="rt-t">${title(x)} ${tag(x)}</span><span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${fmtDist(x.d)}${inRoute.has(x.key) ? ' · ' + esc(T('In the route')) : ''}</span></div>`).join('')
+            <span class="rt-t">${typeIcon(x)}${title(x)} ${tag(x)}</span><span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${fmtDist(x.d)}${inRoute.has(x.key) ? ' · ' + esc(T('In the route')) : ''}</span></div>`).join('')
           : `<div class="gm">${esc(T('Nothing found.'))}</div>`;
         list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
           addStop(c[+el.dataset.i]);
         });
       }
       function drawRouteList() {
-        ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t rt-go" title="${esc(T('Show on the map'))}">${title(r)}${i ? ` <small class="rt-leg">+${legText(i)}</small>` : ''}</span>
+        ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t rt-go" title="${esc(T('Show on the map'))}">${typeIcon(r)}${title(r)}${i ? ` <small class="rt-leg">+${legText(i)}</small>` : ''}</span>
             <button data-m="up" title="${esc(T('Move up'))}" ${i ? '' : 'disabled'}>${icon('up', 14)}</button><button data-m="down" title="${esc(T('Move down'))}" ${i < route.length - 1 ? '' : 'disabled'}>${icon('down', 14)}</button><button data-m="del" title="${esc(T('Remove'))}">${icon('x', 14)}</button></li>`).join('')
           : `<li class="gm">${esc(T('No stops yet.'))}</li>`;
         sum.textContent = route.length ? T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }) : '';
@@ -5291,7 +5301,7 @@
         const rows = route.map((r, i) => {
           const leg = i ? distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
           tot += leg;
-          return `<tr data-i="${i}"><td><span class="rt-n">${i + 1}</span></td><td class="rt-go"><b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
+          return `<tr data-i="${i}"><td><span class="rt-n">${i + 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
             <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
         pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
