@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.47.1
+// @version      1.47.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3584,9 +3584,18 @@
 
     // --- Helpers -----------------------------------------------------------
     const pins = [];                 // pins on the map – right-clicking one snaps to it, like to a cache
+    // Pins and their name labels are only shown from zoom 12 (further out they would clutter the map).
+    const PIN_MIN_ZOOM = 12;
+    function showPin(m) {
+      const hide = map.getZoom() < PIN_MIN_ZOOM;
+      [m, m.__label].forEach(l => { const el = l && (l.getElement ? l.getElement() : l._path || l._icon); if (el) el.style.display = hide ? 'none' : ''; });
+      try { if (m.setStyle) m.setStyle({ opacity: hide ? 0 : 1, fillOpacity: hide ? 0 : 1 }); } catch (e) { /* ignore */ }
+    }
+    map.on('zoomend', () => pins.forEach(showPin));
     function pin(ll, color = ACCENT) {
       const m = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(tools);
       pins.push(m);
+      setTimeout(() => showPin(m), 0);
       m.bindPopup(() => coordPopup(m.getLatLng(), m.__pin ? { kind: 'pin', marker: m, clicked: m.getLatLng(), ll: m.getLatLng() } : null), POPUP_OPTS);
       return m;
     }
@@ -3607,6 +3616,7 @@
       const m = pin(L.latLng(rec.lat, rec.lng));
       m.__pin = rec;
       m.__label = label(L.latLng(rec.lat, rec.lng), pinLabelHtml(rec.name));
+      showPin(m);
       return m;
     }
     function removePin(m) {
@@ -3618,7 +3628,7 @@
       if (!m.__pin) return;
       m.__pin.name = name.trim() || m.__pin.name;
       savePins();
-      if (m.__label) { tools.removeLayer(m.__label); m.__label = label(m.getLatLng(), pinLabelHtml(m.__pin.name)); }
+      if (m.__label) { tools.removeLayer(m.__label); m.__label = label(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); }
     }
     const xmlEsc = t => String(t).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
     function downloadGpx(recs, fileName) {
@@ -3747,6 +3757,7 @@
     function nearestPin(ll) {
       try {
         for (let i = pins.length - 1; i >= 0; i--) if (!tools.hasLayer || !tools.hasLayer(pins[i])) pins.splice(i, 1);
+        if (map.getZoom() < PIN_MIN_ZOOM) return null;          // hidden this far out
         const at = map.latLngToContainerPoint(ll);
         let best = null, bd = Infinity;
         pins.forEach(m => { const pt = map.latLngToContainerPoint(m.getLatLng()), d = Math.hypot(pt.x - at.x, pt.y - at.y); if (d <= SNAP_PX && d < bd) { bd = d; best = m; } });
