@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.44.0
+// @version      1.44.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3404,7 +3404,7 @@
       .gcct-favn .gcct-fav{font-size:1.5em;line-height:1;vertical-align:-0.1em}
       .gcct-favlbl{pointer-events:none!important}
       .gcct-favlbl span{display:inline-flex;align-items:center;gap:2px;color:#1f2328;
-        font:700 11px/16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;white-space:nowrap;
+        font:600 11px/16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;white-space:nowrap;
         -webkit-text-stroke:3px #fff;paint-order:stroke fill;   /* a narrow white halo, no box */
         text-shadow:0 0 1px #fff}
       .gcct-favlbl i{font-style:normal;color:#d1242f;font-size:16.5px;line-height:16px}
@@ -3415,7 +3415,7 @@
         padding:0 4px;font:800 10px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
       .gcct-dtlbl{pointer-events:none!important}
       .gcct-dtlbl span{display:inline-block;transform:translateX(-50%);color:#1f2328;white-space:nowrap;
-        font:700 11px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+        font:600 11px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
         -webkit-text-stroke:3px #fff;paint-order:stroke fill;text-shadow:0 0 1px #fff}
       .leaflet-pane .gcct-popup,.leaflet-pane .gcct-popup *{pointer-events:auto}
       .gcct-solved.gcct-ghost{background:transparent!important;border:0!important;box-shadow:none!important;opacity:0}
