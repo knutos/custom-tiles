@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.46.3
+// @version      1.46.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3455,7 +3455,7 @@
       .gcct-solved svg{display:block;pointer-events:none}
       .gcct-solved.sm .ic{width:18px;height:18px;border-width:1.5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
       .gcct-solved.sm .fb{font-size:11px}
-      .gcct-solved.dot .ic{width:10px;height:10px;border-width:1.5px;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+      .gcct-solved.dot .ic{width:11px;height:11px;border-width:1.5px;box-shadow:0 1px 2px rgba(0,0,0,.35)}
       .gcct-label{background:rgba(255,255,255,.96);border:1px solid ${ACCENT};border-radius:6px;box-shadow:0 1px 3px rgba(16,24,40,.15);
         padding:2px 8px;font:600 12.5px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;color:#1f2328;width:auto!important;height:auto!important}
 
@@ -4329,7 +4329,7 @@
       // Zoomed out (12–13): the size of the site's icons there, without the tick; below 12 just a blue dot.
       const html = small === 'dot' ? '<span class="ic"><span class="fb"></span></span>'
         : `<span class="ic"><span class="fb">?</span></span>${i.found === true && !small ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
-      const sz = small === 'dot' ? 12 : small ? 20 : 24;
+      const sz = small === 'dot' ? 13 : small ? 20 : 24;
       const m = L.marker(ll, {
         icon: L.divIcon({ className: 'gcct-solved' + (small === 'dot' ? ' dot' : small ? ' sm' : ''), html, iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] }),
         title: `${code}${name ? ' · ' + name : ''} – ${T('Final location')}`, keyboard: false, riseOnHover: true,
