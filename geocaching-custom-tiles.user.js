@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.46.1
+// @version      1.46.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3453,8 +3453,8 @@
             .gcct-solved .tick{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:50%;background:#1f7a34;color:#fff;
         border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
       .gcct-solved svg{display:block;pointer-events:none}
-      .gcct-solved.sm .ic{width:13px;height:13px;border-width:1.5px;box-shadow:0 1px 2px rgba(0,0,0,.4)}
-      .gcct-solved.sm .fb{font-size:8.5px}
+      .gcct-solved.sm .ic{width:18px;height:18px;border-width:1.5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+      .gcct-solved.sm .fb{font-size:11px}
       .gcct-label{background:rgba(255,255,255,.96);border:1px solid ${ACCENT};border-radius:6px;box-shadow:0 1px 3px rgba(16,24,40,.15);
         padding:2px 8px;font:600 12.5px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;color:#1f2328;width:auto!important;height:auto!important}
 
@@ -4324,10 +4324,10 @@
         return g;
       }
       // A round blue badge with a question mark (solved puzzle), and a small green tick for "found".
-      // Zoomed out (12–13): about 60 % of the size, without the tick.
+      // Zoomed out (12–13): the size of the site's icons there, without the tick.
       const html = `<span class="ic"><span class="fb">?</span></span>${i.found === true && !small ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
       const m = L.marker(ll, {
-        icon: L.divIcon({ className: 'gcct-solved' + (small ? ' sm' : ''), html, iconSize: small ? [15, 15] : [24, 24], iconAnchor: small ? [7.5, 7.5] : [12, 12] }),
+        icon: L.divIcon({ className: 'gcct-solved' + (small ? ' sm' : ''), html, iconSize: small ? [20, 20] : [24, 24], iconAnchor: small ? [10, 10] : [12, 12] }),
         title: `${code}${name ? ' · ' + name : ''} – ${T('Final location')}`, keyboard: false, riseOnHover: true,
       });
       m.__gcct = true;
