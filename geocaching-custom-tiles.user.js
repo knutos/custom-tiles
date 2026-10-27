@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.48.0
+// @version      1.48.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -208,6 +208,17 @@
     "In the route": "I ruten",
     "Move up": "Flytt opp",
     "Add to route": "Legg til i ruten",
+    "Preview": "Forhåndsvis",
+    "Back": "Tilbake",
+    "Download GPX route": "Last ned GPX-rute",
+    "This is what the GPX file will contain – the map shows the whole route.": "Slik blir GPX-filen – kartet viser hele ruten.",
+    "Name in GPS": "Navn i GPS",
+    "Description": "Beskrivelse",
+    "Coordinates": "Koordinater",
+    "Leg": "Etappe",
+    "Total": "Totalt",
+    "Show on the map": "Vis på kartet",
+    "Straight-line distances; the way there is usually longer.": "Avstander i luftlinje; veien dit er som regel lengre.",
     "Added to the route: {name}": "Lagt til i ruten: {name}",
     "Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en – her eller på kartet – for å legge den til i ruten.",
     "Move down": "Flytt ned",
@@ -2333,7 +2344,7 @@
       closeDialog();
       // Custom element name: no site CSS selector targets it.
       const d = document.createElement('gcct-dialog');
-      d.className = 'gcct-dlg' + (opts.small ? ' sm' : '');
+      d.className = 'gcct-dlg' + (opts.small ? ' sm' : '') + (opts.cls ? ' ' + opts.cls : '');
       d.innerHTML = `<div class="hd" title="${T('Drag to move')}"><h3>${esc(title)}</h3><span class="x" title="${T('Close (Esc)')}">${icon('x', 18)}</span></div><div class="bd">${html}</div>`;
       noSubmit(d);
       L.DomEvent.disableClickPropagation(d);
@@ -3540,7 +3551,20 @@
       .gcct-route .rt-route li button{border:1px solid var(--line);background:#fff;border-radius:6px;width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
       .gcct-route .rt-route li button:disabled{opacity:.35;cursor:default}
       .gcct-route .rt-route li.gm{color:var(--muted)}
+      .gcct-dlg.gcct-route{width:min(580px,calc(100vw - 20px))}
       .gcct-route .rt-gpx{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-go{cursor:pointer}
+      .gcct-route .rt-go:hover b{text-decoration:underline}
+      .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
+      .gcct-route .rt-tbl{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
+      .gcct-route table{border-collapse:collapse;width:100%;font-size:12.5px}
+      .gcct-route th{position:sticky;top:0;background:var(--soft);text-align:left;font-weight:600;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+      .gcct-route td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+      .gcct-route tr:last-child td{border-bottom:0}
+      .gcct-route td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;white-space:nowrap}
+      .gcct-route .num{text-align:right;white-space:nowrap}
+      .gcct-route .rt-desc{color:var(--muted);font-size:11.5px}
+      .gcct-route .rt-note{margin-top:8px}
       .gcct-rtnum{pointer-events:none!important}
       .gcct-rtnum span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8250df;color:#fff;
         font:700 11px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1.5px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.35);box-sizing:border-box}
@@ -5100,6 +5124,13 @@
       });
     }
     const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
+    // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
+    const legText = i => { const a = L.latLng(route[i - 1].lat, route[i - 1].lng), b = L.latLng(route[i].lat, route[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
+    function fitRoute() {
+      if (!route.length) return;
+      if (route.length === 1) { map.setView(L.latLng(route[0].lat, route[0].lng), Math.max(map.getZoom(), 15)); return; }
+      try { map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { padding: [60, 60], maxZoom: 17 }); } catch (e) { /* ignore */ }
+    }
     const routeLength = () => route.reduce((sum, r, i) => i ? sum + distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
     // Everything you can pick: pins, and every geocache the script knows a position for (solved ones at the solved spot).
     function routeCandidates() {
@@ -5163,8 +5194,9 @@
         <div class="rt-list"></div>
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
         <ol class="rt-route"></ol>
-        <div class="btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>GPX</span></button></div>`);
-      d.classList.add('gcct-route');
+        <div class="rt-pv" style="display:none"></div>
+        <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
+        <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
       const tag = c => c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
@@ -5184,18 +5216,40 @@
         });
       }
       function drawRouteList() {
-        ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t">${title(r)}</span>
+        ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t rt-go" title="${esc(T('Show on the map'))}">${title(r)}${i ? ` <small class="rt-leg">+${legText(i)}</small>` : ''}</span>
             <button data-m="up" title="${esc(T('Move up'))}" ${i ? '' : 'disabled'}>${icon('up', 14)}</button><button data-m="down" title="${esc(T('Move down'))}" ${i < route.length - 1 ? '' : 'disabled'}>${icon('down', 14)}</button><button data-m="del" title="${esc(T('Remove'))}">${icon('x', 14)}</button></li>`).join('')
           : `<li class="gm">${esc(T('No stops yet.'))}</li>`;
         sum.textContent = route.length ? T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }) : '';
+        ol.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('li').dataset.i));
         ol.querySelectorAll('button[data-m]').forEach(b => b.onclick = () => {
           const i = +b.closest('li').dataset.i, m = b.dataset.m;
           if (m === 'del') route.splice(i, 1);
           else { const j = m === 'up' ? i - 1 : i + 1; [route[i], route[j]] = [route[j], route[i]]; }
           changed();
         });
-        d.querySelector('[data-a=gpx]').disabled = !route.length;
+        d.querySelector('[data-a=preview]').disabled = !route.length;
       }
+      // Preview: the whole route on the map, and a table of exactly what goes into the GPX file.
+      const pv = d.querySelector('.rt-pv'), editEls = [q, d.querySelector('.hint'), list, d.querySelector('.rt-h'), ol, d.querySelector('.rt-edit-btns')];
+      function preview(on) {
+        editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
+        pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
+        if (!on) return;
+        let tot = 0;
+        const rows = route.map((r, i) => {
+          const leg = i ? distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
+          tot += leg;
+          return `<tr data-i="${i}"><td><span class="rt-n">${i + 1}</span></td><td class="rt-go"><b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng))}</td><td class="num">${i ? legText(i) : '–'}</td><td class="num">${i ? fmtDist(tot) : '–'}</td></tr>`;
+        }).join('');
+        pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
+          <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th><th class="num">${esc(T('Total'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))} · ${esc(T('Straight-line distances; the way there is usually longer.'))}</p>`;
+        pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
+        fitRoute();
+      }
+      d.querySelector('[data-a=preview]').onclick = () => preview(true);
+      d.querySelector('[data-a=back]').onclick = () => preview(false);
       function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
       routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); };
       d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
@@ -5211,6 +5265,7 @@
       };
       d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); };
       d.querySelector('[data-a=gpx]').onclick = () => { if (route.length) saveFile(routeGpx(), `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml'); };
+      function goStop(i) { const r = route[i]; if (r) map.setView(L.latLng(r.lat, r.lng), Math.max(map.getZoom(), 16)); }
       q.oninput = drawList;
       q.addEventListener('keydown', e => e.stopPropagation());
       drawList(); drawRouteList();
