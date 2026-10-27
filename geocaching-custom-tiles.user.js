@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.49.2
+// @version      1.49.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -5202,7 +5202,7 @@
       return out;
     }
     function routeGpx() {
-      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? 'Geocache' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
+      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
       return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
     }
