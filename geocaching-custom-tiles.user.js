@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.45.3
+// @version      1.46.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3856,6 +3856,7 @@
     // centre of all cells belonging to a cache as its position (good to a few metres when zoomed in)
     // and draw a 161 m circle there. Tiles from the highest zoom seen give the best positions.
     const AUTO_MIN_ZOOM = 15;
+    const MARK_MIN_ZOOM = 14;    // the blue marks at solved caches: one zoom level earlier than the circles
     const STAGE_MIN_ZOOM = 15;   // cache pages for stages are only read when zoomed in this far (fewer page loads)
     const autoLayer = L.layerGroup().addTo(map);
     // --- Favourite points on the map ------------------------------------------------------------
@@ -4456,7 +4457,7 @@
     }
     function refreshAuto(force) {
       try {
-        if (!(autoOn || marksOn) || map.getZoom() < AUTO_MIN_ZOOM) {
+        if (!(autoOn || marksOn) || map.getZoom() < MARK_MIN_ZOOM) {
           autoLayer.clearLayers(); syncMarks([]); autoSig = '';
           if (lastSolved.length) { lastSolved = []; if (window.__gcctFavKick) window.__gcctFavKick(); }
           return;
@@ -4510,7 +4511,7 @@
         // Physical stages and finals are only shown with the circles.
         if (autoOn && wanted.length && map.getZoom() >= STAGE_MIN_ZOOM) fetchStages(wanted);
         const stageMarks = [];
-        if (autoOn) all.forEach(c => {
+        if (autoOn && map.getZoom() >= AUTO_MIN_ZOOM) all.forEach(c => {
           const st = c.code && stagesOf(c.code);
           if (!st) return;
           st.forEach(([la, ln, kind, nm, at]) => {
@@ -4555,7 +4556,8 @@
         autoSig = sig;
         autoLayer.clearLayers();
         const view = bounds.pad ? bounds.pad(0.25) : bounds;
-        if (autoOn) pos.forEach(ll => autoLayer.addLayer(geoCircle(ll, 161, AUTO_STYLE)));
+        const circlesNow = autoOn && map.getZoom() >= AUTO_MIN_ZOOM;   // at zoom 14 only the marks
+        if (circlesNow) pos.forEach(ll => autoLayer.addLayer(geoCircle(ll, 161, AUTO_STYLE)));
         const nameOf = c => (CACHE_INFO.get(c) || {}).name || '', foundOf = c => (CACHE_INFO.get(c) || {}).found === true;
         syncMarks([
           ...solvedMarks.map(m => [`s|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${!!m.ghost}|${foundOf(m.code)}|${nameOf(m.code)}`, () => solvedMark(m.ll, m.code, m.ghost)]),
@@ -4577,7 +4579,7 @@
       marksOn = on;
       save('gcct.marks', on);
       if (marksBtn) marksBtn.classList.toggle('active', on);
-      if (on && !autoOn && map.getZoom() < AUTO_MIN_ZOOM) toast(T('Marks are shown from zoom level {z}. Zoom in to see them.', { z: AUTO_MIN_ZOOM }));
+      if (on && !autoOn && map.getZoom() < MARK_MIN_ZOOM) toast(T('Marks are shown from zoom level {z}. Zoom in to see them.', { z: MARK_MIN_ZOOM }));
       restartAuto();
     }
     function restartAuto() {
@@ -4621,7 +4623,7 @@
         add('measure', 'ruler', 'Measure distance & bearing (click points, double-click for new line, Esc to stop)', () => setMode('measure'));
         autoBtn = add(null, 'circles', () => T('161 m circles around traditional caches, physical stages and caches with solved coordinates (from zoom {z}). Right-click the map for a single circle anywhere.', { z: AUTO_MIN_ZOOM }), () => setAuto(!autoOn));
         autoBtn.classList.add('danger');
-        marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off). Always shown with the 161 m circles.', { z: AUTO_MIN_ZOOM }), () => setMarks(!marksOn));
+        marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off). Always shown with the 161 m circles.', { z: MARK_MIN_ZOOM }), () => setMarks(!marksOn));
         marksBtn.classList.toggle('active', marksOn);
         const favOn = () => !!(api.favSettings && api.favSettings().show);
         const favBtn = add(null, 'heart', () => T('Favourite points on the map (from zoom {z}, on/off). The lowest number is set in Settings.', { z: FAV_MIN_ZOOM }), () => {
