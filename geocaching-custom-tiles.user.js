@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.46.2
+// @version      1.46.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3455,6 +3455,7 @@
       .gcct-solved svg{display:block;pointer-events:none}
       .gcct-solved.sm .ic{width:18px;height:18px;border-width:1.5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
       .gcct-solved.sm .fb{font-size:11px}
+      .gcct-solved.dot .ic{width:10px;height:10px;border-width:1.5px;box-shadow:0 1px 2px rgba(0,0,0,.35)}
       .gcct-label{background:rgba(255,255,255,.96);border:1px solid ${ACCENT};border-radius:6px;box-shadow:0 1px 3px rgba(16,24,40,.15);
         padding:2px 8px;font:600 12.5px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;color:#1f2328;width:auto!important;height:auto!important}
 
@@ -3858,8 +3859,9 @@
     // centre of all cells belonging to a cache as its position (good to a few metres when zoomed in)
     // and draw a 161 m circle there. Tiles from the highest zoom seen give the best positions.
     const AUTO_MIN_ZOOM = 15;
-    const MARK_MIN_ZOOM = 12;    // the blue marks at solved caches: earlier than the circles …
-    const MARK_FULL_ZOOM = 14;   // … but small (and without the found tick) below zoom 14
+    const MARK_MIN_ZOOM = 10;    // the blue marks at solved caches: earlier than the circles …
+    const MARK_FULL_ZOOM = 14;   // … but small (and without the found tick) below zoom 14 …
+    const MARK_DOT_ZOOM = 12;    // … and only a blue dot below zoom 12, like the site's own dots there
     const STAGE_MIN_ZOOM = 15;   // cache pages for stages are only read when zoomed in this far (fewer page loads)
     const autoLayer = L.layerGroup().addTo(map);
     // --- Favourite points on the map ------------------------------------------------------------
@@ -4324,10 +4326,12 @@
         return g;
       }
       // A round blue badge with a question mark (solved puzzle), and a small green tick for "found".
-      // Zoomed out (12–13): the size of the site's icons there, without the tick.
-      const html = `<span class="ic"><span class="fb">?</span></span>${i.found === true && !small ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
+      // Zoomed out (12–13): the size of the site's icons there, without the tick; below 12 just a blue dot.
+      const html = small === 'dot' ? '<span class="ic"><span class="fb"></span></span>'
+        : `<span class="ic"><span class="fb">?</span></span>${i.found === true && !small ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
+      const sz = small === 'dot' ? 12 : small ? 20 : 24;
       const m = L.marker(ll, {
-        icon: L.divIcon({ className: 'gcct-solved' + (small ? ' sm' : ''), html, iconSize: small ? [20, 20] : [24, 24], iconAnchor: small ? [10, 10] : [12, 12] }),
+        icon: L.divIcon({ className: 'gcct-solved' + (small === 'dot' ? ' dot' : small ? ' sm' : ''), html, iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] }),
         title: `${code}${name ? ' · ' + name : ''} – ${T('Final location')}`, keyboard: false, riseOnHover: true,
       });
       m.__gcct = true;
@@ -4561,7 +4565,7 @@
         autoLayer.clearLayers();
         const view = bounds.pad ? bounds.pad(0.25) : bounds;
         const circlesNow = autoOn && map.getZoom() >= AUTO_MIN_ZOOM;   // at zoom 12–14 only the marks
-        const smallMarks = map.getZoom() < MARK_FULL_ZOOM;
+        const smallMarks = map.getZoom() < MARK_FULL_ZOOM ? (map.getZoom() < MARK_DOT_ZOOM ? 'dot' : 'small') : false;
         if (circlesNow) pos.forEach(ll => autoLayer.addLayer(geoCircle(ll, 161, AUTO_STYLE)));
         const nameOf = c => (CACHE_INFO.get(c) || {}).name || '', foundOf = c => (CACHE_INFO.get(c) || {}).found === true;
         syncMarks([
