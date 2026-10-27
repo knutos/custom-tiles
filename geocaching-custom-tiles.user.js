@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.46.4
+// @version      1.47.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -192,6 +192,10 @@
     "Use clicked point": "Bruk klikkpunktet",
     "Remove pin": "Fjern merkenålen",
     "Your pin": "Merkenål",
+    "Pin name": "Navn på merkenålen",
+    "Download GPX": "Last ned GPX",
+    "All pins as GPX ({n})": "Alle merkenåler som GPX ({n})",
+    "Pin {n}": "Nål {n}",
     "Zoom": "Zoom",
     "Zoom level – type a number to zoom": "Zoomnivå – skriv et tall for å zoome",
     "Hide all geocaches": "Skjul alle geocacher",
@@ -362,6 +366,7 @@
 
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
+    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
     ftf: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
     dt: '<path d="m2 20 7-12 4 6.5 2.5-3.5L22 20Z"/><path d="M7.5 20h9"/>',
     heart: '<path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.8 6.8 4.6c2.1-.1 3.9 1.1 5.2 3 1.3-1.9 3.1-3.1 5.2-3 3.4.2 5.3 3.6 4.1 6.7-1.8 4.6-9.3 9.2-9.3 9.2Z"/>',
@@ -3491,6 +3496,7 @@
       .gcct-pop .snap .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .gcct-pop .snap a.gc{font-weight:700;color:var(--acc)!important;text-decoration:none;cursor:pointer!important;pointer-events:auto!important}
       .gcct-pop .snap a.gc:hover{text-decoration:underline}
+      .gcct-pop .snap input.pinname{width:100%;min-width:0;box-sizing:border-box;font:600 13px/1.3 inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px}
       .gcct-pop .snap i{font-style:normal;color:var(--muted);cursor:help}
       .gcct-pop .snap button.lnk{flex:none;min-height:0;padding:2px 6px;border:0;background:none;color:var(--acc);text-decoration:underline;font-size:12.5px;cursor:pointer}
       .gcct-pop .snap button.lnk:hover{background:rgba(9,105,218,.08)}
@@ -3578,9 +3584,50 @@
     function pin(ll, color = ACCENT) {
       const m = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(tools);
       pins.push(m);
-      m.bindPopup(() => coordPopup(m.getLatLng()), POPUP_OPTS);
+      m.bindPopup(() => coordPopup(m.getLatLng(), m.__pin ? { kind: 'pin', marker: m, clicked: m.getLatLng(), ll: m.getLatLng() } : null), POPUP_OPTS);
       return m;
     }
+    // Named pins (set from the popup or the place search): a name label beside them, remembered for this
+    // browser session (sessionStorage), and exportable as GPX waypoints – one pin or all of them.
+    const PIN_KEY = 'gcct.pins';
+    let pinRecs = [];
+    try { pinRecs = JSON.parse(sessionStorage.getItem(PIN_KEY) || '[]') || []; } catch (e) { pinRecs = []; }
+    const savePins = () => { try { sessionStorage.setItem(PIN_KEY, JSON.stringify(pinRecs)); } catch (e) { /* blocked */ } };
+    const pinLabelHtml = name => `${icon('pin', 12)} ${esc(name)}`;
+    function namedPin(ll, name, rec) {
+      if (!rec) {
+        let n = pinRecs.length + 1;
+        while (pinRecs.some(r => r.name === T('Pin {n}', { n }))) n++;
+        rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lat: +ll.lat.toFixed(6), lng: +ll.lng.toFixed(6), name: name || T('Pin {n}', { n }), t: new Date().toISOString() };
+        pinRecs.push(rec); savePins();
+      }
+      const m = pin(L.latLng(rec.lat, rec.lng));
+      m.__pin = rec;
+      m.__label = label(L.latLng(rec.lat, rec.lng), pinLabelHtml(rec.name));
+      return m;
+    }
+    function removePin(m) {
+      tools.removeLayer(m);
+      if (m.__label) tools.removeLayer(m.__label);
+      if (m.__pin) { pinRecs = pinRecs.filter(r => r.id !== m.__pin.id); savePins(); }
+    }
+    function renamePin(m, name) {
+      if (!m.__pin) return;
+      m.__pin.name = name.trim() || m.__pin.name;
+      savePins();
+      if (m.__label) { tools.removeLayer(m.__label); m.__label = label(m.getLatLng(), pinLabelHtml(m.__pin.name)); }
+    }
+    const xmlEsc = t => String(t).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
+    function downloadGpx(recs, fileName) {
+      const wpts = recs.map(r => `  <wpt lat="${r.lat}" lon="${r.lng}">\n    <time>${r.t || new Date().toISOString()}</time>\n    <name>${xmlEsc(r.name)}</name>\n    <sym>Flag, Blue</sym>\n  </wpt>`).join('\n');
+      const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n${wpts}\n</gpx>\n`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
+      a.download = fileName;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    const safeName = t => String(t).replace(/[^\p{L}\p{N}._ -]+/gu, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'pin';
     function label(ll, html) {
       return L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-label', html, iconSize: null, iconAnchor: [-10, 10] }) }).addTo(tools);
     }
@@ -3624,12 +3671,18 @@
         const nm = String(snap.name || '').replace(snap.code || '\u0000', '').replace(/^[\s·:–-]+/, '').trim();
         const sn = document.createElement('div');
         sn.className = 'snap';
-        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t"><b>${esc(T('Your pin'))}</b></span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
+        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t">${snap.marker && snap.marker.__pin ? `<input class="pinname" title="${esc(T('Pin name'))}" value="${esc(snap.marker.__pin.name)}">` : `<b>${esc(T('Your pin'))}</b>`}</span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
         const use = document.createElement('button');
         use.type = 'button'; use.className = 'lnk'; use.textContent = T('Use clicked point');
         use.onclick = e => { e.stopPropagation(); openCoordPopup(snap.clicked, false); };
         sn.appendChild(use);
         box.appendChild(sn);
+        const pn = sn.querySelector('.pinname');
+        if (pn) {
+          ['mousedown', 'dblclick', 'keydown', 'contextmenu'].forEach(ev => pn.addEventListener(ev, e => e.stopPropagation()));
+          pn.addEventListener('change', () => renamePin(snap.marker, pn.value));
+          pn.addEventListener('keydown', e => { if (e.key === 'Enter') { renamePin(snap.marker, pn.value); pn.blur(); } });
+        }
       }
       // One line with the coordinates, always opening in DMM; click it to switch notation / system.
       const r = document.createElement('div');
@@ -3660,8 +3713,11 @@
       const acts = document.createElement('div');
       acts.className = 'acts';
       const btn = (ico, t, fn) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = icon(ico, 16) + `<span>${esc(t)}</span>`; b.onclick = () => { map.closePopup(); fn(); }; acts.appendChild(b); };
-      if (snap && snap.kind === 'pin') btn('x', T('Remove pin'), () => { tools.removeLayer(snap.marker); });
-      else btn('pin', T('Pin'), () => pin(ll));
+      if (snap && snap.kind === 'pin') {
+        btn('x', T('Remove pin'), () => removePin(snap.marker));
+        if (snap.marker.__pin) btn('download', T('Download GPX'), () => downloadGpx([snap.marker.__pin], safeName(snap.marker.__pin.name) + '.gpx'));
+      } else btn('pin', T('Pin'), () => namedPin(ll, snap && snap.code ? snap.code + (snap.name ? ' ' + String(snap.name).replace(snap.code, '').replace(/^[\s·:–-]+/, '').trim() : '') : null));
+      if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${new Date().toISOString().slice(0, 10)}.gpx`));
       btn('compass', T('Project…'), () => projectFrom(ll));
       if (circles.some(o => o.c.distanceTo(ll) <= 161)) btn('x', T('Remove circle'), () => removeCircleAt(ll));
       else btn('ring', T('161 m circle'), () => circle161(ll));
@@ -4665,7 +4721,7 @@
         homeBtn = add(null, 'home', () => { const h = load('gcct.home', null); return h ? T('Go home: {name}  (right-click the button to change)', { name: h.name }) : T('Set your home address'); }, goHome);
         homeBtn.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openSearch({ home: true }); });
         fsBtn = add(null, 'expand', () => T(document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'), fullscreen);
-        add(null, 'eraser', 'Clear all drawings', () => { tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); }).classList.add('sep');
+        add(null, 'eraser', 'Clear all drawings', () => { tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); pinRecs = []; savePins(); }).classList.add('sep');
         add(null, 'gear', 'Settings', () => api.openSettings && api.openSettings()).classList.add('sep');
         return bar;
       },
@@ -4867,8 +4923,7 @@
         } else {
           map.setView(ll, r.zoom || 15);
         }
-        pin(ll);
-        label(ll, esc(r.name));
+        namedPin(ll, r.name);
       }
 
       q.oninput = () => { clearTimeout(timer); timer = setTimeout(search, 300); };
@@ -4940,6 +4995,8 @@
       coordCtl.getContainer().querySelector('.zin').title = T('Zoom level – type a number to zoom');
       coordCtl.getContainer().querySelector('.zl').textContent = T('Zoom');
     }
+    // Pins remembered from earlier in this browser session.
+    try { pinRecs.slice().forEach(r => { if (isFinite(r.lat) && isFinite(r.lng)) namedPin(null, null, r); }); } catch (e) { /* ignore */ }
     return { barEl: barCtl.getContainer(), coordEl: coordCtl.getContainer(), relabel };
   }
 })();
