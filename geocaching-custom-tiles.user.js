@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.47.2
+// @version      1.47.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3497,6 +3497,8 @@
       .gcct-pop .snap .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .gcct-pop .snap a.gc{font-weight:700;color:var(--acc)!important;text-decoration:none;cursor:pointer!important;pointer-events:auto!important}
       .gcct-pop .snap a.gc:hover{text-decoration:underline}
+      .gcct-pinlbl{pointer-events:none!important;width:auto!important;height:auto!important}
+      .gcct-pinlbl .gcct-label{display:inline-block;transform:translateY(-100%)}
       .gcct-pop .snap .pinname-t{cursor:text;border-bottom:1px dashed transparent}
       .gcct-pop .snap .pinname-t:hover{border-bottom-color:var(--acc)}
       .gcct-pop .snap input.pinname{width:100%;min-width:0;box-sizing:border-box;font:600 13px/1.3 inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px}
@@ -3615,7 +3617,7 @@
       }
       const m = pin(L.latLng(rec.lat, rec.lng));
       m.__pin = rec;
-      m.__label = label(L.latLng(rec.lat, rec.lng), pinLabelHtml(rec.name));
+      m.__label = pinLabel(L.latLng(rec.lat, rec.lng), pinLabelHtml(rec.name));
       showPin(m);
       return m;
     }
@@ -3628,7 +3630,7 @@
       if (!m.__pin) return;
       m.__pin.name = name.trim() || m.__pin.name;
       savePins();
-      if (m.__label) { tools.removeLayer(m.__label); m.__label = label(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); }
+      if (m.__label) { tools.removeLayer(m.__label); m.__label = pinLabel(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); }
     }
     const xmlEsc = t => String(t).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
     function downloadGpx(recs, fileName) {
@@ -3643,6 +3645,10 @@
     const safeName = t => String(t).replace(/[^\p{L}\p{N}._ -]+/gu, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'pin';
     function label(ll, html) {
       return L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-label', html, iconSize: null, iconAnchor: [-10, 10] }) }).addTo(tools);
+    }
+    // A pin's name: above and to the right of the pin.
+    function pinLabel(ll, html) {
+      return L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-pinlbl', html: `<span class="gcct-label">${html}</span>`, iconSize: null, iconAnchor: [-6, 5] }) }).addTo(tools);
     }
     // Circles are drawn as 180-point polygons computed on the sphere (no line simplification). That avoids L.circle,
     // whose signature differs between Leaflet 0.7 and 1.x, and is exact at any latitude.
