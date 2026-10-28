@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.9
+// @version      1.53.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -211,6 +211,18 @@
     "Solved": "Løst",
     "Found": "Funnet",
     "Owned": "Eiet",
+    "Geocaches on the map": "Geocacher på kartet",
+    "Cache list and route": "Cacheliste og rute",
+    "Route window": "Rutevindu",
+    "Zoom to it on the map": "Zoom til den på kartet",
+    "Open the cache page in a new tab": "Åpne cachesiden i en ny fane",
+    "Filter by code or name …": "Filtrer på kode eller navn …",
+    "{n} of {m} geocaches on the map": "{n} av {m} geocacher på kartet",
+    "{n} geocaches on the map, nearest the middle first": "{n} geocacher på kartet, nærmest midten først",
+    "Show on the map and open the cache page": "Vis på kartet og åpne cachesiden",
+    "Zoom in to see the geocaches here.": "Zoom inn for å se geocachene her.",
+    "No geocaches here yet.": "Ingen geocacher her ennå.",
+    "Geocaches on the map: a list that follows the map – click one to zoom to it": "Geocacher på kartet: en liste som følger kartet – klikk på en for å zoome til den",
     "Pin (tag)": "Nål",
     "In the route": "I ruten",
     "Move up": "Flytt opp",
@@ -424,6 +436,8 @@
     heart: '<path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.8 6.8 4.6c2.1-.1 3.9 1.1 5.2 3 1.3-1.9 3.1-3.1 5.2-3 3.4.2 5.3 3.6 4.1 6.7-1.8 4.6-9.3 9.2-9.3 9.2Z"/>',
     layers: '<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/>',
+    external: '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    list: '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="4" cy="18" r="1.2"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     minus: '<path d="M5 12h14"/>',
     ruler: '<path d="M2 17 17 2l5 5L7 22Z"/><path d="m6 13 2.5 2.5M9.5 9.5 12 12M13 6l2.5 2.5"/>',
@@ -490,6 +504,7 @@
   const SCRIPT_VERSION = (() => { try { return GM_info.script.version; } catch (e) { return '?'; } })();
   try { localStorage.removeItem('gcct.physical'); } catch (e) { /* the old "Physical here" marks (removed in 1.33) */ }
   const TRADITIONAL = 2;
+  const PLAY_MAP = /^\/play\/map/.test(location.pathname);   // the new search map
 
   const CACHE_INFO = new Map();              // code -> { type, solved, corrected: {lat,lng} | null }
   const seenThisVisit = new Set();           // codes the site has told us about since the page loaded
@@ -2451,6 +2466,54 @@
       d.style.bottom = p.top == null ? p.bottom + 'px' : 'auto';
       d.style.maxHeight = p.maxHeight;
     }
+    // A side panel: at the map's left or right edge, never in the middle – beside the toolbar when it is
+    // on a side, otherwise at the right edge (left if the right edge is taken), as tall as the controls allow.
+    function placeSide(d) {
+      const mr0 = map.getContainer().getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight, gap = 8;
+      // The part of the map you see: right of the site's side panel (it lies over the map) and inside the window.
+      let panel = 0;
+      try { panel = leftPanelOffset(); } catch (e) { panel = 0; }
+      const mr = { left: Math.max(0, mr0.left + panel), right: Math.min(vw, mr0.right), top: Math.max(0, mr0.top), bottom: Math.min(vh, mr0.bottom) };
+      const w = d.offsetWidth || 380, tbSide = state.tbSide || 'right', want = state.clSide === 'left' ? 'left' : 'right';
+      let tb = null;
+      try { tb = dock.getBoundingClientRect(); } catch (e) { tb = null; }
+      let obs = [];
+      try { obs = collectObstacles([dock]); } catch (e) { /* none */ }
+      if (tb) obs.push(tb);
+      const ce = toolsUi && toolsUi.coordEl;
+      if (ce && ce.offsetWidth) obs.push(ce.getBoundingClientRect());
+      obs = obs.filter(o => o.width && o.height);
+      const top0 = Math.max(10, mr.top + 10), bot0 = Math.min(vh - 10, mr.bottom - 10);
+      // The free height in a column: below what sits in its upper half, above what sits in its lower half.
+      const column = left => {
+        const across = obs.filter(o => o.left < left + w + gap && o.right > left - gap);
+        const mid = (top0 + bot0) / 2;
+        const top = Math.max(top0, ...across.filter(o => (o.top + o.bottom) / 2 < mid).map(o => o.bottom + gap));
+        const bottom = Math.min(bot0, ...across.filter(o => (o.top + o.bottom) / 2 >= mid).map(o => o.top - gap));
+        return { left, top, h: bottom - top };
+      };
+      // At the chosen edge – beside the toolbar when the toolbar is on that edge.
+      let x = want === 'left' ? (tbSide === 'left' && tb ? tb.right + 10 : mr.left + 10)
+        : (tbSide === 'right' && tb ? tb.left - 10 - w : mr.right - 10 - w);
+      x = Math.max(10, Math.min(vw - w - 10, x));
+      const best = column(x);
+      Object.assign(d.style, { left: best.left + 'px', right: 'auto', top: best.top + 'px', bottom: 'auto', height: Math.max(200, best.h) + 'px', maxHeight: 'none' });
+      d.classList.add('sized');
+      // Follow the side panel (opened, closed, resized), the toolbar and the window while it is open.
+      if (!d._sideTimer) {
+        let sig = '';
+        const sigNow = () => { const r = map.getContainer().getBoundingClientRect(); let t = ''; try { const q = dock.getBoundingClientRect(); t = [q.left, q.top, q.width, q.height].map(Math.round).join(','); } catch (e) { /* none */ }
+          return [Math.round(r.left), Math.round(r.right), Math.round(r.top), Math.round(r.bottom), panelOffsetOf(leftPanelEl, r), t, state.clSide, state.tbSide, innerWidth, innerHeight].join('|'); };
+        sig = sigNow();
+        d._sideTimer = setInterval(() => {
+          if (!d.isConnected) { clearInterval(d._sideTimer); return; }
+          if (d.dataset.moved) return;                                   // you moved it yourself: leave it
+          let now = '';
+          try { now = sigNow(); } catch (e) { return; }
+          if (now !== sig) { sig = now; placeSide(d); }
+        }, 250);
+      }
+    }
     let lastFill = null;
     window.gcctDialogTest = () => lastFill;
     // Stretch a placed dialog up and down as far as the window and the controls around it allow.
@@ -2516,7 +2579,7 @@
       }
       return { left, top, maxHeight: `${Math.max(150, bottomLimit - top)}px` };
     }
-    window.addEventListener('resize', () => { if (dlgEl && !dlgEl.dataset.moved) placeDialog(dlgEl); });
+    window.addEventListener('resize', () => { if (dlgEl && !dlgEl.dataset.moved) { if (dlgEl.classList.contains('gcct-route')) placeSide(dlgEl); else placeDialog(dlgEl); } });
     const setStatus = (el, msg, cls = '') => { el.textContent = msg; el.className = 'status ' + cls; };
 
     // --- Layer editor --------------------------------------------------------
@@ -2821,6 +2884,7 @@
       const d = openDialog(T('Settings'), `
         <div class="row2"><label class="f"><span class="l">${T('Toolbar')}</span><select data-a="tbside">${sideOpts}</select></label>
         <label class="f"><span class="l">${T('Buttons in')}</span><select data-a="tbcols">${lineOpts}</select></label></div>
+        <label class="f"><span class="l">${T(PLAY_MAP ? 'Route window' : 'Cache list and route')}</span><select data-a="clside"><option value="right" ${state.clSide !== 'left' ? 'selected' : ''}>${T('Right')}${dflt}</option><option value="left" ${state.clSide === 'left' ? 'selected' : ''}>${T('Left')}</option></select></label>
         <label class="f"><span class="l">${T('Language')}</span><select data-a="lang"><option value="en" ${LANG === 'en' ? 'selected' : ''}>English</option><option value="no" ${LANG === 'no' ? 'selected' : ''}>Norsk</option></select></label>
         <div class="favset"><b>${T('Favourite points')}</b>
           <label class="chk"><input type="checkbox" data-a="favshow" ${state.favShow !== false ? 'checked' : ''}> ${T('Show ♥ and the number by caches on the map (from zoom 15)').replace('♥', '<span class="gcct-fav">♥</span>')}</label>
@@ -2833,6 +2897,8 @@
         <div class="btns"><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true });
       d.querySelector('[data-a=cancel]').onclick = closeDialog;
       d.querySelector('[data-a=tbside]').onchange = e => { state.tbSide = e.target.value; save(STORE_STATE, state); applyToolbarLayout(); };
+      const cls = d.querySelector('[data-a=clside]');
+      if (cls) cls.onchange = e => { state.clSide = e.target.value; save(STORE_STATE, state); };   // an open list moves at once
       d.querySelector('[data-a=tbcols]').onchange = e => { state.tbCols = +e.target.value; save(STORE_STATE, state); applyToolbarLayout(); syncLinesSelect(); };
       syncLinesSelect();
       d.querySelector('[data-a=coords]').onchange = e => setCoordsVisible(e.target.checked);
@@ -2871,7 +2937,7 @@
       if (ce) ce.style.display = state.showCoords === false ? 'none' : '';
     }
 
-    const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
+    const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, placeSide, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
       favSettings: () => ({ show: state.favShow !== false, min: state.favMin ?? 10 }),
       dtSettings: () => ({ show: state.dtShow !== false }),
       ftfSettings: () => ({ show: state.ftfShow !== false }),
@@ -3638,6 +3704,21 @@
       .gcct-route .rt-row:last-child{border-bottom:0}
       .gcct-route .rt-row:hover{background:var(--hover)}
       .gcct-route .rt-row.in{opacity:.55;cursor:default}
+      .gcct-route .rt-row.on{background:var(--hover);box-shadow:inset 3px 0 0 var(--acc)}
+      .gcct-cachelist .cl-list{max-height:none;flex:1 1 0;margin-bottom:0}
+      .gcct-cachelist .cl-sum{margin:6px 0 8px}
+      .gcct-cachelist .cl-row{position:relative;padding-right:40px}
+      .gcct-cachelist .cl-row .rt-t{white-space:normal}
+      .gcct-cachelist .cl-row.hov{background:#fffbe0}
+      .gcct-cachelist .cl-row.on{background:#fff8c5;box-shadow:inset 3px 0 0 #bf8700}
+      .gcct-glow{pointer-events:none!important;background:none!important;border:0!important;mix-blend-mode:multiply}
+      .gcct-glow span{display:block;width:100%;height:100%;border-radius:50%;
+        background:radial-gradient(circle closest-side,rgba(255,190,0,0) 12px,rgba(255,190,0,.55) 14px,rgba(255,190,0,.32) 22px,rgba(255,190,0,.12) 32px,rgba(255,190,0,0) 42px);
+        animation:gcct-glow 1.8s ease-in-out infinite alternate}
+      @keyframes gcct-glow{from{opacity:.65}to{opacity:1}}
+      @media (prefers-reduced-motion:reduce){.gcct-glow span{animation:none}}
+      .gcct-cachelist .cl-open{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--acc);cursor:pointer;padding:0}
+      .gcct-cachelist .cl-open:hover{background:var(--hover)}
       .gcct-route .rt-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
       .gcct-route .rt-m{font-size:12px;color:var(--muted)}
       .gcct-route em.tag{font-style:normal;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;margin-left:4px}
@@ -3665,7 +3746,9 @@
       .gcct-route .rt-route li button{border:1px solid var(--line);background:#fff;border-radius:6px;width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
       .gcct-route .rt-route li button:disabled{opacity:.35;cursor:default}
       .gcct-route .rt-route li.gm{color:var(--muted)}
-      .gcct-dlg.gcct-route{width:min(580px,calc(100vw - 20px))}
+      .gcct-dlg.gcct-route{width:min(380px,calc(100vw - 20px))}
+      .gcct-route th,.gcct-route td{padding:4px 5px!important} .gcct-route th{white-space:normal!important} .gcct-route td.rt-go{overflow-wrap:anywhere}
+      .gcct-route td.mono{font-size:11px!important} .gcct-route .rt-desc{font-size:11px}
       .gcct-route .rt-gpx{display:inline-flex;align-items:center;gap:6px}
       .gcct-route .rt-go{cursor:pointer}
       .gcct-route .rt-ic{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:6px;object-fit:contain}
@@ -4662,7 +4745,7 @@
       console.log('[gcct] circles', out);
       return out;
     };
-    window.__gcctInfoChanged = () => { clearTimeout(window.__gcctInfoT); window.__gcctInfoT = setTimeout(() => refreshAuto(), 300); if (window.__gcctFavKick) window.__gcctFavKick(); };
+    window.__gcctInfoChanged = () => { clearTimeout(window.__gcctInfoT); window.__gcctInfoT = setTimeout(() => refreshAuto(), 300); if (window.__gcctFavKick) window.__gcctFavKick(); (window.__gcctInfoHooks || []).forEach(f => { try { f(); } catch (e) { /* ignore */ } }); };
     // The sidebar filters on /map, read from its buttons: a filter that is off has the class
     // "ct_untoggled" (My Finds = ct_mf, My Hides = ct_mo, My DNFs = ct_mdnf, types = ct_toggle with
     // data-typeid). The site's cache list itself ignores these filters, so we apply them ourselves.
@@ -4912,6 +4995,8 @@
         add(null, 'search', 'Search place, address or coordinates  ( / )', openSearch).classList.add('sep');
         add('measure', 'ruler', 'Measure distance & bearing (click points, double-click for new line, Esc to stop)', () => setMode('measure'));
         add(null, 'route', 'Route: pick geocaches and pins, and export them as a GPX route', openRoute);
+        // The new map (/play/map) has its own list of caches, so the cache list is only on the old one.
+        if (!PLAY_MAP) add(null, 'list', 'Geocaches on the map: a list that follows the map – click one to zoom to it', openCacheList);
         autoBtn = add(null, 'circles', () => T('161 m circles around traditional caches, physical stages and caches with solved coordinates (from zoom {z}). Right-click the map for a single circle anywhere.', { z: AUTO_MIN_ZOOM }), () => setAuto(!autoOn));
         autoBtn.classList.add('danger');
         marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off). Always shown with the 161 m circles.', { z: MARK_MIN_ZOOM }), () => setMarks(!marksOn));
@@ -5540,7 +5625,119 @@ ${pts}
       e.preventDefault(); e.stopImmediatePropagation();
       if (addStop(x)) toast(T('Added to the route: {name}', { name: x.kind === 'cache' ? x.code : x.name }));
     }, true);
+    // --- Cache list (the old map only) ---------------------------------------------------------------
+    // The geocaches on the map you see, nearest the middle first, kept up to date as the map moves and
+    // as the site's cache search answers. Click one to zoom to it and open its cache page in a new tab.
+    let clDlg = null, clRefresh = null;
+    const clOpen = () => !!(clDlg && clDlg.isConnected);
+    map.on('moveend', () => { if (clOpen() && clRefresh) clRefresh(); });
+    // Hovering a geocache on the map highlights it in the list.
+    let clHover = null, clHoverT = 0;
+    map.on('mousemove', e => {
+      if (!clOpen() || !clHover) return;
+      const now = Date.now();
+      if (now - clHoverT < 120) return;
+      clHoverT = now;
+      let c = null;
+      try { c = nearestCache(e.latlng); } catch (err) { c = null; }
+      clHover(c && c.code);
+    });
+    map.on('mouseout', () => { if (clOpen() && clHover) clHover(null); });
+    (window.__gcctInfoHooks ||= []).push(() => { if (clOpen() && clRefresh) { clearTimeout(clRefresh.t); clRefresh.t = setTimeout(() => clOpen() && clRefresh(), 400); } });
+    function openCacheList() {
+      if (clOpen()) { api.closeDialog(); return; }           // the button opens and closes it
+      const d = api.openDialog(T('Geocaches on the map'), `
+        <input class="gcct-q rt-q" placeholder="${esc(T('Filter by code or name …'))}">
+        <p class="hint cl-sum"></p>
+        <div class="rt-list cl-list"></div>`, { cls: 'gcct-route gcct-cachelist', small: true });
+      const q = d.querySelector('.rt-q'), list = d.querySelector('.cl-list'), sum = d.querySelector('.cl-sum');
+      let picked = null, items = [], backView = null;
+      const typeIcon = c => {
+        const t = c.type != null ? c.type : (CACHE_INFO.get(c.code) || {}).type;
+        return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
+          : '<span class="rt-ic rt-ic-dot"></span>';
+      };
+      const tags = c => [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
+        window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
+      function draw() {
+        const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
+        let bb = null;
+        try { bb = map.getBounds(); } catch (e) { bb = null; }
+        let c = routeCandidates().filter(x => x.kind === 'cache' && (!bb || bb.contains(L.latLng(x.lat, x.lng))));
+        const inView = c.length;
+        if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
+        c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); const i = CACHE_INFO.get(x.code) || {}; x.fav = i.fav; x.dt = x.dt || (i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : ''); });
+        c.sort((a, b) => a.d - b.d);
+        items = c.slice(0, 300);
+        sum.textContent = text ? T('{n} of {m} geocaches on the map', { n: c.length, m: inView }) : T('{n} geocaches on the map, nearest the middle first', { n: inView });
+        list.innerHTML = items.map((x, i) => `<div class="rt-row cl-row${picked === x.code ? ' on' : ''}${hovered === x.code ? ' hov' : ''}" data-i="${i}" data-code="${esc(x.code)}" title="${esc(T('Zoom to it on the map'))}">
+            <span class="rt-t">${typeIcon(x)}<b>${esc(x.code)}</b>${x.name ? ' · ' + esc(x.name) : ''} ${tags(x)}</span>
+            <span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${x.fav ? '♥ ' + esc(x.fav) + ' · ' : ''}${fmtDist(x.d)}</span>
+            <button class="cl-open" title="${esc(T('Open the cache page in a new tab'))}" aria-label="${esc(T('Open the cache page in a new tab'))}">${icon('external', 15)}</button></div>`).join('')
+          || `<div class="gm">${esc(map.getZoom() < 12 ? T('Zoom in to see the geocaches here.') : T('No geocaches here yet.'))}</div>`;
+        list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
+          const x = items[+el.dataset.i];
+          if (!x) return;
+          // The same cache again: let go of it and go back to the view from before you picked one.
+          if (picked === x.code) {
+            picked = null;
+            list.querySelectorAll('.rt-row.on').forEach(r => r.classList.remove('on'));
+            clLayer.clearLayers();
+            if (backView) { const v = backView; backView = null; map.setView(v.c, v.z); }
+            return;
+          }
+          if (!picked) backView = { c: map.getCenter(), z: map.getZoom() };   // the view to come back to
+          picked = x.code;
+          list.querySelectorAll('.rt-row.on').forEach(r => r.classList.remove('on'));
+          el.classList.add('on');
+          // All the way in, and the cache ringed on the map like its row in the list.
+          let z = 18;
+          try { const mz = map.getMaxZoom(); z = isFinite(mz) && mz > 0 ? mz : 18; } catch (e) { z = 18; }
+          const ll = L.latLng(x.lat, x.lng);
+          try { showInFree(ll, z, d); } catch (e) { map.setView(ll, z); }
+          clMark(ll, x.code);
+        });
+        list.querySelectorAll('.cl-open').forEach(b => b.onclick = e => {
+          e.stopPropagation();
+          const x = items[+b.closest('.rt-row').dataset.i];
+          if (x) window.open('https://www.geocaching.com/geocache/' + encodeURIComponent(x.code), '_blank', 'noopener');
+        });
+      }
+      // The ring on the map at the cache you picked; gone when the list closes.
+      const clLayer = L.layerGroup().addTo(map);
+      clLayer.__gcct = true;
+      const clMark = (ll, code) => {
+        clLayer.clearLayers();
+        // A solved cache you have found: the site's icon has gone back to the posted coordinates, so show
+        // our mark at the solved spot (as with the marks button) – whether or not the marks are on.
+        const i = CACHE_INFO.get(code) || {};
+        if (code && i.solved && i.corrected && i.found === true) {
+          try { const m = solvedMark(ll, code); m.__gcct = true; clLayer.addLayer(m); } catch (e) { /* no mark */ }
+        }
+        // A soft glow: warm yellow at the cache fading out to nothing, multiplied onto the map so the icon shows through.
+        const glow = L.marker(ll, { pane: 'overlayPane', interactive: false, keyboard: false,
+          icon: L.divIcon({ className: 'gcct-glow', html: '<span></span>', iconSize: [84, 84], iconAnchor: [42, 42] }) });
+        glow.__gcct = true;
+        clLayer.addLayer(glow);
+      };
+      d._onClose = () => { try { map.removeLayer(clLayer); } catch (e) { /* gone */ } };
+      let hovered = null;
+      clHover = code => {
+        if (code === hovered) return;
+        hovered = code || null;
+        list.querySelectorAll('.rt-row.hov').forEach(r => r.classList.remove('hov'));
+        if (!hovered) return;
+        const el = list.querySelector(`.rt-row[data-code="${CSS.escape(hovered)}"]`);
+        if (el) { el.classList.add('hov'); el.scrollIntoView({ block: 'nearest' }); }
+      };
+      clDlg = d; clRefresh = draw;
+      q.oninput = draw;
+      q.addEventListener('keydown', e => e.stopPropagation());
+      draw();
+      if (api.placeSide) api.placeSide(d); else if (api.fillHeight) api.fillHeight(d);
+    }
     function openRoute() {
+      if (routeOpen()) { api.closeDialog(); return; }            // the button opens and closes it
       const d = api.openDialog(T('Route'), `
         <input class="gcct-q rt-q" placeholder="${esc(T('Search code or name …'))}">
         <p class="hint">${esc(T('Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.'))}</p>
@@ -5706,8 +5903,8 @@ ${pts}
       q.oninput = drawList;
       q.addEventListener('keydown', e => e.stopPropagation());
       drawList(); drawRouteList();
-      // As tall as the window allows (drag the top or bottom edge to make it shorter).
-      if (api.fillHeight) api.fillHeight(d);
+      // At the same edge as the cache list (Settings), as tall as the window allows (drag an edge to make it shorter).
+      if (api.placeSide) api.placeSide(d); else if (api.fillHeight) api.fillHeight(d);
       setTimeout(() => q.focus(), 0);
     }
     drawRoute();
