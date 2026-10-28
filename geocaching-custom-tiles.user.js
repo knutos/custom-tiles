@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.5
+// @version      1.51.6
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -397,6 +397,8 @@
     return out;
   }
   const presetName = d => (LANG === 'no' && d.name_no) || d.name;
+  // Local date and time for file names (2026-10-28-121305), so several files on one day don't overwrite each other.
+  const fileStamp = (n = new Date(), p2 = v => String(v).padStart(2, '0')) => `${n.getFullYear()}-${p2(n.getMonth() + 1)}-${p2(n.getDate())}-${p2(n.getHours())}${p2(n.getMinutes())}${p2(n.getSeconds())}`;
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -3932,7 +3934,7 @@
         btn('x', T('Remove pin'), () => removePin(snap.marker));
         if (snap.marker.__pin) btn('download', T('Download GPX'), () => downloadGpx([snap.marker.__pin], safeName(snap.marker.__pin.name) + '.gpx'));
       } else btn('pin', T('Pin'), () => namedPin(ll, snap && snap.code ? snap.code + (snap.name ? ' ' + String(snap.name).replace(snap.code, '').replace(/^[\s·:–-]+/, '').trim() : '') : null));
-      if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${new Date().toISOString().slice(0, 10)}.gpx`));
+      if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${fileStamp()}.gpx`));
       if (route.length || routeOpen()) {
         const st = snap && snap.kind === 'pin' && snap.marker && snap.marker.__pin ? { key: 'p:' + snap.marker.__pin.id, kind: 'pin', name: snap.marker.__pin.name, lat: snap.marker.__pin.lat, lng: snap.marker.__pin.lng }
           : snap && snap.code ? { key: 'c:' + snap.code, kind: 'cache', code: snap.code, name: (CACHE_INFO.get(snap.code) || {}).name || snap.name || '', lat: ll.lat, lng: ll.lng } : null;
@@ -5684,9 +5686,7 @@ ${pts}
         try {
           const full = !!(fullBox && fullBox.checked);
           const { text, failed } = await routeGpx((n, of) => { if (n === 1 && of > 1) toast(T('Fetching {n} geocaches …', { n: of })); }, full);
-          // Local date and time in the name, so several routes on one day don't overwrite each other.
-          const n = new Date(), p2 = v => String(v).padStart(2, '0');
-          saveFile(text, `route-${n.getFullYear()}-${p2(n.getMonth() + 1)}-${p2(n.getDate())}-${p2(n.getHours())}${p2(n.getMinutes())}${p2(n.getSeconds())}.gpx`, 'application/gpx+xml');
+          saveFile(text, `route-${fileStamp()}.gpx`, 'application/gpx+xml');
           if (failed.length) toast(T('Could not fetch {list} – only in the route, without description.', { list: failed.join(', ') }));
         } finally { b.disabled = false; }
       };
