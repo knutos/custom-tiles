@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.53.0
+// @version      1.53.5
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3848,8 +3848,17 @@
       if (map.getMinZoom) zi.min = map.getMinZoom();
       if (map.getMaxZoom && isFinite(map.getMaxZoom())) zi.max = map.getMaxZoom();
     }
-    map.on('mousemove', e => { lastLL = e.latlng; updCoord(); });
-    map.on('zoomend', () => { const zi = coordCtl.getContainer().querySelector('.zin'); if (zi && document.activeElement === zi) zi.blur(); updZoom(); });
+    // The coordinates are those under the mouse; when the map moves or zooms by itself (from a list, a
+    // search, the buttons) they follow: the point now under the mouse, or the middle when the mouse is elsewhere.
+    let lastPt = null;
+    map.on('mousemove', e => { lastLL = e.latlng; lastPt = e.containerPoint || null; updCoord(); });
+    map.on('mouseout', () => { lastPt = null; });
+    map.on('zoomend', () => { const zi = coordCtl.getContainer().querySelector('.zin'); if (zi && document.activeElement === zi) zi.blur(); });
+    const followView = () => {
+      try { lastLL = lastPt ? map.containerPointToLatLng(lastPt) : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
+      try { updZoom(); } catch (e) { /* not ready */ }
+    };
+    ['zoom', 'move', 'zoomend', 'moveend'].forEach(ev => map.on(ev, followView));
     updCoord();
     updZoom();
 
@@ -4656,6 +4665,8 @@
         if (e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
         window.open('https://www.geocaching.com/geocache/' + encodeURIComponent(w.code), '_blank', 'noopener');
       });
+      m.on('mouseover', () => window.__gcctMarkHover && window.__gcctMarkHover(w.code));
+      m.on('mouseout', () => window.__gcctMarkHover && window.__gcctMarkHover(null));
       return m;
     }
     // Clickable mark at a solved position: opens the cache page in a new tab (right-click works as anywhere else).
@@ -4683,6 +4694,8 @@
         g.on('add', () => {
           const el = g.getElement ? g.getElement() : g._icon;
           if (el) ['mousemove', 'mouseover', 'mouseout', 'pointermove', 'pointerover', 'pointerout'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
+          // The map never hears the mouse here, so tell the cache list directly.
+          if (el) { el.addEventListener('mouseenter', () => window.__gcctMarkHover && window.__gcctMarkHover(code)); el.addEventListener('mouseleave', () => window.__gcctMarkHover && window.__gcctMarkHover(null)); }
         });
         // The site finds the cache under the pointer from its last mouse move, which the mark held back:
         // tell it where the pointer is just before the click passes on to the map.
@@ -4703,6 +4716,9 @@
         if (e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
         window.open('https://www.geocaching.com/geocache/' + encodeURIComponent(code), '_blank', 'noopener');
       });
+      // Marks don't pass the mouse on to the map, so tell the cache list directly.
+      m.on('mouseover', () => window.__gcctMarkHover && window.__gcctMarkHover(code));
+      m.on('mouseout', () => window.__gcctMarkHover && window.__gcctMarkHover(null));
       return m;
     }
     // Caches in view that the site's search left out (typically your own) once it has answered for the
@@ -5632,17 +5648,32 @@ ${pts}
     const clOpen = () => !!(clDlg && clDlg.isConnected);
     map.on('moveend', () => { if (clOpen() && clRefresh) clRefresh(); });
     // Hovering a geocache on the map highlights it in the list.
-    let clHover = null, clHoverT = 0;
+    // Found from the list's own caches (where the list puts them, and where the site draws a found solved
+    // cache: its posted coordinates), so every line can light up – a few times a second, and once more
+    // when the mouse stops.
+    let lastHoverTest = null;
+    // For the console: what the last mouse move over the map found for the cache list.
+    window.gcctHoverTest = () => lastHoverTest ? Object.assign({}, lastHoverTest, { markHover: lastMarkHover }) : 'Open the cache list and point at a cache first.';
+    let lastMarkHover = null;
+    let clHover = null, clHoverAt = null, clHoverT = 0, clHoverLast = null, clHoverTimer = null;
+    const clHoverNow = () => {
+      clHoverTimer = null;
+      if (!clOpen() || !clHover || !clHoverAt || !clHoverLast) return;
+      clHoverT = Date.now();
+      let code = null;
+      try { code = clHoverAt(clHoverLast); } catch (err) { code = null; }
+      if (!code) { try { const c = nearestCache(clHoverLast); code = c && c.code; } catch (err) { code = null; } }
+      clHover(code);
+    };
     map.on('mousemove', e => {
       if (!clOpen() || !clHover) return;
-      const now = Date.now();
-      if (now - clHoverT < 120) return;
-      clHoverT = now;
-      let c = null;
-      try { c = nearestCache(e.latlng); } catch (err) { c = null; }
-      clHover(c && c.code);
+      clHoverLast = e.latlng;
+      clearTimeout(clHoverTimer);
+      if (Date.now() - clHoverT >= 100) clHoverNow();
+      else clHoverTimer = setTimeout(clHoverNow, 110);
     });
     map.on('mouseout', () => { if (clOpen() && clHover) clHover(null); });
+    window.__gcctMarkHover = code => { if (code) lastMarkHover = code; if (clOpen() && clHover) { clearTimeout(clHoverTimer); clHoverT = Date.now(); clHover(code); } };
     (window.__gcctInfoHooks ||= []).push(() => { if (clOpen() && clRefresh) { clearTimeout(clRefresh.t); clRefresh.t = setTimeout(() => clOpen() && clRefresh(), 400); } });
     function openCacheList() {
       if (clOpen()) { api.closeDialog(); return; }           // the button opens and closes it
@@ -5663,7 +5694,11 @@ ${pts}
         const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
         let bb = null;
         try { bb = map.getBounds(); } catch (e) { bb = null; }
-        let c = routeCandidates().filter(x => x.kind === 'cache' && (!bb || bb.contains(L.latLng(x.lat, x.lng))));
+        // On the map = its solved spot, its posted coordinates or the site's icon is in view (a solved
+        // cache's icon may sit at the posted coordinates while the solved spot is elsewhere).
+        const spots = x => { const i = CACHE_INFO.get(x.code) || {}, kp = knownPos.get(x.code);
+          return [L.latLng(x.lat, x.lng), i.posted && L.latLng(i.posted.lat, i.posted.lng), kp && L.latLng(kp.lat, kp.lng)].filter(Boolean); };
+        let c = routeCandidates().filter(x => x.kind === 'cache' && (!bb || spots(x).some(q => bb.contains(q))));
         const inView = c.length;
         if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
         c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); const i = CACHE_INFO.get(x.code) || {}; x.fav = i.fav; x.dt = x.dt || (i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : ''); });
@@ -5721,6 +5756,31 @@ ${pts}
         clLayer.addLayer(glow);
       };
       d._onClose = () => { try { map.removeLayer(clLayer); } catch (e) { /* gone */ } };
+      // The list's cache nearest the mouse, within the size of an icon.
+      clHoverAt = ll => {
+        const at = map.latLngToContainerPoint(ll);
+        let best = null, bd = 16;
+        lastHoverTest = { at: [Math.round(at.x), Math.round(at.y)], items: items.length, zoom: map.getZoom() };
+        items.forEach(x => {
+          const i = CACHE_INFO.get(x.code) || {};
+          // Where the list has it, its posted coordinates, and where the site's map draws its icon.
+          const kp = knownPos.get(x.code);
+          [L.latLng(x.lat, x.lng), i.posted && L.latLng(i.posted.lat, i.posted.lng), i.corrected && L.latLng(i.corrected.lat, i.corrected.lng), kp && L.latLng(kp.lat, kp.lng)].filter(Boolean).forEach(q => {
+            const p = map.latLngToContainerPoint(q), dd = Math.hypot(p.x - at.x, p.y - at.y);
+            if (dd < bd) { bd = dd; best = x.code; }
+          });
+        });
+        if (lastHoverTest) {
+          lastHoverTest.found = best;
+          // The three list caches nearest the mouse (code, pixels away) – to see why one doesn't light up.
+          lastHoverTest.nearest = items.map(x => { const i = CACHE_INFO.get(x.code) || {}, kp = knownPos.get(x.code);
+            const ds = [L.latLng(x.lat, x.lng), i.posted && L.latLng(i.posted.lat, i.posted.lng), kp && L.latLng(kp.lat, kp.lng)].filter(Boolean)
+              .map(q => { const p = map.latLngToContainerPoint(q); return Math.round(Math.hypot(p.x - at.x, p.y - at.y)); });
+            return [x.code, Math.min(...ds), { solved: !!i.solved, found: i.found === true, posted: !!i.posted, icon: !!kp }]; })
+            .sort((a, b) => a[1] - b[1]).slice(0, 3);
+        }
+        return best;
+      };
       let hovered = null;
       clHover = code => {
         if (code === hovered) return;
