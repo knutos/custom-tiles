@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.6
+// @version      1.51.7
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -210,6 +210,7 @@
     "{n} stops · {d}": "{n} stopp · {d}",
     "Solved": "Løst",
     "Found": "Funnet",
+    "Owned": "Eiet",
     "Pin (tag)": "Nål",
     "In the route": "I ruten",
     "Move up": "Flytt opp",
@@ -3654,6 +3655,7 @@
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
       .gcct-route em.tag-solved{background:#e8f0fa;color:#336699}
       .gcct-route em.tag-found{background:#dafbe1;color:#116329}
+      .gcct-route em.tag-owned{background:#fff8c5;color:#7d4e00}
       .gcct-route .rt-h{margin:4px 0 6px;font-size:14px}
       .gcct-route .rt-sum{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
       .gcct-route .rt-route{flex:1 1 0;min-height:64px;max-height:260px;margin:0 0 4px;padding-left:0;list-style:none;overflow:auto}
@@ -5547,7 +5549,8 @@ ${pts}
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
+      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
+        c.kind === 'cache' && c.code && window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
       const typeIcon = c => {
