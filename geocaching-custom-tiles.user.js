@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.50.1
+// @version      1.50.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3604,7 +3604,9 @@
       .gcct-route .rt-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
       .gcct-route .rt-m{font-size:12px;color:var(--muted)}
       .gcct-route em.tag{font-style:normal;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;margin-left:4px}
-      .gcct-route em.tag-place{background:#fff1e5;color:#953800}
+      .gcct-route em.tag-place{background:#dafbe1;color:#116329}
+      .gcct-route em.tag-addr{background:#ddf4ff;color:#0550ae}
+      .gcct-route em.tag-abroad{background:#fbefff;color:#6639ba}
       .gcct-route .rt-ic-place{color:#1a7f37;display:inline-flex;align-items:center;justify-content:center}
       .gcct-route .rt-sec{padding:6px 10px 4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
@@ -5269,7 +5271,7 @@
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'place' ? `<em class="tag tag-place">${esc(LANG === 'no' ? T('Place (tag)') : 'Place')}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
+      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
       const typeIcon = c => {
@@ -5299,8 +5301,10 @@
         placeTimer = setTimeout(() => {
           placeRes.set(text, 'busy');
           Promise.allSettled([searchNorwayPlaces(text), searchNorwayAddresses(text), searchAbroad(text)]).then(rs => {
-            const all = rs.flatMap(r => r.status === 'fulfilled' ? r.value : []).slice(0, 8);
-            placeRes.set(text, all.map(p => ({ key: 'g:' + p.lat.toFixed(5) + ',' + p.lng.toFixed(5), kind: 'place', name: p.name + (p.sub && p.kind === 'addr' ? ', ' + p.sub.split(' · ')[0] : ''), sub: p.kind === 'addr' ? (p.sub || '').split(' · ').slice(1).join(' · ') : (p.sub || ''), lat: p.lat, lng: p.lng })));
+            // Like Find a place: with a house number addresses come first, otherwise place names; then places abroad.
+            const [pl, ad, ab] = rs.map(r => r.status === 'fulfilled' ? r.value : []);
+            const all = (/\d/.test(text) ? [ad.slice(0, 6), pl.slice(0, 4)] : [pl.slice(0, 5), ad.slice(0, 5)]).concat([ab.slice(0, 3)]).flat();
+            placeRes.set(text, all.map(p => ({ key: 'g:' + p.lat.toFixed(5) + ',' + p.lng.toFixed(5), kind: 'place', pkind: p.kind, name: p.name + (p.sub && p.kind === 'addr' ? ', ' + p.sub.split(' · ')[0] : ''), sub: p.kind === 'addr' ? (p.sub || '').split(' · ').slice(1).join(' · ') : (p.sub || ''), lat: p.lat, lng: p.lng })));
             if (routeOpen() && q.value.trim().toLowerCase() === text) drawList();
           });
         }, 350);
