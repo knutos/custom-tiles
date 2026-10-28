@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.2
+// @version      1.51.6
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -397,6 +397,8 @@
     return out;
   }
   const presetName = d => (LANG === 'no' && d.name_no) || d.name;
+  // Local date and time for file names (2026-10-28-121305), so several files on one day don't overwrite each other.
+  const fileStamp = (n = new Date(), p2 = v => String(v).padStart(2, '0')) => `${n.getFullYear()}-${p2(n.getMonth() + 1)}-${p2(n.getDate())}-${p2(n.getHours())}${p2(n.getMinutes())}${p2(n.getSeconds())}`;
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -2035,6 +2037,7 @@
       .gcct-dlg .rz:hover::after,.gcct-dlg .rz-bottom:hover::after{background:var(--acc)}
       .gcct-dlg.sized .bd{flex:1 1 auto}
       .gcct-route.sized .rt-list,.gcct-route.sized .rt-route,.gcct-route.sized .rt-tbl{max-height:none}
+      .gcct-route.sized .rt-list{flex-grow:3}.gcct-route.sized .rt-route{flex-grow:2}
       .gcct-dlg .hd{flex:none;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 20px;border-bottom:1px solid var(--line);cursor:move;user-select:none}
       .gcct-dlg h3{flex:1;margin:0;font-size:16.5px;font-weight:650;line-height:1.3;color:var(--ink)}
       .gcct-dlg .bd{flex:1 1 auto;min-height:0;overflow:auto;padding:16px 20px 18px;overscroll-behavior:contain}
@@ -2447,6 +2450,30 @@
       d.style.bottom = p.top == null ? p.bottom + 'px' : 'auto';
       d.style.maxHeight = p.maxHeight;
     }
+    let lastFill = null;
+    window.gcctDialogTest = () => lastFill;
+    // Stretch a placed dialog up and down as far as the window and the controls around it allow.
+    function fillHeight(d) {
+      const r = d.getBoundingClientRect(), vh = window.innerHeight, gap = 8;
+      if (!r.height) return;
+      let obs = [];
+      try { obs = collectObstacles([dock]); } catch (e) { /* none */ }
+      try { obs.push(dock.getBoundingClientRect()); } catch (e) { /* none */ }
+      const ce = toolsUi && toolsUi.coordEl;
+      if (ce && ce.offsetWidth) obs.push(ce.getBoundingClientRect());
+      const across = obs.filter(o => o.width && o.height && o.left < r.right + gap && o.right > r.left - gap);
+      const mapTop = map.getContainer().getBoundingClientRect().top;
+      const hi = Math.max(Math.min(r.top, Math.max(10, mapTop + 10)), ...across.filter(o => o.bottom <= r.top + 1).map(o => o.bottom + gap));
+      const lo = Math.min(vh - 10, ...across.filter(o => o.top >= r.bottom - 1).map(o => o.top - gap));
+      // For gcctDialogTest(): what limited the height (element kinds and positions only).
+      const desc = o => o.__el ? `${o.__el.tagName.toLowerCase()}.${String(o.__el.className || '').split(/\s+/).slice(0, 2).join('.')}` : 'box';
+      lastFill = { vh, rect: [Math.round(r.top), Math.round(r.bottom), Math.round(r.left), Math.round(r.right)], hi: Math.round(hi), lo: Math.round(lo),
+        above: across.filter(o => o.bottom <= r.top + 1).map(o => [desc(o), Math.round(o.top), Math.round(o.bottom)]),
+        below: across.filter(o => o.top >= r.bottom - 1).map(o => [desc(o), Math.round(o.top), Math.round(o.bottom)]) };
+      if (lo - hi <= r.height) return;
+      Object.assign(d.style, { top: hi + 'px', bottom: 'auto', height: (lo - hi) + 'px', maxHeight: 'none' });
+      d.classList.add('sized');
+    }
     // Where a box of w × h goes next to the toolbar (also used for the layer panel).
     function besideToolbar(w, h) {
       const mapR = map.getContainer().getBoundingClientRect();
@@ -2843,7 +2870,7 @@
       if (ce) ce.style.display = state.showCoords === false ? 'none' : '';
     }
 
-    const toolsUi = addTools(L, { openDialog, closeDialog, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
+    const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
       favSettings: () => ({ show: state.favShow !== false, min: state.favMin ?? 10 }),
       dtSettings: () => ({ show: state.dtShow !== false }),
       ftfSettings: () => ({ show: state.ftfShow !== false }),
@@ -3125,7 +3152,7 @@
         .filter(el => el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : getComputedStyle(el).visibility !== 'hidden')
         // Only what is really on top of the map: a closed side panel's buttons may still lie there, under it.
         .filter(el => root.contains(el) || !coveredByMap(el, root, mr))
-        .map(el => el.getBoundingClientRect())
+        .map(el => { const q = el.getBoundingClientRect(); q.__el = el; return q; })
         .filter(r => r.width > 0 && r.height > 0 && r.width < 300 && r.height < 500);
     }
     // gcctDockDebug() in the console: what the toolbar placement sees (element names and positions only).
@@ -3907,7 +3934,7 @@
         btn('x', T('Remove pin'), () => removePin(snap.marker));
         if (snap.marker.__pin) btn('download', T('Download GPX'), () => downloadGpx([snap.marker.__pin], safeName(snap.marker.__pin.name) + '.gpx'));
       } else btn('pin', T('Pin'), () => namedPin(ll, snap && snap.code ? snap.code + (snap.name ? ' ' + String(snap.name).replace(snap.code, '').replace(/^[\s·:–-]+/, '').trim() : '') : null));
-      if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${new Date().toISOString().slice(0, 10)}.gpx`));
+      if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${fileStamp()}.gpx`));
       if (route.length || routeOpen()) {
         const st = snap && snap.kind === 'pin' && snap.marker && snap.marker.__pin ? { key: 'p:' + snap.marker.__pin.id, kind: 'pin', name: snap.marker.__pin.name, lat: snap.marker.__pin.lat, lng: snap.marker.__pin.lng }
           : snap && snap.code ? { key: 'c:' + snap.code, kind: 'cache', code: snap.code, name: (CACHE_INFO.get(snap.code) || {}).name || snap.name || '', lat: ll.lat, lng: ll.lng } : null;
@@ -5659,7 +5686,7 @@ ${pts}
         try {
           const full = !!(fullBox && fullBox.checked);
           const { text, failed } = await routeGpx((n, of) => { if (n === 1 && of > 1) toast(T('Fetching {n} geocaches …', { n: of })); }, full);
-          saveFile(text, `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml');
+          saveFile(text, `route-${fileStamp()}.gpx`, 'application/gpx+xml');
           if (failed.length) toast(T('Could not fetch {list} – only in the route, without description.', { list: failed.join(', ') }));
         } finally { b.disabled = false; }
       };
@@ -5667,6 +5694,8 @@ ${pts}
       q.oninput = drawList;
       q.addEventListener('keydown', e => e.stopPropagation());
       drawList(); drawRouteList();
+      // As tall as the window allows (drag the top or bottom edge to make it shorter).
+      if (api.fillHeight) api.fillHeight(d);
       setTimeout(() => q.focus(), 0);
     }
     drawRoute();
