@@ -229,7 +229,7 @@
     "Leg": "Etappe",
     "Total": "Totalt",
     "Show on the map": "Vis på kartet",
-    "Straight-line distances; the way there is usually longer.": "Avstander i luftlinje; veien dit er som regel lengre.",
+    "Straight-line distances; the way there is always longer.": "Avstander i luftlinje; veien dit er alltid lengre.",
     "Added to the route: {name}": "Lagt til i ruten: {name}",
     "Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en – her eller på kartet – for å legge den til i ruten.",
     "Move down": "Flytt ned",
@@ -5591,7 +5591,7 @@ ${pts}
         }).join('');
         pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is usually longer.'))}</p>`;
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         fitRoute();
       }
