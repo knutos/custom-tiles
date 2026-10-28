@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.1
+// @version      1.51.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3788,6 +3788,7 @@
       m.__pin.name = name.trim() || m.__pin.name;
       savePins();
       if (m.__label) { tools.removeLayer(m.__label); m.__label = pinLabel(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); }
+      pinRenamedInRoute(m.__pin.id, m.__pin.name);
     }
     const xmlEsc = t => String(t).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
     function downloadGpx(recs, fileName) {
@@ -5474,6 +5475,13 @@ ${pts}
     }
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
+    // A pin renamed on the map gets the new name in the route too (and in an open route window).
+    function pinRenamedInRoute(id, name) {
+      let hit = false;
+      route.forEach(r => { if (r.key === 'p:' + id && r.name !== name) { r.name = name; hit = true; } });
+      if (hit) { saveRoute(); drawRoute(); }
+      if (routeOpen() && routeRefresh) routeRefresh();
+    }
     function addStop(x) {
       if (!x || route.some(r => r.key === x.key)) return false;
       route.push({ key: x.key, kind: x.kind, code: x.code, name: x.name || '', lat: +(+x.lat).toFixed(6), lng: +(+x.lng).toFixed(6) });
@@ -5603,7 +5611,7 @@ ${pts}
       }
       // Preview: the whole route on the map, and a table of exactly what goes into the GPX file.
       const pv = d.querySelector('.rt-pv'), editEls = [q, d.querySelector('.hint'), list, d.querySelector('.rt-h'), ol, d.querySelector('.rt-edit-btns')];
-      function preview(on) {
+      function preview(on, refit = true) {
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
         if (!on) return;
@@ -5619,12 +5627,12 @@ ${pts}
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
           <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
-        fitRoute(d);
+        if (refit) fitRoute(d);
       }
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
       d.querySelector('[data-a=back]').onclick = () => preview(false);
       function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
-      routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); };
+      routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
       d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
         if (route.length < 3) return;
         const rest = route.slice(1), out = [route[0]];
