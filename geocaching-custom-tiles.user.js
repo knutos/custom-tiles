@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.53.5
+// @version      1.53.7
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3709,11 +3709,13 @@
       .gcct-cachelist .cl-sum{margin:6px 0 8px}
       .gcct-cachelist .cl-row{position:relative;padding-right:40px}
       .gcct-cachelist .cl-row .rt-t{white-space:normal}
-      .gcct-cachelist .cl-row.hov{background:#fffbe0}
-      .gcct-cachelist .cl-row.on{background:#fff8c5;box-shadow:inset 3px 0 0 #bf8700}
+      .gcct-cachelist .cl-row.hov{background:#ffefb0;box-shadow:inset 4px 0 0 #d4a72c}
+      .gcct-cachelist .cl-row.on{background:#ffdf73;box-shadow:inset 4px 0 0 #9a6700}
+      .gcct-cachelist .cl-row.on.hov{background:#ffd75e}
+      .gcct-cachelist .cl-row.on em.tag-owned,.gcct-cachelist .cl-row.hov em.tag-owned{background:#fff;box-shadow:0 0 0 1px #d4a72c inset}
       .gcct-glow{pointer-events:none!important;background:none!important;border:0!important;mix-blend-mode:multiply}
       .gcct-glow span{display:block;width:100%;height:100%;border-radius:50%;
-        background:radial-gradient(circle closest-side,rgba(255,190,0,0) 12px,rgba(255,190,0,.55) 14px,rgba(255,190,0,.32) 22px,rgba(255,190,0,.12) 32px,rgba(255,190,0,0) 42px);
+        background:radial-gradient(circle closest-side,rgba(255,176,0,0) 12px,rgba(255,176,0,.8) 14px,rgba(255,176,0,.5) 22px,rgba(255,176,0,.2) 32px,rgba(255,176,0,0) 42px);
         animation:gcct-glow 1.8s ease-in-out infinite alternate}
       @keyframes gcct-glow{from{opacity:.65}to{opacity:1}}
       @media (prefers-reduced-motion:reduce){.gcct-glow span{animation:none}}
@@ -5682,7 +5684,7 @@ ${pts}
         <p class="hint cl-sum"></p>
         <div class="rt-list cl-list"></div>`, { cls: 'gcct-route gcct-cachelist', small: true });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.cl-list'), sum = d.querySelector('.cl-sum');
-      let picked = null, items = [], backView = null;
+      let picked = null, items = [], backView = null, clSearchT = null;
       const typeIcon = c => {
         const t = c.type != null ? c.type : (CACHE_INFO.get(c.code) || {}).type;
         return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
@@ -5704,6 +5706,12 @@ ${pts}
         c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); const i = CACHE_INFO.get(x.code) || {}; x.fav = i.fav; x.dt = x.dt || (i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : ''); });
         c.sort((a, b) => a.d - b.d);
         items = c.slice(0, 300);
+        // Name, D/T, favourites and tags come from the site's cache search, which the map itself only asks
+        // from zoom 15: with the list open, ask it for the view whenever listed caches are missing from it.
+        if (items.some(x => !inSearch.has(x.code))) {
+          clearTimeout(clSearchT);
+          clSearchT = setTimeout(() => { try { if (clOpen()) searchArea(map.getBounds()); } catch (e) { /* ignore */ } }, 350);
+        }
         sum.textContent = text ? T('{n} of {m} geocaches on the map', { n: c.length, m: inView }) : T('{n} geocaches on the map, nearest the middle first', { n: inView });
         list.innerHTML = items.map((x, i) => `<div class="rt-row cl-row${picked === x.code ? ' on' : ''}${hovered === x.code ? ' hov' : ''}" data-i="${i}" data-code="${esc(x.code)}" title="${esc(T('Zoom to it on the map'))}">
             <span class="rt-t">${typeIcon(x)}<b>${esc(x.code)}</b>${x.name ? ' · ' + esc(x.name) : ''} ${tags(x)}</span>
