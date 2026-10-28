@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.0
+// @version      1.51.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -5220,10 +5220,36 @@
     const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
     // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
     const legText = (i, pts = routeStops()) => { const a = L.latLng(pts[i - 1].lat, pts[i - 1].lng), b = L.latLng(pts[i].lat, pts[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
-    function fitRoute() {
+    // Zoom to the whole route in the part of the map the dialog leaves free (the widest free side).
+    function freeArea(el) {
+      const mr = map.getContainer().getBoundingClientRect(), pad = 40;
+      const out = { tl: [pad, pad], br: [pad, pad] };
+      el = el && el.closest ? (el.closest('.gcct-dlg') || el) : el;
+      const r = el && el.getBoundingClientRect && el.getBoundingClientRect();
+      if (!r || r.right <= mr.left || r.left >= mr.right || r.bottom <= mr.top || r.top >= mr.bottom) return out;
+      const free = { left: r.left - mr.left, right: mr.right - r.right, top: r.top - mr.top, bottom: mr.bottom - r.bottom };
+      const horiz = k => k === 'left' || k === 'right', share = k => free[k] / (horiz(k) ? mr.width : mr.height);
+      const side = Object.keys(free).sort((a, b) => share(b) - share(a)).find(k => free[k] >= (horiz(k) ? 160 : 120));
+      if (!side) return out;
+      if (side === 'left') out.br[0] = mr.right - r.left + pad;
+      if (side === 'right') out.tl[0] = r.right - mr.left + pad;
+      if (side === 'top') out.br[1] = mr.bottom - r.top + pad;
+      if (side === 'bottom') out.tl[1] = r.bottom - mr.top + pad;
+      return out;
+    }
+    // Centre a point in the free area at zoom z.
+    function showInFree(ll, z, avoid) {
+      const fa = freeArea(avoid), sz = map.getSize();
+      const px = L.point((fa.tl[0] + sz.x - fa.br[0]) / 2, (fa.tl[1] + sz.y - fa.br[1]) / 2);
+      map.setView(map.unproject(map.project(ll, z).subtract(px).add(sz.divideBy(2)), z), z);
+    }
+    function fitRoute(avoid) {
       if (!route.length) return;
-      if (route.length === 1) { map.setView(L.latLng(route[0].lat, route[0].lng), Math.max(map.getZoom(), 15)); return; }
-      try { map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { padding: [60, 60], maxZoom: 17 }); } catch (e) { /* ignore */ }
+      const fa = freeArea(avoid);
+      try {
+        if (route.length === 1) { showInFree(L.latLng(route[0].lat, route[0].lng), Math.max(map.getZoom(), 15), avoid); return; }
+        map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
+      } catch (e) { /* ignore */ }
     }
     const routeLength = () => routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
     // Everything you can pick: pins, and every geocache the script knows a position for (solved ones at the solved spot).
@@ -5593,7 +5619,7 @@ ${pts}
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
           <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
-        fitRoute();
+        fitRoute(d);
       }
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
       d.querySelector('[data-a=back]').onclick = () => preview(false);
@@ -5629,7 +5655,7 @@ ${pts}
           if (failed.length) toast(T('Could not fetch {list} – only in the route, without description.', { list: failed.join(', ') }));
         } finally { b.disabled = false; }
       };
-      function goStop(i) { const r = route[i]; if (r) map.setView(L.latLng(r.lat, r.lng), Math.max(map.getZoom(), 16)); }
+      function goStop(i) { const r = route[i]; if (r) { try { showInFree(L.latLng(r.lat, r.lng), Math.max(map.getZoom(), 16), d); } catch (e) { map.setView(L.latLng(r.lat, r.lng), Math.max(map.getZoom(), 16)); } } }
       q.oninput = drawList;
       q.addEventListener('keydown', e => e.stopPropagation());
       drawList(); drawRouteList();
