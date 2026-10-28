@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.7
+// @version      1.51.8
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -507,14 +507,14 @@
     if (!e || !e.c || Date.now() - (e.ts || 0) > SOLVED_TTL) { delete solvedStore[c]; return; }
     const prev = CACHE_INFO.get(c) || {};
     CACHE_INFO.set(c, Object.assign({}, prev, { type: e.t ?? prev.type ?? null, solved: true, corrected: { lat: e.c[0], lng: e.c[1] },
-      posted: e.p ? { lat: e.p[0], lng: e.p[1] } : prev.posted, found: e.f, owned: e.o, name: e.n || prev.name, fav: e.fav, diff: e.d, terr: e.te, fromStore: true }));
+      posted: e.p ? { lat: e.p[0], lng: e.p[1] } : prev.posted, found: e.f, owned: e.o, ownerName: e.ow || prev.ownerName, name: e.n || prev.name, fav: e.fav, diff: e.d, terr: e.te, fromStore: true }));
   });
   let solvedSaveTimer = null;
   function rememberSolved(code, i) {
     try {
       if (i.solved && i.corrected) {
         solvedStore[code] = { c: [+i.corrected.lat.toFixed(6), +i.corrected.lng.toFixed(6)], p: i.posted ? [+i.posted.lat.toFixed(6), +i.posted.lng.toFixed(6)] : null,
-          f: i.found, o: i.owned, n: i.name, t: i.type, fav: i.fav, d: i.diff, te: i.terr, ts: Date.now() };
+          f: i.found, o: i.owned, ow: i.ownerName || undefined, n: i.name, t: i.type, fav: i.fav, d: i.diff, te: i.terr, ts: Date.now() };
       } else if (solvedStore[code]) delete solvedStore[code];          // no longer solved
       else return;
       clearTimeout(solvedSaveTimer);
@@ -4695,9 +4695,9 @@
     // search answer was complete, that the answer did not contain, is taken to be yours.
     function likelyOwn(code, ll) {
       const i = CACHE_INFO.get(code) || {};
-      if (i.owned === true || i.fromPage) return true;
+      // Your name as owner counts first – the site's own "owned" flag is not always right.
+      if (i.owned === true || i.fromPage || (i.ownerName && i.ownerName === myName())) return true;
       if (i.owned === false) return false;
-      if (i.ownerName && i.ownerName === myName()) return true;
       if (inSearch.has(code) || !ll) return false;
       const p = L.latLng(ll.lat, ll.lng);
       return searchedComplete.some(a => a.contains(p));
