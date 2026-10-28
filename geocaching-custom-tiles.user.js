@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.2
+// @version      1.51.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2035,6 +2035,7 @@
       .gcct-dlg .rz:hover::after,.gcct-dlg .rz-bottom:hover::after{background:var(--acc)}
       .gcct-dlg.sized .bd{flex:1 1 auto}
       .gcct-route.sized .rt-list,.gcct-route.sized .rt-route,.gcct-route.sized .rt-tbl{max-height:none}
+      .gcct-route.sized .rt-list{flex-grow:3}.gcct-route.sized .rt-route{flex-grow:2}
       .gcct-dlg .hd{flex:none;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 20px;border-bottom:1px solid var(--line);cursor:move;user-select:none}
       .gcct-dlg h3{flex:1;margin:0;font-size:16.5px;font-weight:650;line-height:1.3;color:var(--ink)}
       .gcct-dlg .bd{flex:1 1 auto;min-height:0;overflow:auto;padding:16px 20px 18px;overscroll-behavior:contain}
@@ -2447,6 +2448,23 @@
       d.style.bottom = p.top == null ? p.bottom + 'px' : 'auto';
       d.style.maxHeight = p.maxHeight;
     }
+    // Stretch a placed dialog up and down as far as the window and the controls around it allow.
+    function fillHeight(d) {
+      const r = d.getBoundingClientRect(), vh = window.innerHeight, gap = 8;
+      if (!r.height) return;
+      let obs = [];
+      try { obs = collectObstacles([dock]); } catch (e) { /* none */ }
+      try { obs.push(dock.getBoundingClientRect()); } catch (e) { /* none */ }
+      const ce = toolsUi && toolsUi.coordEl;
+      if (ce && ce.offsetWidth) obs.push(ce.getBoundingClientRect());
+      const across = obs.filter(o => o.width && o.height && o.left < r.right + gap && o.right > r.left - gap);
+      const mapTop = map.getContainer().getBoundingClientRect().top;
+      const hi = Math.max(Math.min(r.top, Math.max(10, mapTop + 10)), ...across.filter(o => o.bottom <= r.top + 1).map(o => o.bottom + gap));
+      const lo = Math.min(vh - 10, ...across.filter(o => o.top >= r.bottom - 1).map(o => o.top - gap));
+      if (lo - hi <= r.height) return;
+      Object.assign(d.style, { top: hi + 'px', bottom: 'auto', height: (lo - hi) + 'px', maxHeight: 'none' });
+      d.classList.add('sized');
+    }
     // Where a box of w × h goes next to the toolbar (also used for the layer panel).
     function besideToolbar(w, h) {
       const mapR = map.getContainer().getBoundingClientRect();
@@ -2843,7 +2861,7 @@
       if (ce) ce.style.display = state.showCoords === false ? 'none' : '';
     }
 
-    const toolsUi = addTools(L, { openDialog, closeDialog, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
+    const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
       favSettings: () => ({ show: state.favShow !== false, min: state.favMin ?? 10 }),
       dtSettings: () => ({ show: state.dtShow !== false }),
       ftfSettings: () => ({ show: state.ftfShow !== false }),
@@ -5667,6 +5685,8 @@ ${pts}
       q.oninput = drawList;
       q.addEventListener('keydown', e => e.stopPropagation());
       drawList(); drawRouteList();
+      // As tall as the window allows (drag the top or bottom edge to make it shorter).
+      if (api.fillHeight) api.fillHeight(d);
       setTimeout(() => q.focus(), 0);
     }
     drawRoute();
