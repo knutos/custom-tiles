@@ -217,6 +217,8 @@
     "Preview": "Forhåndsvis",
     "Back": "Tilbake",
     "Download GPX route": "Last ned GPX-rute",
+    "Full cache data": "Fulle cachedata",
+    "Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.": "Hver geocache med beskrivelse, hint, attributter, logger og ekstra veipunkter, som GPX-fila på cachesiden. Tar litt tid, siden hver cacheside hentes.",
     "This is what the GPX file will contain – the map shows the whole route.": "Slik blir GPX-filen – kartet viser hele ruten.",
     "Name in GPS": "Navn i GPS",
     "Description": "Beskrivelse",
@@ -3610,6 +3612,10 @@
       .gcct-route em.tag-place{background:#dafbe1;color:#116329}
       .gcct-route em.tag-addr{background:#ddf4ff;color:#0550ae}
       .gcct-route em.tag-abroad{background:#fbefff;color:#6639ba}
+      .gcct-route .rt-full{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:13px;white-space:nowrap;cursor:pointer}
+      .gcct-route .rt-full input{margin:0}
+      .gcct-route .rt-pv-btns{flex-wrap:wrap;row-gap:8px}
+      .gcct-route .rt-pv-btns .rt-gpx{margin-left:auto}
       .gcct-route .rt-ic-place{color:#1a7f37;display:inline-flex;align-items:center;justify-content:center}
       .gcct-route .rt-sec{padding:6px 10px 4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
@@ -5386,7 +5392,14 @@
       }
       return list;
     }
-    async function routeGpx(progress) {
+    // The plain route: only the stops (GPX 1.1).
+    function plainRouteGpx() {
+      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
+      const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
+    }
+    async function routeGpx(progress, full) {
+      if (!full) return { text: plainRouteGpx(), failed: [] };
       const codes = [...new Set(route.filter(r => r.kind === 'cache').map(r => r.code))];
       const wpts = [], failed = [];
       let done = 0;
@@ -5459,7 +5472,7 @@ ${pts}
         <ol class="rt-route"></ol>
         <div class="rt-pv" style="display:none"></div>
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
-        <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
+        <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
       const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
@@ -5584,12 +5597,17 @@ ${pts}
         route = out; changed();
       };
       d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); };
+      // Full cache data is a choice, off unless you turn it on (remembered for the session).
+      const fullBox = d.querySelector('[data-a=full]');
+      try { fullBox.checked = sessionStorage.getItem('gcct.gpxFull') === '1'; } catch (e) { /* ignore */ }
+      fullBox.onchange = () => { try { sessionStorage.setItem('gcct.gpxFull', fullBox.checked ? '1' : '0'); } catch (e) { /* ignore */ } };
       d.querySelector('[data-a=gpx]').onclick = async e => {
         const b = e.currentTarget;
         if (!route.length || b.disabled) return;
         b.disabled = true;
         try {
-          const { text, failed } = await routeGpx((n, of) => { if (n === 1 && of > 1) toast(T('Fetching {n} geocaches …', { n: of })); });
+          const full = !!(fullBox && fullBox.checked);
+          const { text, failed } = await routeGpx((n, of) => { if (n === 1 && of > 1) toast(T('Fetching {n} geocaches …', { n: of })); }, full);
           saveFile(text, `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml');
           if (failed.length) toast(T('Could not fetch {list} – only in the route, without description.', { list: failed.join(', ') }));
         } finally { b.disabled = false; }
