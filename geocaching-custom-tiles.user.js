@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.47.0
+// @version      1.50.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -193,6 +193,39 @@
     "Remove pin": "Fjern merkenålen",
     "Your pin": "Merkenål",
     "Pin name": "Navn på merkenålen",
+    "Click to rename": "Klikk for å gi nytt navn",
+    "Drag to resize": "Dra for å endre høyden",
+    "Looking up {code} …": "Slår opp {code} …",
+    "{code} not found.": "Fant ikke {code}.",
+    "Route": "Rute",
+    "Route: pick geocaches and pins, and export them as a GPX route": "Rute: velg geocacher og merkenåler, og eksporter dem som en GPX-rute",
+    "Search code or name …": "Søk etter kode eller navn …",
+    "Geocaches and pins nearest the middle of the map. Click one to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en for å legge den til i ruten.",
+    "No stops yet.": "Ingen stopp ennå.",
+    "Sort by nearest": "Sorter etter nærmeste",
+    "Clear route": "Tøm ruten",
+    "{n} stops · {d}": "{n} stopp · {d}",
+    "Solved": "Løst",
+    "Found": "Funnet",
+    "Pin (tag)": "Nål",
+    "In the route": "I ruten",
+    "Move up": "Flytt opp",
+    "Add to route": "Legg til i ruten",
+    "Preview": "Forhåndsvis",
+    "Back": "Tilbake",
+    "Download GPX route": "Last ned GPX-rute",
+    "This is what the GPX file will contain – the map shows the whole route.": "Slik blir GPX-filen – kartet viser hele ruten.",
+    "Name in GPS": "Navn i GPS",
+    "Description": "Beskrivelse",
+    "Coordinates": "Koordinater",
+    "Leg": "Etappe",
+    "Total": "Totalt",
+    "Show on the map": "Vis på kartet",
+    "Straight-line distances; the way there is usually longer.": "Avstander i luftlinje; veien dit er som regel lengre.",
+    "Added to the route: {name}": "Lagt til i ruten: {name}",
+    "Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en – her eller på kartet – for å legge den til i ruten.",
+    "Move down": "Flytt ned",
+    "Remove": "Fjern",
     "Download GPX": "Last ned GPX",
     "All pins as GPX ({n})": "Alle merkenåler som GPX ({n})",
     "Pin {n}": "Nål {n}",
@@ -366,6 +399,9 @@
 
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
+    route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/>',
+    up: '<path d="m6 15 6-6 6 6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
     ftf: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
     dt: '<path d="m2 20 7-12 4 6.5 2.5-3.5L22 20Z"/><path d="M7.5 20h9"/>',
@@ -1979,6 +2015,13 @@
         display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);
         padding:0;font-size:14px;line-height:1.5;cursor:auto;text-align:left;animation:gcct-in .14s ease-out}
       .gcct-dlg.sm{width:min(400px,calc(100vw - 20px))}
+      .gcct-dlg .rz{position:absolute;left:14px;right:14px;height:9px;cursor:ns-resize;z-index:5;touch-action:none}
+      .gcct-dlg .rz-top{top:-2px}
+      .gcct-dlg .rz-bottom{bottom:-2px}
+      .gcct-dlg .rz-bottom::after{content:"";position:absolute;left:50%;bottom:4px;width:36px;height:3px;margin-left:-18px;border-radius:2px;background:var(--line);opacity:.9}
+      .gcct-dlg .rz:hover::after,.gcct-dlg .rz-bottom:hover::after{background:var(--acc)}
+      .gcct-dlg.sized .bd{flex:1 1 auto}
+      .gcct-route.sized .rt-list,.gcct-route.sized .rt-route,.gcct-route.sized .rt-tbl{max-height:none}
       .gcct-dlg .hd{flex:none;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 20px;border-bottom:1px solid var(--line);cursor:move;user-select:none}
       .gcct-dlg h3{flex:1;margin:0;font-size:16.5px;font-weight:650;line-height:1.3;color:var(--ink)}
       .gcct-dlg .bd{flex:1 1 auto;min-height:0;overflow:auto;padding:16px 20px 18px;overscroll-behavior:contain}
@@ -2047,6 +2090,13 @@
           const pos = besideToolbar(p.offsetWidth || 340, p.offsetHeight || 500);
           Object.assign(p.style, { position: 'fixed', left: pos.left + 'px', right: 'auto', maxHeight: pos.maxHeight,
             top: pos.top == null ? 'auto' : pos.top + 'px', bottom: pos.top == null ? pos.bottom + 'px' : 'auto' });
+          // A moved toolbar (centred at the top or bottom) makes "fixed" relative to the toolbar instead of the
+          // window: measure where the panel ended up and correct for that.
+          const r = p.getBoundingClientRect(), vh = window.innerHeight;
+          const dx = r.left - pos.left;
+          if (Math.abs(dx) > 1) p.style.left = (pos.left - dx) + 'px';
+          if (pos.top != null) { const dy = r.top - pos.top; if (Math.abs(dy) > 1) p.style.top = (pos.top - dy) + 'px'; }
+          else { const dy = (vh - r.bottom) - pos.bottom; if (Math.abs(dy) > 1) p.style.bottom = (pos.bottom - dy) + 'px'; }
         };
         this._box = box;
         return box;
@@ -2307,11 +2357,45 @@
         ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.addEventListener(ev, up, true));
       });
     }
+    // Drag the top or bottom edge of a dialog to make it taller or shorter, upwards or downwards.
+    function resizeBy(box) {
+      ['top', 'bottom'].forEach(edge => {
+        const h = document.createElement('div');
+        h.className = 'rz rz-' + edge;
+        h.title = T('Drag to resize');
+        box.appendChild(h);
+        h.addEventListener('pointerdown', e => {
+          if (e.button !== 0) return;
+          e.preventDefault(); e.stopPropagation();
+          const r = box.getBoundingClientRect(), y0 = e.clientY, vh = window.innerHeight, MIN = 160;
+          // From here on the dialog has a fixed top and height (also when it started anchored at the bottom).
+          Object.assign(box.style, { top: r.top + 'px', bottom: 'auto', height: r.height + 'px', maxHeight: 'none' });
+          box.dataset.moved = '1';
+          box.classList.add('sized');
+          const mv = ev => {
+            if (ev.buttons === 0) return up();
+            const dy = ev.clientY - y0;
+            if (edge === 'bottom') box.style.height = Math.max(MIN, Math.min(vh - r.top - 4, r.height + dy)) + 'px';
+            else {
+              const top = Math.max(4, Math.min(r.bottom - MIN, r.top + dy));
+              box.style.top = top + 'px';
+              box.style.height = (r.bottom - top) + 'px';
+            }
+          };
+          const up = () => {
+            window.removeEventListener('pointermove', mv, true);
+            ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.removeEventListener(ev, up, true));
+          };
+          window.addEventListener('pointermove', mv, true);
+          ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.addEventListener(ev, up, true));
+        });
+      });
+    }
     function openDialog(title, html, opts = {}) {
       closeDialog();
       // Custom element name: no site CSS selector targets it.
       const d = document.createElement('gcct-dialog');
-      d.className = 'gcct-dlg' + (opts.small ? ' sm' : '');
+      d.className = 'gcct-dlg' + (opts.small ? ' sm' : '') + (opts.cls ? ' ' + opts.cls : '');
       d.innerHTML = `<div class="hd" title="${T('Drag to move')}"><h3>${esc(title)}</h3><span class="x" title="${T('Close (Esc)')}">${icon('x', 18)}</span></div><div class="bd">${html}</div>`;
       noSubmit(d);
       L.DomEvent.disableClickPropagation(d);
@@ -2321,6 +2405,7 @@
       d.querySelector('.x').onclick = closeDialog;
       // Drag the dialog by its header – anywhere in the window.
       dragBy(d, d.querySelector('.hd'));
+      resizeBy(d);
       // Attach to the page (not the map) so the site's sidebar can't cover it.
       // In fullscreen only the fullscreen element is visible, so attach there instead.
       dialogParent().appendChild(d);
@@ -3496,6 +3581,59 @@
       .gcct-pop .snap .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .gcct-pop .snap a.gc{font-weight:700;color:var(--acc)!important;text-decoration:none;cursor:pointer!important;pointer-events:auto!important}
       .gcct-pop .snap a.gc:hover{text-decoration:underline}
+      .gcct-pinlbl{pointer-events:none!important;width:auto!important;height:auto!important}
+      .gcct-pinlbl .gcct-label{display:inline-block;transform:translateY(-100%)}
+      /* The route window fits any screen: the list of caches and the route share the height there is,
+         each scrolling on its own, and the buttons always stay in view. */
+      .gcct-route .bd{display:flex;flex-direction:column;overflow:hidden}
+      .gcct-route .bd > *{flex:none}
+      .gcct-route .rt-list{flex:1 1 0;min-height:84px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc);margin-bottom:10px}
+      .gcct-route .rt-pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+      .gcct-route .rt-pv .rt-tbl{flex:1 1 auto;min-height:90px}
+      .gcct-route .bd > .btns{position:static;margin-top:12px}
+      @media (max-height:720px){ .gcct-route > .bd > .hint{display:none} .gcct-route .rt-h{margin-top:0} }
+      @media (max-width:540px){ .gcct-route th,.gcct-route td{padding:4px!important} .gcct-route th{white-space:normal!important} .gcct-route td.rt-go{overflow-wrap:anywhere} .gcct-route td.mono{font-size:10.5px!important} .gcct-route .rt-desc{font-size:10.5px} }
+      .gcct-route .rt-row{display:flex;flex-direction:column;gap:1px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
+      .gcct-route .rt-row:last-child{border-bottom:0}
+      .gcct-route .rt-row:hover{background:var(--hover)}
+      .gcct-route .rt-row.in{opacity:.55;cursor:default}
+      .gcct-route .rt-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+      .gcct-route .rt-m{font-size:12px;color:var(--muted)}
+      .gcct-route em.tag{font-style:normal;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;margin-left:4px}
+      .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
+      .gcct-route em.tag-solved{background:#e8f0fa;color:#336699}
+      .gcct-route em.tag-found{background:#dafbe1;color:#116329}
+      .gcct-route .rt-h{margin:4px 0 6px;font-size:14px}
+      .gcct-route .rt-sum{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+      .gcct-route .rt-route{flex:1 1 0;min-height:64px;max-height:260px;margin:0 0 4px;padding-left:0;list-style:none;overflow:auto}
+      .gcct-route .rt-n{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8250df;color:#fff;font-size:11px;font-weight:700;margin-right:4px}
+      .gcct-route .rt-route li{display:flex;align-items:center;gap:4px;padding:2px 0}
+      .gcct-route .rt-route li .rt-t{flex:1}
+      .gcct-route .rt-route li button{border:1px solid var(--line);background:#fff;border-radius:6px;width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+      .gcct-route .rt-route li button:disabled{opacity:.35;cursor:default}
+      .gcct-route .rt-route li.gm{color:var(--muted)}
+      .gcct-dlg.gcct-route{width:min(580px,calc(100vw - 20px))}
+      .gcct-route .rt-gpx{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-go{cursor:pointer}
+      .gcct-route .rt-ic{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:6px;object-fit:contain}
+      .gcct-route .rt-ic-pin{color:#c52a7a;display:inline-flex;align-items:center;justify-content:center}
+      .gcct-route .rt-ic-dot::before{content:"";display:block;width:10px;height:10px;margin:4px;border-radius:50%;background:#8c959f}
+      .gcct-route .rt-go:hover b{text-decoration:underline}
+      .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
+      .gcct-route .rt-tbl{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
+      .gcct-route table{border-collapse:collapse;width:100%;font-size:12.5px}
+      .gcct-route th{position:sticky;top:0;background:var(--soft);text-align:left;font-weight:600;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+      .gcct-route td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+      .gcct-route tr:last-child td{border-bottom:0}
+      .gcct-route td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;white-space:nowrap}
+      .gcct-route .num{text-align:right;white-space:nowrap}
+      .gcct-route .rt-desc{color:var(--muted);font-size:11.5px}
+      .gcct-route .rt-note{margin-top:8px}
+      .gcct-rtnum{pointer-events:none!important}
+      .gcct-rtnum span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8250df;color:#fff;
+        font:700 11px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1.5px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.35);box-sizing:border-box}
+      .gcct-pop .snap .pinname-t{cursor:text;border-bottom:1px dashed transparent}
+      .gcct-pop .snap .pinname-t:hover{border-bottom-color:var(--acc)}
       .gcct-pop .snap input.pinname{width:100%;min-width:0;box-sizing:border-box;font:600 13px/1.3 inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px}
       .gcct-pop .snap i{font-style:normal;color:var(--muted);cursor:help}
       .gcct-pop .snap button.lnk{flex:none;min-height:0;padding:2px 6px;border:0;background:none;color:var(--acc);text-decoration:underline;font-size:12.5px;cursor:pointer}
@@ -3581,9 +3719,18 @@
 
     // --- Helpers -----------------------------------------------------------
     const pins = [];                 // pins on the map – right-clicking one snaps to it, like to a cache
+    // Pins and their name labels are only shown from zoom 12 (further out they would clutter the map).
+    const PIN_MIN_ZOOM = 12;
+    function showPin(m) {
+      const hide = map.getZoom() < PIN_MIN_ZOOM;
+      [m, m.__label].forEach(l => { const el = l && (l.getElement ? l.getElement() : l._path || l._icon); if (el) el.style.display = hide ? 'none' : ''; });
+      try { if (m.setStyle) m.setStyle({ opacity: hide ? 0 : 1, fillOpacity: hide ? 0 : 1 }); } catch (e) { /* ignore */ }
+    }
+    map.on('zoomend', () => pins.forEach(showPin));
     function pin(ll, color = ACCENT) {
       const m = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(tools);
       pins.push(m);
+      setTimeout(() => showPin(m), 0);
       m.bindPopup(() => coordPopup(m.getLatLng(), m.__pin ? { kind: 'pin', marker: m, clicked: m.getLatLng(), ll: m.getLatLng() } : null), POPUP_OPTS);
       return m;
     }
@@ -3603,7 +3750,8 @@
       }
       const m = pin(L.latLng(rec.lat, rec.lng));
       m.__pin = rec;
-      m.__label = label(L.latLng(rec.lat, rec.lng), pinLabelHtml(rec.name));
+      m.__label = pinLabel(L.latLng(rec.lat, rec.lng), pinLabelHtml(rec.name));
+      showPin(m);
       return m;
     }
     function removePin(m) {
@@ -3615,11 +3763,11 @@
       if (!m.__pin) return;
       m.__pin.name = name.trim() || m.__pin.name;
       savePins();
-      if (m.__label) { tools.removeLayer(m.__label); m.__label = label(m.getLatLng(), pinLabelHtml(m.__pin.name)); }
+      if (m.__label) { tools.removeLayer(m.__label); m.__label = pinLabel(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); }
     }
     const xmlEsc = t => String(t).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
     function downloadGpx(recs, fileName) {
-      const wpts = recs.map(r => `  <wpt lat="${r.lat}" lon="${r.lng}">\n    <time>${r.t || new Date().toISOString()}</time>\n    <name>${xmlEsc(r.name)}</name>\n    <sym>Flag, Blue</sym>\n  </wpt>`).join('\n');
+      const wpts = recs.map(r => `  <wpt lat="${r.lat}" lon="${r.lng}">\n    <time>${r.t || new Date().toISOString()}</time>\n    <name>${xmlEsc(r.name)}</name>\n    <sym>Pin, Blue</sym>\n  </wpt>`).join('\n');
       const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n${wpts}\n</gpx>\n`;
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
@@ -3630,6 +3778,10 @@
     const safeName = t => String(t).replace(/[^\p{L}\p{N}._ -]+/gu, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'pin';
     function label(ll, html) {
       return L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-label', html, iconSize: null, iconAnchor: [-10, 10] }) }).addTo(tools);
+    }
+    // A pin's name: above and to the right of the pin.
+    function pinLabel(ll, html) {
+      return L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-pinlbl', html: `<span class="gcct-label">${html}</span>`, iconSize: null, iconAnchor: [-6, 5] }) }).addTo(tools);
     }
     // Circles are drawn as 180-point polygons computed on the sphere (no line simplification). That avoids L.circle,
     // whose signature differs between Leaflet 0.7 and 1.x, and is exact at any latitude.
@@ -3671,18 +3823,31 @@
         const nm = String(snap.name || '').replace(snap.code || '\u0000', '').replace(/^[\s·:–-]+/, '').trim();
         const sn = document.createElement('div');
         sn.className = 'snap';
-        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t">${snap.marker && snap.marker.__pin ? `<input class="pinname" title="${esc(T('Pin name'))}" value="${esc(snap.marker.__pin.name)}">` : `<b>${esc(T('Your pin'))}</b>`}</span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
+        sn.innerHTML = snap.kind === 'pin' ? `${icon('pin', 15)}<span class="t">${snap.marker && snap.marker.__pin ? `<b class="pinname-t" title="${esc(T('Click to rename'))}">${esc(snap.marker.__pin.name)}</b>` : `<b>${esc(T('Your pin'))}</b>`}</span>` : `${icon('pin', 15)}<span class="t">${snap.code ? `<a class="gc gcct-gc" href="https://www.geocaching.com/geocache/${encodeURIComponent(snap.code)}" target="_blank" rel="noopener" title="${esc(T('Open the cache page'))}">${esc(snap.code)}</a>` : `<b>${esc(T('Geocache'))}</b>`}${nm ? ' · ' + esc(nm) : ''}${(() => { const fv = snap.code && (CACHE_INFO.get(snap.code) || {}).fav; return fv != null ? ` <span class="gcct-favn" title="${esc(T('Favourite points'))}"><span class="gcct-fav">♥</span> ${fv}</span>` : ''; })()}${snap.approx ? ` <i title="${esc(T('Estimated from the cache icon – can be a few metres off.'))}">≈</i>` : ''}</span>`;
         const use = document.createElement('button');
         use.type = 'button'; use.className = 'lnk'; use.textContent = T('Use clicked point');
         use.onclick = e => { e.stopPropagation(); openCoordPopup(snap.clicked, false); };
         sn.appendChild(use);
         box.appendChild(sn);
-        const pn = sn.querySelector('.pinname');
-        if (pn) {
-          ['mousedown', 'dblclick', 'keydown', 'contextmenu'].forEach(ev => pn.addEventListener(ev, e => e.stopPropagation()));
-          pn.addEventListener('change', () => renamePin(snap.marker, pn.value));
-          pn.addEventListener('keydown', e => { if (e.key === 'Enter') { renamePin(snap.marker, pn.value); pn.blur(); } });
-        }
+        // The pin's name: click it to rename (Enter or clicking elsewhere keeps it, Esc cancels).
+        const pt = sn.querySelector('.pinname-t');
+        if (pt) pt.addEventListener('click', e => {
+          e.stopPropagation();
+          const inp = document.createElement('input');
+          inp.className = 'pinname'; inp.title = T('Pin name'); inp.value = snap.marker.__pin.name;
+          ['mousedown', 'click', 'dblclick', 'contextmenu'].forEach(ev => inp.addEventListener(ev, x => x.stopPropagation()));
+          let done = false;
+          const finish = keep => {
+            if (done) return; done = true;
+            if (keep) renamePin(snap.marker, inp.value);
+            pt.textContent = snap.marker.__pin.name;
+            inp.replaceWith(pt);
+          };
+          inp.addEventListener('keydown', x => { x.stopPropagation(); if (x.key === 'Enter') finish(true); else if (x.key === 'Escape') finish(false); });
+          inp.addEventListener('blur', () => finish(true));
+          pt.replaceWith(inp);
+          inp.focus(); inp.select();
+        });
       }
       // One line with the coordinates, always opening in DMM; click it to switch notation / system.
       const r = document.createElement('div');
@@ -3718,6 +3883,11 @@
         if (snap.marker.__pin) btn('download', T('Download GPX'), () => downloadGpx([snap.marker.__pin], safeName(snap.marker.__pin.name) + '.gpx'));
       } else btn('pin', T('Pin'), () => namedPin(ll, snap && snap.code ? snap.code + (snap.name ? ' ' + String(snap.name).replace(snap.code, '').replace(/^[\s·:–-]+/, '').trim() : '') : null));
       if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${new Date().toISOString().slice(0, 10)}.gpx`));
+      if (route.length || routeOpen()) {
+        const st = snap && snap.kind === 'pin' && snap.marker && snap.marker.__pin ? { key: 'p:' + snap.marker.__pin.id, kind: 'pin', name: snap.marker.__pin.name, lat: snap.marker.__pin.lat, lng: snap.marker.__pin.lng }
+          : snap && snap.code ? { key: 'c:' + snap.code, kind: 'cache', code: snap.code, name: (CACHE_INFO.get(snap.code) || {}).name || snap.name || '', lat: ll.lat, lng: ll.lng } : null;
+        if (st && !route.some(r => r.key === st.key)) btn('route', T('Add to route'), () => addStop(st));
+      }
       btn('compass', T('Project…'), () => projectFrom(ll));
       if (circles.some(o => o.c.distanceTo(ll) <= 161)) btn('x', T('Remove circle'), () => removeCircleAt(ll));
       else btn('ring', T('161 m circle'), () => circle161(ll));
@@ -3731,6 +3901,7 @@
     function nearestPin(ll) {
       try {
         for (let i = pins.length - 1; i >= 0; i--) if (!tools.hasLayer || !tools.hasLayer(pins[i])) pins.splice(i, 1);
+        if (map.getZoom() < PIN_MIN_ZOOM) return null;          // hidden this far out
         const at = map.latLngToContainerPoint(ll);
         let best = null, bd = Infinity;
         pins.forEach(m => { const pt = map.latLngToContainerPoint(m.getLatLng()), d = Math.hypot(pt.x - at.x, pt.y - at.y); if (d <= SNAP_PX && d < bd) { bd = d; best = m; } });
@@ -4686,6 +4857,7 @@
         zoomOutBtn = add(null, 'minus', 'Zoom out  ( − )', () => map.zoomOut());
         add(null, 'search', 'Search place, address or coordinates  ( / )', openSearch).classList.add('sep');
         add('measure', 'ruler', 'Measure distance & bearing (click points, double-click for new line, Esc to stop)', () => setMode('measure'));
+        add(null, 'route', 'Route: pick geocaches and pins, and export them as a GPX route', openRoute);
         autoBtn = add(null, 'circles', () => T('161 m circles around traditional caches, physical stages and caches with solved coordinates (from zoom {z}). Right-click the map for a single circle anywhere.', { z: AUTO_MIN_ZOOM }), () => setAuto(!autoOn));
         autoBtn.classList.add('danger');
         marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off). Always shown with the 161 m circles.', { z: MARK_MIN_ZOOM }), () => setMarks(!marksOn));
@@ -4995,6 +5167,203 @@
       coordCtl.getContainer().querySelector('.zin').title = T('Zoom level – type a number to zoom');
       coordCtl.getContainer().querySelector('.zl').textContent = T('Zoom');
     }
+    // --- Route ----------------------------------------------------------------------------------------
+    // A searchable list of geocaches (solved or not) and pins; pick stops in order, see the route on the map,
+    // and download it as a GPX route for a GPS. Kept for this browser tab (sessionStorage).
+    const ROUTE_KEY = 'gcct.route';
+    let route = [];
+    try { route = JSON.parse(sessionStorage.getItem(ROUTE_KEY) || '[]') || []; } catch (e) { route = []; }
+    const saveRoute = () => { try { sessionStorage.setItem(ROUTE_KEY, JSON.stringify(route)); } catch (e) { /* blocked */ } };
+    const routeLayer = L.layerGroup().addTo(map);
+    routeLayer.__gcct = true;
+    function drawRoute() {
+      routeLayer.clearLayers();
+      if (!route.length) return;
+      const lls = route.map(r => L.latLng(r.lat, r.lng));
+      if (lls.length > 1) routeLayer.addLayer(L.polyline(lls, { color: '#8250df', weight: 3, opacity: 0.85, dashArray: '6 6', interactive: false }));
+      route.forEach((r, i) => {
+        const m = L.marker(lls[i], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gcct-rtnum', html: `<span>${i + 1}</span>`, iconSize: [18, 18], iconAnchor: [9, 26] }) });
+        m.__gcct = true;
+        routeLayer.addLayer(m);
+      });
+    }
+    const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
+    // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
+    const legText = i => { const a = L.latLng(route[i - 1].lat, route[i - 1].lng), b = L.latLng(route[i].lat, route[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
+    function fitRoute() {
+      if (!route.length) return;
+      if (route.length === 1) { map.setView(L.latLng(route[0].lat, route[0].lng), Math.max(map.getZoom(), 15)); return; }
+      try { map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { padding: [60, 60], maxZoom: 17 }); } catch (e) { /* ignore */ }
+    }
+    const routeLength = () => route.reduce((sum, r, i) => i ? sum + distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
+    // Everything you can pick: pins, and every geocache the script knows a position for (solved ones at the solved spot).
+    function routeCandidates() {
+      const out = [];
+      pinRecs.forEach(r => out.push({ key: 'p:' + r.id, kind: 'pin', name: r.name, lat: r.lat, lng: r.lng }));
+      const seen = new Set();
+      CACHE_INFO.forEach((i, code) => {
+        const q = i && (i.solved && i.corrected ? i.corrected : i.posted || knownPos.get(code));
+        if (!q || !isFinite(q.lat)) return;
+        seen.add(code);
+        out.push({ key: 'c:' + code, kind: 'cache', code, name: i.name || '', lat: +q.lat, lng: +q.lng, solved: !!(i.solved && i.corrected), found: i.found === true, type: i.type, dt: i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : '' });
+      });
+      knownPos.forEach((q, code) => { if (!seen.has(code)) out.push({ key: 'c:' + code, kind: 'cache', code, name: q.name || '', lat: q.lat, lng: q.lng }); });
+      return out;
+    }
+    function routeGpx() {
+      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
+      const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
+    }
+    function saveFile(text, fileName, type) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type }));
+      a.download = fileName;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    let routeDlg = null, routeRefresh = null;
+    const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
+    function addStop(x) {
+      if (!x || route.some(r => r.key === x.key)) return false;
+      route.push({ key: x.key, kind: x.kind, code: x.code, name: x.name || '', lat: +(+x.lat).toFixed(6), lng: +(+x.lng).toFixed(6) });
+      saveRoute(); drawRoute();
+      if (routeOpen() && routeRefresh) routeRefresh();
+      return true;
+    }
+    // What a click or right-click at this point would snap to, as a route stop (a pin or a geocache), or null.
+    function stopAt(ll) {
+      const pn = nearestPin(ll);
+      if (pn && pn.m.__pin) return { key: 'p:' + pn.m.__pin.id, kind: 'pin', name: pn.m.__pin.name, lat: pn.m.__pin.lat, lng: pn.m.__pin.lng };
+      const c = nearestCache(ll);
+      if (c && c.code) { const i = CACHE_INFO.get(c.code) || {}; return { key: 'c:' + c.code, kind: 'cache', code: c.code, name: i.name || c.name || '', lat: c.ll.lat, lng: c.ll.lng }; }
+      return null;
+    }
+    // While the route window is open, a click on a geocache or pin on the map adds it (instead of the site's popup).
+    window.addEventListener('click', e => {
+      if (!routeOpen() || e.button !== 0) return;
+      const root = map.getContainer(), tgt = e.target;
+      if (!root.contains(tgt) || (tgt.closest && tgt.closest('.leaflet-popup, .leaflet-control-container, .gcct-dock, .gcct-coord, .gcct-dlg'))) return;
+      let ll;
+      try { ll = map.mouseEventToLatLng(e); } catch (err) { return; }
+      const x = stopAt(ll);
+      if (!x) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (addStop(x)) toast(T('Added to the route: {name}', { name: x.kind === 'cache' ? x.code : x.name }));
+    }, true);
+    function openRoute() {
+      const d = api.openDialog(T('Route'), `
+        <input class="gcct-q rt-q" placeholder="${esc(T('Search code or name …'))}">
+        <p class="hint">${esc(T('Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.'))}</p>
+        <div class="rt-list"></div>
+        <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
+        <ol class="rt-route"></ol>
+        <div class="rt-pv" style="display:none"></div>
+        <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
+        <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
+      const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
+      const tag = c => c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
+      const title = c => c.kind === 'pin' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
+      // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
+      const typeIcon = c => {
+        if (c.kind === 'pin') return `<span class="rt-ic rt-ic-pin">${icon('pin', 14)}</span>`;
+        const t = c.type != null ? c.type : (CACHE_INFO.get(c.code) || {}).type;
+        return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
+          : '<span class="rt-ic rt-ic-dot"></span>';
+      };
+      // A full GC code is looked up anywhere in the world (from what the script knows, else the cache page).
+      const looked = new Map();                       // code -> 'busy' | [candidates] | 'none'
+      function lookUp(code) {
+        if (looked.has(code)) return;
+        looked.set(code, 'busy');
+        searchGC(code).then(rows => {
+          const i = CACHE_INFO.get(code) || {};
+          looked.set(code, rows.length ? rows.map((r, k) => ({ key: 'c:' + code, kind: 'cache', code, name: (r.name || '').replace(code, '').replace(/^[\s·]+/, ''),
+            lat: r.lat, lng: r.lng, solved: rows.length > 1 && k === 0, found: i.found === true, type: i.type })).slice(0, 1) : 'none');
+        }).catch(() => looked.set(code, 'none')).finally(() => { if (routeOpen()) drawList(); });
+      }
+      function drawList() {
+        const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
+        const inRoute = new Set(route.map(r => r.key));
+        let c = routeCandidates();
+        if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
+        const gc = /^gc[0-9a-z]{1,7}$/.test(text) ? text.toUpperCase() : null;
+        let extra = '', pre = [];
+        if (gc && !c.some(x => x.code === gc)) {
+          const st = looked.get(gc);
+          if (Array.isArray(st)) pre = st;
+          else if (st === 'none') extra = `<div class="gm">${esc(T('{code} not found.', { code: gc }))}</div>`;
+          else { extra = `<div class="gm">${esc(T('Looking up {code} …', { code: gc }))}</div>`; lookUp(gc); }
+        }
+        c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
+        c.sort((a, b) => a.d - b.d);
+        pre.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
+        c = pre.concat(c.slice(0, 100));
+        list.innerHTML = c.length ? c.map((x, i) => `<div class="rt-row${inRoute.has(x.key) ? ' in' : ''}" data-i="${i}">
+            <span class="rt-t">${typeIcon(x)}${title(x)} ${tag(x)}</span><span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${fmtDist(x.d)}${inRoute.has(x.key) ? ' · ' + esc(T('In the route')) : ''}</span></div>`).join('')
+          : (extra ? '' : `<div class="gm">${esc(T('Nothing found.'))}</div>`);
+        if (extra) list.insertAdjacentHTML('afterbegin', extra);
+        list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
+          addStop(c[+el.dataset.i]);
+        });
+      }
+      function drawRouteList() {
+        ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t rt-go" title="${esc(T('Show on the map'))}">${typeIcon(r)}${title(r)}${i ? ` <small class="rt-leg">+${legText(i)}</small>` : ''}</span>
+            <button data-m="up" title="${esc(T('Move up'))}" ${i ? '' : 'disabled'}>${icon('up', 14)}</button><button data-m="down" title="${esc(T('Move down'))}" ${i < route.length - 1 ? '' : 'disabled'}>${icon('down', 14)}</button><button data-m="del" title="${esc(T('Remove'))}">${icon('x', 14)}</button></li>`).join('')
+          : `<li class="gm">${esc(T('No stops yet.'))}</li>`;
+        sum.textContent = route.length ? T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }) : '';
+        ol.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('li').dataset.i));
+        ol.querySelectorAll('button[data-m]').forEach(b => b.onclick = () => {
+          const i = +b.closest('li').dataset.i, m = b.dataset.m;
+          if (m === 'del') route.splice(i, 1);
+          else { const j = m === 'up' ? i - 1 : i + 1; [route[i], route[j]] = [route[j], route[i]]; }
+          changed();
+        });
+        d.querySelector('[data-a=preview]').disabled = !route.length;
+      }
+      // Preview: the whole route on the map, and a table of exactly what goes into the GPX file.
+      const pv = d.querySelector('.rt-pv'), editEls = [q, d.querySelector('.hint'), list, d.querySelector('.rt-h'), ol, d.querySelector('.rt-edit-btns')];
+      function preview(on) {
+        editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
+        pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
+        if (!on) return;
+        let tot = 0;
+        const rows = route.map((r, i) => {
+          const leg = i ? distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
+          tot += leg;
+          return `<tr data-i="${i}"><td><span class="rt-n">${i + 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
+        }).join('');
+        pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
+          <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))} · ${esc(T('Straight-line distances; the way there is usually longer.'))}</p>`;
+        pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
+        fitRoute();
+      }
+      d.querySelector('[data-a=preview]').onclick = () => preview(true);
+      d.querySelector('[data-a=back]').onclick = () => preview(false);
+      function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
+      routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); };
+      d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
+        if (route.length < 3) return;
+        const rest = route.slice(1), out = [route[0]];
+        while (rest.length) {
+          const last = out[out.length - 1];
+          let bi = 0, bd = Infinity;
+          rest.forEach((r, i) => { const dd = distM(L.latLng(last.lat, last.lng), L.latLng(r.lat, r.lng)); if (dd < bd) { bd = dd; bi = i; } });
+          out.push(rest.splice(bi, 1)[0]);
+        }
+        route = out; changed();
+      };
+      d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); };
+      d.querySelector('[data-a=gpx]').onclick = () => { if (route.length) saveFile(routeGpx(), `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml'); };
+      function goStop(i) { const r = route[i]; if (r) map.setView(L.latLng(r.lat, r.lng), Math.max(map.getZoom(), 16)); }
+      q.oninput = drawList;
+      q.addEventListener('keydown', e => e.stopPropagation());
+      drawList(); drawRouteList();
+      setTimeout(() => q.focus(), 0);
+    }
+    drawRoute();
     // Pins remembered from earlier in this browser session.
     try { pinRecs.slice().forEach(r => { if (isFinite(r.lat) && isFinite(r.lng)) namedPin(null, null, r); }); } catch (e) { /* ignore */ }
     return { barEl: barCtl.getContainer(), coordEl: coordCtl.getContainer(), relabel };
