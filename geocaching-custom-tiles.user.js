@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.53.7
+// @version      1.53.9
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4823,6 +4823,7 @@
         setTimeout(queueUnseenCaches, 300);
         try { refreshAuto(true); } catch (e) { /* ignore */ }
         if (window.__gcctRefreshFav) window.__gcctRefreshFav();
+        if (window.__gcctClRefresh) window.__gcctClRefresh();      // the cache list follows the filters at once
       }
       lastFilterSig = s;
     }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
@@ -5675,6 +5676,7 @@ ${pts}
       else clHoverTimer = setTimeout(clHoverNow, 110);
     });
     map.on('mouseout', () => { if (clOpen() && clHover) clHover(null); });
+    window.__gcctClRefresh = () => { if (clOpen() && clRefresh) clRefresh(); };
     window.__gcctMarkHover = code => { if (code) lastMarkHover = code; if (clOpen() && clHover) { clearTimeout(clHoverTimer); clHoverT = Date.now(); clHover(code); } };
     (window.__gcctInfoHooks ||= []).push(() => { if (clOpen() && clRefresh) { clearTimeout(clRefresh.t); clRefresh.t = setTimeout(() => clOpen() && clRefresh(), 400); } });
     function openCacheList() {
@@ -5695,12 +5697,15 @@ ${pts}
       function draw() {
         const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
         let bb = null;
-        try { bb = map.getBounds(); } catch (e) { bb = null; }
+        // A little beyond the edges (the size of an icon), so a cache whose icon is only partly in view counts too.
+        try { const sz = map.getSize(); bb = map.getBounds().pad(Math.max(20 / Math.max(1, sz.x), 20 / Math.max(1, sz.y))); } catch (e) { try { bb = map.getBounds(); } catch (e2) { bb = null; } }
         // On the map = its solved spot, its posted coordinates or the site's icon is in view (a solved
         // cache's icon may sit at the posted coordinates while the solved spot is elsewhere).
         const spots = x => { const i = CACHE_INFO.get(x.code) || {}, kp = knownPos.get(x.code);
           return [L.latLng(x.lat, x.lng), i.posted && L.latLng(i.posted.lat, i.posted.lng), kp && L.latLng(kp.lat, kp.lng)].filter(Boolean); };
         let c = routeCandidates().filter(x => x.kind === 'cache' && (!bb || spots(x).some(q => bb.contains(q))));
+        // Only what the site's sidebar filters let through (cache types, My Finds, My Hides, My DNFs).
+        if (window.__gcctFilteredOut) c = c.filter(x => { try { return !window.__gcctFilteredOut(x.code); } catch (e) { return true; } });
         const inView = c.length;
         if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
         c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); const i = CACHE_INFO.get(x.code) || {}; x.fav = i.fav; x.dt = x.dt || (i.diff != null && i.terr != null ? `${i.diff}/${i.terr}` : ''); });
