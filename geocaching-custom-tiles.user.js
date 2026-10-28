@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.3
+// @version      1.51.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2448,6 +2448,8 @@
       d.style.bottom = p.top == null ? p.bottom + 'px' : 'auto';
       d.style.maxHeight = p.maxHeight;
     }
+    let lastFill = null;
+    window.gcctDialogTest = () => lastFill;
     // Stretch a placed dialog up and down as far as the window and the controls around it allow.
     function fillHeight(d) {
       const r = d.getBoundingClientRect(), vh = window.innerHeight, gap = 8;
@@ -2461,6 +2463,11 @@
       const mapTop = map.getContainer().getBoundingClientRect().top;
       const hi = Math.max(Math.min(r.top, Math.max(10, mapTop + 10)), ...across.filter(o => o.bottom <= r.top + 1).map(o => o.bottom + gap));
       const lo = Math.min(vh - 10, ...across.filter(o => o.top >= r.bottom - 1).map(o => o.top - gap));
+      // For gcctDialogTest(): what limited the height (element kinds and positions only).
+      const desc = o => o.__el ? `${o.__el.tagName.toLowerCase()}.${String(o.__el.className || '').split(/\s+/).slice(0, 2).join('.')}` : 'box';
+      lastFill = { vh, rect: [Math.round(r.top), Math.round(r.bottom), Math.round(r.left), Math.round(r.right)], hi: Math.round(hi), lo: Math.round(lo),
+        above: across.filter(o => o.bottom <= r.top + 1).map(o => [desc(o), Math.round(o.top), Math.round(o.bottom)]),
+        below: across.filter(o => o.top >= r.bottom - 1).map(o => [desc(o), Math.round(o.top), Math.round(o.bottom)]) };
       if (lo - hi <= r.height) return;
       Object.assign(d.style, { top: hi + 'px', bottom: 'auto', height: (lo - hi) + 'px', maxHeight: 'none' });
       d.classList.add('sized');
@@ -3143,7 +3150,7 @@
         .filter(el => el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : getComputedStyle(el).visibility !== 'hidden')
         // Only what is really on top of the map: a closed side panel's buttons may still lie there, under it.
         .filter(el => root.contains(el) || !coveredByMap(el, root, mr))
-        .map(el => el.getBoundingClientRect())
+        .map(el => { const q = el.getBoundingClientRect(); q.__el = el; return q; })
         .filter(r => r.width > 0 && r.height > 0 && r.width < 300 && r.height < 500);
     }
     // gcctDockDebug() in the console: what the toolbar placement sees (element names and positions only).
