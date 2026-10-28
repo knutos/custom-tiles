@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.53.9
+// @version      1.53.11
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -222,6 +222,7 @@
     "Show on the map and open the cache page": "Vis på kartet og åpne cachesiden",
     "Zoom in to see the geocaches here.": "Zoom inn for å se geocachene her.",
     "No geocaches here yet.": "Ingen geocacher her ennå.",
+    "The geocaches are hidden – click the eye button in the toolbar to show them again.": "Geocachene er skjult – klikk på øyeknappen i verktøylinjen for å vise dem igjen.",
     "Geocaches on the map: a list that follows the map – click one to zoom to it": "Geocacher på kartet: en liste som følger kartet – klikk på en for å zoome til den",
     "Pin (tag)": "Nål",
     "In the route": "I ruten",
@@ -2514,6 +2515,17 @@
         }, 250);
       }
     }
+    // The controls on the map (for keeping a zoomed-to route clear of them), and the side panel's width.
+    function mapObstacles() {
+      let rects = [];
+      try { rects = collectObstacles([dock]); } catch (e) { rects = []; }
+      try { rects.push(dock.getBoundingClientRect()); } catch (e) { /* none */ }
+      const ce = toolsUi && toolsUi.coordEl;
+      if (ce && ce.offsetWidth) rects.push(ce.getBoundingClientRect());
+      let panel = 0;
+      try { panel = leftPanelOffset(); } catch (e) { panel = 0; }
+      return { panel, rects };
+    }
     let lastFill = null;
     window.gcctDialogTest = () => lastFill;
     // Stretch a placed dialog up and down as far as the window and the controls around it allow.
@@ -2937,7 +2949,7 @@
       if (ce) ce.style.display = state.showCoords === false ? 'none' : '';
     }
 
-    const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, placeSide, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
+    const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, placeSide, mapObstacles, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
       favSettings: () => ({ show: state.favShow !== false, min: state.favMin ?? 10 }),
       dtSettings: () => ({ show: state.dtShow !== false }),
       ftfSettings: () => ({ show: state.ftfShow !== false }),
@@ -5045,6 +5057,7 @@
           hideBtn.classList.toggle('active', hidOn());
           hideBtn.title = T(hidOn() ? 'Show the geocaches again' : 'Hide all geocaches');
           hideBtn.setAttribute('aria-label', hideBtn.title);
+          if (window.__gcctClRefresh) window.__gcctClRefresh();     // the cache list empties and fills with it
         });
         locBtn = add(null, 'locate', () => T(locShown.length ? 'Hide my location' : 'Show my location'), locate);
         locBtn.classList.add('sep');
@@ -5355,21 +5368,34 @@
     // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
     const legText = (i, pts = routeStops()) => { const a = L.latLng(pts[i - 1].lat, pts[i - 1].lng), b = L.latLng(pts[i].lat, pts[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
     // Zoom to the whole route in the part of the map the dialog leaves free (the widest free side).
+    // The part of the map nothing lies on: right of the site's side panel, beside the open dialog (on its
+    // widest free side), and clear of the toolbar, the zoom and coordinate box and the site's buttons.
+    // Returned as Leaflet padding (top-left and bottom-right, in pixels).
     function freeArea(el) {
-      const mr = map.getContainer().getBoundingClientRect(), pad = 40;
-      const out = { tl: [pad, pad], br: [pad, pad] };
+      const mr = map.getContainer().getBoundingClientRect(), pad = 24, vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      const info = api.mapObstacles ? api.mapObstacles() : { panel: 0, rects: [] };
+      const f = { left: Math.max(mr.left + (info.panel || 0), 0), top: Math.max(mr.top, 0), right: Math.min(mr.right, vw), bottom: Math.min(mr.bottom, vh) };
+      const inside = o => o.right > f.left && o.left < f.right && o.bottom > f.top && o.top < f.bottom;
+      // Cut away the side of the dialog with the least room, keeping the widest free side.
       el = el && el.closest ? (el.closest('.gcct-dlg') || el) : el;
       const r = el && el.getBoundingClientRect && el.getBoundingClientRect();
-      if (!r || r.right <= mr.left || r.left >= mr.right || r.bottom <= mr.top || r.top >= mr.bottom) return out;
-      const free = { left: r.left - mr.left, right: mr.right - r.right, top: r.top - mr.top, bottom: mr.bottom - r.bottom };
-      const horiz = k => k === 'left' || k === 'right', share = k => free[k] / (horiz(k) ? mr.width : mr.height);
-      const side = Object.keys(free).sort((a, b) => share(b) - share(a)).find(k => free[k] >= (horiz(k) ? 160 : 120));
-      if (!side) return out;
-      if (side === 'left') out.br[0] = mr.right - r.left + pad;
-      if (side === 'right') out.tl[0] = r.right - mr.left + pad;
-      if (side === 'top') out.br[1] = mr.bottom - r.top + pad;
-      if (side === 'bottom') out.tl[1] = r.bottom - mr.top + pad;
-      return out;
+      if (r && r.width && inside(r)) {
+        const free = { left: r.left - f.left, right: f.right - r.right, top: r.top - f.top, bottom: f.bottom - r.bottom };
+        const horiz = k => k === 'left' || k === 'right', share = k => free[k] / (horiz(k) ? f.right - f.left : f.bottom - f.top);
+        const side = Object.keys(free).sort((a, b) => share(b) - share(a)).find(k => free[k] >= (horiz(k) ? 160 : 120));
+        if (side === 'left') f.right = r.left; else if (side === 'right') f.left = r.right;
+        else if (side === 'top') f.bottom = r.top; else if (side === 'bottom') f.top = r.bottom;
+      }
+      // Every control in what is left: cut it off along the edge where that costs least.
+      (info.rects || []).filter(o => o && o.width && o.height).forEach(o => {
+        if (!inside(o)) return;
+        const cuts = [['left', o.right - f.left], ['right', f.right - o.left], ['top', o.bottom - f.top], ['bottom', f.bottom - o.top]]
+          .map(([k, d]) => [k, d * ((k === 'left' || k === 'right') ? f.bottom - f.top : f.right - f.left)]).sort((a, b) => a[1] - b[1]);
+        const k = cuts[0][0];
+        if (k === 'left') f.left = o.right; else if (k === 'right') f.right = o.left; else if (k === 'top') f.top = o.bottom; else f.bottom = o.top;
+      });
+      if (f.right - f.left < 120 || f.bottom - f.top < 100) return { tl: [pad, pad], br: [pad, pad] };
+      return { tl: [f.left - mr.left + pad, f.top - mr.top + pad], br: [mr.right - f.right + pad, mr.bottom - f.bottom + pad] };
     }
     // Centre a point in the free area at zoom z.
     function showInFree(ll, z, avoid) {
@@ -5704,6 +5730,9 @@ ${pts}
         const spots = x => { const i = CACHE_INFO.get(x.code) || {}, kp = knownPos.get(x.code);
           return [L.latLng(x.lat, x.lng), i.posted && L.latLng(i.posted.lat, i.posted.lng), kp && L.latLng(kp.lat, kp.lng)].filter(Boolean); };
         let c = routeCandidates().filter(x => x.kind === 'cache' && (!bb || spots(x).some(q => bb.contains(q))));
+        // All geocaches hidden with the toolbar button: none in the list either.
+        const allHidden = !!(cacheHider && cacheHider.on());
+        if (allHidden) c = [];
         // Only what the site's sidebar filters let through (cache types, My Finds, My Hides, My DNFs).
         if (window.__gcctFilteredOut) c = c.filter(x => { try { return !window.__gcctFilteredOut(x.code); } catch (e) { return true; } });
         const inView = c.length;
@@ -5722,7 +5751,7 @@ ${pts}
             <span class="rt-t">${typeIcon(x)}<b>${esc(x.code)}</b>${x.name ? ' · ' + esc(x.name) : ''} ${tags(x)}</span>
             <span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${x.fav ? '♥ ' + esc(x.fav) + ' · ' : ''}${fmtDist(x.d)}</span>
             <button class="cl-open" title="${esc(T('Open the cache page in a new tab'))}" aria-label="${esc(T('Open the cache page in a new tab'))}">${icon('external', 15)}</button></div>`).join('')
-          || `<div class="gm">${esc(map.getZoom() < 12 ? T('Zoom in to see the geocaches here.') : T('No geocaches here yet.'))}</div>`;
+          || `<div class="gm">${esc(allHidden ? T('The geocaches are hidden – click the eye button in the toolbar to show them again.') : map.getZoom() < 12 ? T('Zoom in to see the geocaches here.') : T('No geocaches here yet.'))}</div>`;
         list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
           const x = items[+el.dataset.i];
           if (!x) return;
