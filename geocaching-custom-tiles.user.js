@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.6
+// @version      1.51.9
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -210,6 +210,7 @@
     "{n} stops · {d}": "{n} stopp · {d}",
     "Solved": "Løst",
     "Found": "Funnet",
+    "Owned": "Eiet",
     "Pin (tag)": "Nål",
     "In the route": "I ruten",
     "Move up": "Flytt opp",
@@ -231,7 +232,7 @@
     "Show on the map": "Vis på kartet",
     "Straight-line distances; the way there is always longer.": "Avstander i luftlinje; veien dit er alltid lengre.",
     "Added to the route: {name}": "Lagt til i ruten: {name}",
-    "Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en – her eller på kartet – for å legge den til i ruten.",
+    "Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.": "Geocacher i kartutsnittet og merkenålene dine, nærmest midten først – søk for å finne andre. Klikk på en – her eller på kartet – for å legge den til i ruten.",
     "Move down": "Flytt ned",
     "Remove": "Fjern",
     "Download GPX": "Last ned GPX",
@@ -506,14 +507,14 @@
     if (!e || !e.c || Date.now() - (e.ts || 0) > SOLVED_TTL) { delete solvedStore[c]; return; }
     const prev = CACHE_INFO.get(c) || {};
     CACHE_INFO.set(c, Object.assign({}, prev, { type: e.t ?? prev.type ?? null, solved: true, corrected: { lat: e.c[0], lng: e.c[1] },
-      posted: e.p ? { lat: e.p[0], lng: e.p[1] } : prev.posted, found: e.f, owned: e.o, name: e.n || prev.name, fav: e.fav, diff: e.d, terr: e.te, fromStore: true }));
+      posted: e.p ? { lat: e.p[0], lng: e.p[1] } : prev.posted, found: e.f, owned: e.o, ownerName: e.ow || prev.ownerName, name: e.n || prev.name, fav: e.fav, diff: e.d, terr: e.te, fromStore: true }));
   });
   let solvedSaveTimer = null;
   function rememberSolved(code, i) {
     try {
       if (i.solved && i.corrected) {
         solvedStore[code] = { c: [+i.corrected.lat.toFixed(6), +i.corrected.lng.toFixed(6)], p: i.posted ? [+i.posted.lat.toFixed(6), +i.posted.lng.toFixed(6)] : null,
-          f: i.found, o: i.owned, n: i.name, t: i.type, fav: i.fav, d: i.diff, te: i.terr, ts: Date.now() };
+          f: i.found, o: i.owned, ow: i.ownerName || undefined, n: i.name, t: i.type, fav: i.fav, d: i.diff, te: i.terr, ts: Date.now() };
       } else if (solvedStore[code]) delete solvedStore[code];          // no longer solved
       else return;
       clearTimeout(solvedSaveTimer);
@@ -3654,6 +3655,7 @@
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
       .gcct-route em.tag-solved{background:#e8f0fa;color:#336699}
       .gcct-route em.tag-found{background:#dafbe1;color:#116329}
+      .gcct-route em.tag-owned{background:#fff8c5;color:#7d4e00}
       .gcct-route .rt-h{margin:4px 0 6px;font-size:14px}
       .gcct-route .rt-sum{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
       .gcct-route .rt-route{flex:1 1 0;min-height:64px;max-height:260px;margin:0 0 4px;padding-left:0;list-style:none;overflow:auto}
@@ -4693,9 +4695,9 @@
     // search answer was complete, that the answer did not contain, is taken to be yours.
     function likelyOwn(code, ll) {
       const i = CACHE_INFO.get(code) || {};
-      if (i.owned === true || i.fromPage) return true;
+      // Your name as owner counts first – the site's own "owned" flag is not always right.
+      if (i.owned === true || i.fromPage || (i.ownerName && i.ownerName === myName())) return true;
       if (i.owned === false) return false;
-      if (i.ownerName && i.ownerName === myName()) return true;
       if (inSearch.has(code) || !ll) return false;
       const p = L.latLng(ll.lat, ll.lng);
       return searchedComplete.some(a => a.contains(p));
@@ -5502,6 +5504,8 @@ ${pts}
     }
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
+    // The list follows the map while the route window is open.
+    map.on('moveend', () => { if (routeOpen() && routeRefresh) routeRefresh(); });
     // A pin renamed on the map gets the new name in the route too (and in an open route window).
     function pinRenamedInRoute(id, name) {
       let hit = false;
@@ -5539,7 +5543,7 @@ ${pts}
     function openRoute() {
       const d = api.openDialog(T('Route'), `
         <input class="gcct-q rt-q" placeholder="${esc(T('Search code or name …'))}">
-        <p class="hint">${esc(T('Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.'))}</p>
+        <p class="hint">${esc(T('Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.'))}</p>
         <div class="rt-list"></div>
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
         <ol class="rt-route"></ol>
@@ -5547,7 +5551,8 @@ ${pts}
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
+      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
+        c.kind === 'cache' && c.code && window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
       const typeIcon = c => {
@@ -5590,6 +5595,13 @@ ${pts}
         const inRoute = new Set(route.map(r => r.key));
         let c = routeCandidates();
         if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
+        else {
+          // Without a search: only what is on the map you see (a little beyond the edges), and your pins.
+          // Caches remembered from elsewhere are still found by searching for their code or name.
+          let bb = null;
+          try { bb = map.getBounds().pad(0.15); } catch (e) { bb = null; }
+          if (bb) c = c.filter(x => x.kind === 'pin' || bb.contains(L.latLng(x.lat, x.lng)));
+        }
         const gc = /^gc[0-9a-z]{1,7}$/.test(text) ? text.toUpperCase() : null;
         let extra = '', pre = [];
         if (gc && !c.some(x => x.code === gc)) {
