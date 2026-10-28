@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.0
+// @version      1.50.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -197,14 +197,12 @@
     "Drag to resize": "Dra for å endre høyden",
     "Looking up {code} …": "Slår opp {code} …",
     "Places and addresses": "Steder og adresser",
-    "Places, addresses and POIs": "Steder, adresser og interessepunkter",
     "Searching places …": "Søker etter steder …",
     "Place (tag)": "Sted",
     "{code} not found.": "Fant ikke {code}.",
     "Route": "Rute",
     "Route: pick geocaches and pins, and export them as a GPX route": "Rute: velg geocacher og merkenåler, og eksporter dem som en GPX-rute",
     "Search code or name …": "Søk etter kode eller navn …",
-    "Search code, name, place or e.g. parking …": "Søk på kode, navn, sted eller f.eks. parkering …",
     "Geocaches and pins nearest the middle of the map. Click one to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en for å legge den til i ruten.",
     "No stops yet.": "Ingen stopp ennå.",
     "Sort by nearest": "Sorter etter nærmeste",
@@ -361,7 +359,7 @@
     "Place name, address, coordinates or GC code": "Stedsnavn, adresse, koordinater eller GC-kode",
     "Posted coordinates": "Publiserte koordinater",
     "Solved coordinates": "Løste koordinater",
-    "Places, addresses and points of interest appear as you type – a word like <i>parkering</i>, <i>kafé</i> or <i>gapahuk</i> finds the nearest ones. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.": "Steder, adresser og interessepunkter vises mens du skriver – et ord som <i>parkering</i>, <i>kafé</i> eller <i>gapahuk</i> finner de nærmeste. En GC-kode finner geocachen. Bruk <b>↑</b> <b>↓</b> og <b>Enter</b> for å velge. Tips: trykk <b>/</b> på kartet for å åpne denne boksen.",
+    "Places in Norway, addresses and places abroad appear as you type. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.": "Steder i Norge, adresser og steder i utlandet vises mens du skriver. En GC-kode finner geocachen. Bruk <b>↑</b> <b>↓</b> og <b>Enter</b> for å velge. Tips: trykk <b>/</b> på kartet for å åpne denne boksen.",
     "Search the whole world (OpenStreetMap)": "Søk i hele verden (OpenStreetMap)",
     "Coordinates": "Koordinater",
     "Places in Norway": "Steder i Norge",
@@ -370,14 +368,6 @@
     "Searching…": "Søker …",
     "Place": "Sted",
     "Abroad": "Utland",
-    "POI": "POI",
-    "near {place}": "ved {place}",
-    "Car park": "Parkering", "Café": "Kafé", "Toilet": "Toalett", "Fuel": "Drivstoff", "Charging station": "Ladestasjon",
-    "Shelter": "Gapahuk", "Viewpoint": "Utsiktspunkt", "Cabin": "Hytte", "Shop": "Butikk", "Playground": "Lekeplass",
-    "Fireplace": "Bålplass", "Beach": "Badeplass", "Picnic site": "Rasteplass", "Bench": "Benk", "Drinking water": "Drikkevann",
-    "Church": "Kirke", "Hotel": "Overnatting", "Campsite": "Campingplass", "Bus stop": "Holdeplass", "Station": "Stasjon",
-    "Pharmacy": "Apotek", "ATM": "Minibank", "Hospital": "Legevakt/sykehus", "Library": "Bibliotek", "Lighthouse": "Fyr",
-    "Defibrillator": "Hjertestarter",
     "Some search services did not answer: {list}": "Noen søketjenester svarte ikke: {list}",
     "Places in Norway, addresses and places abroad appear as you type. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.": "Steder i Norge, adresser og steder i utlandet vises mens du skriver. Bruk <b>↑</b> <b>↓</b> og <b>Enter</b> for å velge. Tips: trykk <b>/</b> på kartet for å åpne denne boksen.",
     "Nothing found.": "Ingen treff.",
@@ -3520,7 +3510,6 @@
       .gcct-results em.tag-place{background:#dafbe1;color:#116329}
       .gcct-results em.tag-addr{background:#ddf4ff;color:#0550ae}
       .gcct-results em.tag-abroad{background:#fbefff;color:#6639ba}
-      .gcct-results em.tag-poi{background:#fff1e5;color:#953800}
       .gcct-results em.tag-gc{background:#fff1e5;color:#953800}
       .gcct-results .gm.err{color:#a40e26}
       .gcct-crosshair, .gcct-crosshair .leaflet-interactive{cursor:crosshair!important}
@@ -3618,7 +3607,6 @@
       .gcct-route em.tag-place{background:#dafbe1;color:#116329}
       .gcct-route em.tag-addr{background:#ddf4ff;color:#0550ae}
       .gcct-route em.tag-abroad{background:#fbefff;color:#6639ba}
-      .gcct-route em.tag-poi{background:#fff1e5;color:#953800}
       .gcct-route .rt-ic-place{color:#1a7f37;display:inline-flex;align-items:center;justify-content:center}
       .gcct-route .rt-sec{padding:6px 10px 4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
@@ -4963,104 +4951,16 @@
         + `&lat=${c.lat.toFixed(4)}&lon=${c.lng.toFixed(4)}`, signal);
       return (j.features || []).map(f => {
         const p = f.properties || {}, xy = (f.geometry && f.geometry.coordinates) || [];
-        // In Norway Kartverket covers places and addresses; from Photon only points of interest (cafés, car parks …).
-        const poi = POI_KEYS.test(p.osm_key || '') && p.name;
-        if (String(p.countrycode || '').toUpperCase() === 'NO' && !poi) return null;
+        if (String(p.countrycode || '').toUpperCase() === 'NO') return null;
         const street = [p.street, p.housenumber].filter(Boolean).join(' ');
         const name = p.name || street || p.city || p.county || p.state || p.country;
         const sub = [name !== street ? street : '', [p.postcode, p.city !== name ? p.city : ''].filter(Boolean).join(' '),
           p.county !== name ? p.county : '', p.state !== name ? p.state : '', p.country !== name ? p.country : '']
           .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ');
         const e = Array.isArray(p.extent) && p.extent.length === 4 ? p.extent.map(Number) : null;   // [minLon, maxLat, maxLon, minLat]
-        return { kind: poi ? 'poi' : 'abroad', name, sub: poi ? [poiLabel(p.osm_key, p.osm_value), sub].filter(Boolean).join(' · ') : sub, lat: Number(xy[1]), lng: Number(xy[0]), zoom: photonZoom(p.type),
+        return { kind: 'abroad', name, sub, lat: Number(xy[1]), lng: Number(xy[0]), zoom: photonZoom(p.type),
           bounds: e ? [e[3], e[1], e[0], e[2]] : null };                                           // [south, north, west, east]
       }).filter(r => r && r.name && isFinite(r.lat) && isFinite(r.lng)).slice(0, 6);
-    }
-
-    // Points of interest (OpenStreetMap). Named ones also come from Photon above; a category word
-    // ("parkering", "kafé", "gapahuk", "toilet" …) finds the nearest ones around the map centre via Overpass.
-    // Words besides the category filter on the name: "kafé fuglen".
-    const POI_KEYS = /^(amenity|shop|tourism|leisure|historic|man_made|craft|office|healthcare|sport|natural|railway|aeroway|emergency)$/;
-    const POI_CATS = [
-      [['parkering', 'parkeringsplass', 'p-plass', 'parking', 'car park'], 'Car park', ['amenity=parking']],
-      [['kafé', 'kafe', 'café', 'cafe', 'kaffe', 'coffee'], 'Café', ['amenity=cafe']],
-      [['restaurant', 'spisested', 'mat', 'food'], 'Restaurant', ['amenity~"^(restaurant|fast_food)$"']],
-      [['toalett', 'wc', 'toilet'], 'Toilet', ['amenity=toilets']],
-      [['bensin', 'bensinstasjon', 'drivstoff', 'diesel', 'fuel', 'petrol'], 'Fuel', ['amenity=fuel']],
-      [['lading', 'ladestasjon', 'ladepunkt', 'elbil', 'charging', 'charger'], 'Charging station', ['amenity=charging_station']],
-      [['gapahuk', 'lavvo', 'shelter'], 'Shelter', ['amenity=shelter']],
-      [['utsikt', 'utsiktspunkt', 'utkikk', 'utkikkspunkt', 'viewpoint'], 'Viewpoint', ['tourism=viewpoint', 'tower:type=observation']],
-      [['hytte', 'turisthytte', 'koie', 'cabin', 'hut'], 'Cabin', ['tourism~"^(alpine_hut|wilderness_hut)$"']],
-      [['butikk', 'dagligvare', 'matbutikk', 'supermarked', 'kiosk', 'supermarket', 'grocery', 'shop'], 'Shop', ['shop~"^(supermarket|convenience|kiosk)$"']],
-      [['lekeplass', 'playground'], 'Playground', ['leisure=playground']],
-      [['bålplass', 'grillplass', 'grill', 'firepit', 'bbq', 'barbecue'], 'Fireplace', ['leisure=firepit', 'amenity=bbq']],
-      [['badeplass', 'strand', 'beach', 'bathing'], 'Beach', ['leisure=bathing_place', 'natural=beach']],
-      [['rasteplass', 'piknik', 'picnic', 'rest area'], 'Picnic site', ['tourism=picnic_site', 'highway=rest_area']],
-      [['benk', 'bench'], 'Bench', ['amenity=bench']],
-      [['drikkevann', 'vannpost', 'drinking water', 'water tap'], 'Drinking water', ['amenity=drinking_water']],
-      [['kirke', 'kapell', 'church', 'chapel'], 'Church', ['amenity=place_of_worship']],
-      [['museum'], 'Museum', ['tourism=museum']],
-      [['hotell', 'hotel', 'overnatting'], 'Hotel', ['tourism~"^(hotel|guest_house|hostel|motel)$"']],
-      [['camping', 'campingplass', 'campsite'], 'Campsite', ['tourism=camp_site']],
-      [['holdeplass', 'bussholdeplass', 'busstopp', 'bus stop', 'buss'], 'Bus stop', ['highway=bus_stop']],
-      [['togstasjon', 'jernbanestasjon', 'stasjon', 'station', 'train'], 'Station', ['railway~"^(station|halt)$"']],
-      [['apotek', 'pharmacy'], 'Pharmacy', ['amenity=pharmacy']],
-      [['minibank', 'atm'], 'ATM', ['amenity=atm']],
-      [['legevakt', 'sykehus', 'hospital'], 'Hospital', ['amenity~"^(hospital|clinic)$"']],
-      [['bibliotek', 'library'], 'Library', ['amenity=library']],
-      [['fyr', 'fyrtårn', 'lighthouse'], 'Lighthouse', ['man_made=lighthouse']],
-      [['hjertestarter', 'defibrillator', 'aed'], 'Defibrillator', ['emergency=defibrillator']],
-    ];
-    const POI_VALUE_LABEL = { parking: 'Car park', cafe: 'Café', restaurant: 'Restaurant', fast_food: 'Restaurant', toilets: 'Toilet', fuel: 'Fuel',
-      charging_station: 'Charging station', shelter: 'Shelter', viewpoint: 'Viewpoint', alpine_hut: 'Cabin', wilderness_hut: 'Cabin',
-      supermarket: 'Shop', convenience: 'Shop', kiosk: 'Shop', playground: 'Playground', firepit: 'Fireplace', bbq: 'Fireplace',
-      bathing_place: 'Beach', beach: 'Beach', picnic_site: 'Picnic site', rest_area: 'Picnic site', bench: 'Bench', drinking_water: 'Drinking water',
-      place_of_worship: 'Church', museum: 'Museum', hotel: 'Hotel', guest_house: 'Hotel', hostel: 'Hotel', motel: 'Hotel', camp_site: 'Campsite',
-      bus_stop: 'Bus stop', station: 'Station', halt: 'Station', pharmacy: 'Pharmacy', atm: 'ATM', hospital: 'Hospital', clinic: 'Hospital',
-      library: 'Library', lighthouse: 'Lighthouse', defibrillator: 'Defibrillator' };
-    const poiLabel = (k, v) => POI_VALUE_LABEL[v] ? T(POI_VALUE_LABEL[v]) : String(v || k || '').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
-    // The category in what you typed, and the rest of the words as a name filter.
-    function poiQuery(q) {
-      const t = ' ' + String(q || '').toLocaleLowerCase('nb').replace(/[,.;:!?]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
-      for (const cat of POI_CATS) for (const w of cat[0]) {
-        const m = w.includes(' ') ? (t.includes(' ' + w + ' ') ? ' ' + w + ' ' : null)
-          : (t.match(new RegExp(' (' + w.replace(/[-]/g, '\\-') + (w.length >= 4 ? '(?:e|en|er|ene|a|ar|ane|et|s|es|ne)?' : '') + ') ')) || [])[0];
-        if (!m) continue;
-        const rest = t.replace(m, ' ').split(' ').filter(x => x && !/^(i|in|ved|near|nær|på|at|the|en|et|a|nearest|nærmeste)$/.test(x));
-        return { cat, name: rest.join(' ') };
-      }
-      return null;
-    }
-    async function overpassPOI(cat, name, c, r, signal) {
-      const nm = name ? `["name"~"${name.replace(/[\\"^$.*+?()[\]{}|]/g, '.')}",i]` : '';
-      const parts = cat[2].map(f => { const [k, v] = f.split(/([=~].*)/); return `nwr["${k}"${v.startsWith('~') ? v : '="' + v.slice(1) + '"'}]${nm}(around:${r},${c.lat.toFixed(5)},${c.lng.toFixed(5)});`; }).join('');
-      const body = 'data=' + encodeURIComponent(`[out:json][timeout:12];(${parts});out center tags 150;`);
-      const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body, signal,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const j = await res.json(), label = T(cat[1]);
-      return (j.elements || []).map(e => {
-        const lat = e.lat ?? (e.center && e.center.lat), lng = e.lon ?? (e.center && e.center.lon), g = e.tags || {};
-        const street = [g['addr:street'], g['addr:housenumber']].filter(Boolean).join(' ');
-        const name = g.name || g['name:' + (LANG === 'no' ? 'no' : 'en')] || g.operator || label;
-        return { kind: 'poi', name,
-          sub: [name !== label ? label : '', street, g['addr:city'] || g['addr:place']].filter(Boolean).join(' · '),
-          lat: Number(lat), lng: Number(lng), zoom: 17, d: distM(c, { lat: Number(lat), lng: Number(lng) }) };
-      }).filter(x => isFinite(x.lat) && isFinite(x.lng)).sort((a, b) => a.d - b.d).slice(0, 10);
-    }
-    // "parkering" → around the map centre. "kafé fuglen" → cafés named Fuglen nearby; if there are none,
-    // the other words are taken as a place: "parkering holmenkollen" → car parks near Holmenkollen.
-    async function searchPOI(q, signal) {
-      const pq = poiQuery(q);
-      if (!pq) return [];
-      const c = map.getCenter(), r = Math.round(Math.max(1000, Math.min(10000, (b => distM(c, { lat: b.getNorth(), lng: b.getEast() }))(map.getBounds()))));
-      const hits = await overpassPOI(pq.cat, pq.name, c, r, signal);
-      if (hits.length || !pq.name) return hits;
-      const at = (await searchNorwayPlaces(pq.name, signal).catch(() => []))[0]
-        || (await searchAbroad(pq.name, signal).catch(() => [])).find(x => x.kind === 'abroad');
-      if (!at) return [];
-      const where = { lat: at.lat, lng: at.lng };
-      return (await overpassPOI(pq.cat, '', where, 3000, signal)).map(x => Object.assign(x, { sub: x.sub + ' · ' + T('near {place}', { place: at.name }) }));
     }
 
     // A geocache by its GC code: from what the script already knows, otherwise from the cache page
@@ -5105,7 +5005,7 @@
         <input class="gcct-q" placeholder="${T(homeMode ? 'Place name, address or coordinates' : 'Place name, address, coordinates or GC code')}" value="${homeMode ? '' : esc(lastSearch)}">
         <p class="hint">${homeMode
           ? T('Search for your address and pick it from the list. You can also right-click the map and choose “Set as home”.')
-          : T('Places, addresses and points of interest appear as you type – a word like <i>parkering</i>, <i>kafé</i> or <i>gapahuk</i> finds the nearest ones. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.')}</p>
+          : T('Places in Norway, addresses and places abroad appear as you type. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.')}</p>
         ${homeMode && home ? `<p class="hint homeline">${icon('home', 16)} <b>${esc(home.name)}</b> &nbsp;<button data-a="clearhome">${T('Remove home address')}</button></p>` : ''}
         <div class="gcct-results"></div>`);
       const ch = d.querySelector('[data-a=clearhome]');
@@ -5115,8 +5015,8 @@
         api.closeDialog();
       };
       const q = d.querySelector('.gcct-q'), out = d.querySelector('.gcct-results');
-      const SOURCES = [['place', searchNorwayPlaces, 2, 'Kartverket'], ['addr', searchNorwayAddresses, 2, 'Kartverket'], ['abroad', searchAbroad, 3, 'Photon'], ['poi', searchPOI, 3, 'Overpass (OpenStreetMap)']];
-      const TAG = { gc: () => T('Geocache'), coord: () => T('Coordinates'), place: () => T('Place'), addr: () => T('Address'), abroad: () => T('Abroad'), poi: () => T('POI') };
+      const SOURCES = [['place', searchNorwayPlaces, 2, 'Kartverket'], ['addr', searchNorwayAddresses, 2, 'Kartverket'], ['abroad', searchAbroad, 3, 'Photon']];
+      const TAG = { gc: () => T('Geocache'), coord: () => T('Coordinates'), place: () => T('Place'), addr: () => T('Address'), abroad: () => T('Abroad') };
       let res = {}, pending = 0, failed = [], items = [], sel = -1, seq = 0, ctrl = null, timer = null, picked = null;
 
       // Rank all hits together, best match first, whatever service they came from:
@@ -5135,11 +5035,8 @@
           return n.includes(t) ? 3 : 4;
         };
         if (list.length && list.every(r => r.kind === 'gc')) return list;      // solved first, then posted
-        // A category word ("parkering") puts the nearest points of interest first.
-        const kindOrder = poiQuery(text) ? { gc: 0, coord: 0, poi: 1, place: 2, addr: 3, abroad: 4 }
-          : hasNumber ? { gc: 0, coord: 0, addr: 1, place: 2, poi: 3, abroad: 4 } : { gc: 0, coord: 0, place: 1, poi: 2, addr: 3, abroad: 4 };
-        const cat = poiQuery(text);
-        return list.map((r, i) => ({ r, k: cat && r.kind === 'poi' ? [0, kindOrder.poi, r.d ?? 1e9, i] : [match(r), kindOrder[r.kind] ?? 9, r.zoom || 15, i] }))
+        const kindOrder = hasNumber ? { gc: 0, coord: 0, addr: 1, place: 2, abroad: 3 } : { gc: 0, coord: 0, place: 1, addr: 2, abroad: 3 };
+        return list.map((r, i) => ({ r, k: [match(r), kindOrder[r.kind] ?? 9, r.zoom || 15, i] }))
           .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2] || a.k[3] - b.k[3])
           .map(x => x.r);
       }
@@ -5154,7 +5051,7 @@
       }
       function draw() {
         // One ranked list mixing coordinates, places in Norway, addresses and places abroad.
-        items = rank(['gc', 'coord', 'poi', 'place', 'addr', 'abroad'].flatMap(k => res[k] || []), q.value);
+        items = rank(['gc', 'coord', 'place', 'addr', 'abroad'].flatMap(k => res[k] || []), q.value);
         let html = items.map((r, i) => `<div class="gr" data-i="${i}"><b>${esc(r.name)}</b>
           <span><em class="tag tag-${r.kind}">${esc(TAG[r.kind]())}</em>${esc(r.sub || '')}</span></div>`).join('');
         const text = q.value.trim();
@@ -5365,7 +5262,7 @@
     }, true);
     function openRoute() {
       const d = api.openDialog(T('Route'), `
-        <input class="gcct-q rt-q" placeholder="${esc(T('Search code, name, place or e.g. parking …'))}">
+        <input class="gcct-q rt-q" placeholder="${esc(T('Search code or name …'))}">
         <p class="hint">${esc(T('Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.'))}</p>
         <div class="rt-list"></div>
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
@@ -5374,7 +5271,7 @@
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'place' ? `<em class="tag tag-${['addr', 'abroad', 'poi'].includes(c.pkind) ? c.pkind : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : c.pkind === 'poi' ? T('POI') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
+      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
       const typeIcon = c => {
@@ -5403,13 +5300,10 @@
         clearTimeout(placeTimer);
         placeTimer = setTimeout(() => {
           placeRes.set(text, 'busy');
-          Promise.allSettled([searchNorwayPlaces(text), searchNorwayAddresses(text), searchAbroad(text), searchPOI(text)]).then(rs => {
-            // Like Find a place: a category word gives the nearest points of interest first; with a house number
-            // addresses come first, otherwise place names; then named points of interest and places abroad.
-            const [pl, ad, ph, poi] = rs.map(r => r.status === 'fulfilled' ? r.value : []);
-            const ab = ph.filter(p => p.kind === 'abroad'), np = ph.filter(p => p.kind === 'poi');
-            const all = poi.length ? [poi.slice(0, 10), np.slice(0, 3), pl.slice(0, 3), ad.slice(0, 3)].flat()
-              : (/\d/.test(text) ? [ad.slice(0, 6), pl.slice(0, 4)] : [pl.slice(0, 5), ad.slice(0, 5)]).concat([np.slice(0, 4), ab.slice(0, 3)]).flat();
+          Promise.allSettled([searchNorwayPlaces(text), searchNorwayAddresses(text), searchAbroad(text)]).then(rs => {
+            // Like Find a place: with a house number addresses come first, otherwise place names; then places abroad.
+            const [pl, ad, ab] = rs.map(r => r.status === 'fulfilled' ? r.value : []);
+            const all = (/\d/.test(text) ? [ad.slice(0, 6), pl.slice(0, 4)] : [pl.slice(0, 5), ad.slice(0, 5)]).concat([ab.slice(0, 3)]).flat();
             placeRes.set(text, all.map(p => ({ key: 'g:' + p.lat.toFixed(5) + ',' + p.lng.toFixed(5), kind: 'place', pkind: p.kind, name: p.name + (p.sub && p.kind === 'addr' ? ', ' + p.sub.split(' · ')[0] : ''), sub: p.kind === 'addr' ? (p.sub || '').split(' · ').slice(1).join(' · ') : (p.sub || ''), lat: p.lat, lng: p.lng })));
             if (routeOpen() && q.value.trim().toLowerCase() === text) drawList();
           });
@@ -5444,7 +5338,7 @@
         const n0 = c.length;
         c = c.concat(places);
         list.innerHTML = (n0 ? c.slice(0, n0).map(rowHtml).join('') : '')
-          + (places.length || placeNote ? `<div class="rt-sec">${esc(T('Places, addresses and POIs'))}</div>` + placeNote + places.map((x, k) => rowHtml(x, n0 + k)).join('') : '')
+          + (places.length || placeNote ? `<div class="rt-sec">${esc(T('Places and addresses'))}</div>` + placeNote + places.map((x, k) => rowHtml(x, n0 + k)).join('') : '')
           || (extra ? '' : `<div class="gm">${esc(T('Nothing found.'))}</div>`);
         if (extra) list.insertAdjacentHTML('afterbegin', extra);
         list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
