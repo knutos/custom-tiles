@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.4
+// @version      1.51.5
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -5684,7 +5684,9 @@ ${pts}
         try {
           const full = !!(fullBox && fullBox.checked);
           const { text, failed } = await routeGpx((n, of) => { if (n === 1 && of > 1) toast(T('Fetching {n} geocaches …', { n: of })); }, full);
-          saveFile(text, `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml');
+          // Local date and time in the name, so several routes on one day don't overwrite each other.
+          const n = new Date(), p2 = v => String(v).padStart(2, '0');
+          saveFile(text, `route-${n.getFullYear()}-${p2(n.getMonth() + 1)}-${p2(n.getDate())}-${p2(n.getHours())}${p2(n.getMinutes())}${p2(n.getSeconds())}.gpx`, 'application/gpx+xml');
           if (failed.length) toast(T('Could not fetch {list} – only in the route, without description.', { list: failed.join(', ') }));
         } finally { b.disabled = false; }
       };
