@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.51.8
+// @version      1.51.9
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -232,7 +232,7 @@
     "Show on the map": "Vis på kartet",
     "Straight-line distances; the way there is always longer.": "Avstander i luftlinje; veien dit er alltid lengre.",
     "Added to the route: {name}": "Lagt til i ruten: {name}",
-    "Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en – her eller på kartet – for å legge den til i ruten.",
+    "Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.": "Geocacher i kartutsnittet og merkenålene dine, nærmest midten først – søk for å finne andre. Klikk på en – her eller på kartet – for å legge den til i ruten.",
     "Move down": "Flytt ned",
     "Remove": "Fjern",
     "Download GPX": "Last ned GPX",
@@ -5504,6 +5504,8 @@ ${pts}
     }
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
+    // The list follows the map while the route window is open.
+    map.on('moveend', () => { if (routeOpen() && routeRefresh) routeRefresh(); });
     // A pin renamed on the map gets the new name in the route too (and in an open route window).
     function pinRenamedInRoute(id, name) {
       let hit = false;
@@ -5541,7 +5543,7 @@ ${pts}
     function openRoute() {
       const d = api.openDialog(T('Route'), `
         <input class="gcct-q rt-q" placeholder="${esc(T('Search code or name …'))}">
-        <p class="hint">${esc(T('Geocaches and pins nearest the middle of the map. Click one – here or on the map – to add it to the route.'))}</p>
+        <p class="hint">${esc(T('Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.'))}</p>
         <div class="rt-list"></div>
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
         <ol class="rt-route"></ol>
@@ -5593,6 +5595,13 @@ ${pts}
         const inRoute = new Set(route.map(r => r.key));
         let c = routeCandidates();
         if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
+        else {
+          // Without a search: only what is on the map you see (a little beyond the edges), and your pins.
+          // Caches remembered from elsewhere are still found by searching for their code or name.
+          let bb = null;
+          try { bb = map.getBounds().pad(0.15); } catch (e) { bb = null; }
+          if (bb) c = c.filter(x => x.kind === 'pin' || bb.contains(L.latLng(x.lat, x.lng)));
+        }
         const gc = /^gc[0-9a-z]{1,7}$/.test(text) ? text.toUpperCase() : null;
         let extra = '', pre = [];
         if (gc && !c.some(x => x.code === gc)) {
