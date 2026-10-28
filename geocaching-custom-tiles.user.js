@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.50.2
+// @version      1.51.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -368,6 +368,9 @@
     "Searching…": "Søker …",
     "Place": "Sted",
     "Abroad": "Utland",
+    "Fetching {n} geocaches …": "Henter {n} geocacher …",
+    "Could not fetch {list} – only in the route, without description.": "Fikk ikke hentet {list} – bare med i ruten, uten beskrivelse.",
+    "Route with {n} stops from geocaching.com": "Rute med {n} stopp fra geocaching.com",
     "Some search services did not answer: {list}": "Noen søketjenester svarte ikke: {list}",
     "Places in Norway, addresses and places abroad appear as you type. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.": "Steder i Norge, adresser og steder i utlandet vises mens du skriver. Bruk <b>↑</b> <b>↓</b> og <b>Enter</b> for å velge. Tips: trykk <b>/</b> på kartet for å åpne denne boksen.",
     "Nothing found.": "Ingen treff.",
@@ -834,12 +837,12 @@
   }
   // Exact coordinates from a cache page: the posted ones, and your corrected ones if you have set them
   // (the page's userDefinedCoords). Used when the site's cache search hasn't told us – e.g. your own caches.
-  function jsonAfter(html, name) {
+  function jsonAfter(html, name, max = 20000) {
     const i = html.search(new RegExp('\\b' + name + '\\s*=\\s*\\{'));
     if (i < 0) return null;
     const s = html.indexOf('{', i);
     let depth = 0, inStr = false, esc = false;
-    for (let k = s; k < html.length && k < s + 20000; k++) {
+    for (let k = s; k < html.length && k < s + max; k++) {
       const ch = html[k];
       if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
       if (ch === '"') inStr = true;
@@ -5219,10 +5222,197 @@
       knownPos.forEach((q, code) => { if (!seen.has(code)) out.push({ key: 'c:' + code, kind: 'cache', code, name: q.name || '', lat: q.lat, lng: q.lng }); });
       return out;
     }
-    function routeGpx() {
+    // --- Geocaches in the GPX route, in Groundspeak's format ---------------------
+    // Each geocache in the route goes in as a full waypoint like the GPX file on the cache page
+    // (GPX 1.0 with the groundspeak:cache extension: description, hint, attributes, logs and the
+    // cache's additional waypoints), so a Garmin or other GPS shows it as a paperless geocache.
+    // With Premium the cache page's own GPX file is used; otherwise the same is read from the cache page.
+    const GS_TYPE = { 2: 'Traditional Cache', 3: 'Multi-cache', 4: 'Virtual Cache', 5: 'Letterbox Hybrid', 6: 'Event Cache', 8: 'Unknown Cache',
+      9: 'Project APE Cache', 11: 'Webcam Cache', 12: 'Locationless (Reverse) Cache', 13: 'Cache In Trash Out Event', 137: 'Earthcache',
+      453: 'Mega-Event Cache', 1304: 'GPS Adventures Exhibit', 1858: 'Wherigo Cache', 3653: 'Community Celebration Event', 3773: 'Geocaching HQ',
+      3774: 'Geocaching HQ Celebration', 4738: 'Geocaching HQ Block Party', 7005: 'Giga-Event Cache' };
+    const GS_ATTR = { dogs: 1, fee: 2, rappelling: 3, boat: 4, scuba: 5, kids: 6, onehour: 7, scenic: 8, hiking: 9, climbing: 10, wading: 11,
+      swimming: 12, available: 13, night: 14, winter: 15, poisonoak: 17, dangerousanimals: 18, ticks: 19, mine: 20, cliff: 21, hunting: 22,
+      danger: 23, wheelchair: 24, parking: 25, public: 26, water: 27, restrooms: 28, phone: 29, picnic: 30, camping: 31, bicycles: 32,
+      motorcycles: 33, quads: 34, jeeps: 35, snowmobiles: 36, horses: 37, campfires: 38, thorn: 39, stealth: 40, stroller: 41, firstaid: 42,
+      cow: 43, flashlight: 44, landf: 45, rv: 46, field_puzzle: 47, uv: 48, snowshoes: 49, skiis: 50, 's-tool': 51, nightcache: 52,
+      parkngrab: 53, abandonedbuilding: 54, hike_short: 55, hike_med: 56, hike_long: 57, fuel: 58, food: 59, wirelessbeacon: 60,
+      partnership: 61, seasonal: 62, touristok: 63, treeclimbing: 64, frontyard: 65, teamwork: 66, geotour: 67, bonuscache: 69,
+      powertrail: 70, challengecache: 71, hqsolutioncheck: 72 };
+    const GS_NS = 'http://www.groundspeak.com/cache/1/0/1';
+    const isoDate = v => { if (!v) return ''; const d = new Date(v); return isNaN(d) ? '' : d.toISOString().replace(/\.\d+Z$/, ''); };
+    const rot13 = t => t.replace(/[a-z]/gi, c => String.fromCharCode((c <= 'Z' ? 65 : 97) + (c.toLowerCase().charCodeAt(0) - 97 + 13) % 26));
+    // Hints on the cache page are ROT13 except text in [brackets].
+    const unRot = t => t.split(/(\[[^\]]*\])/).map((p, i) => i % 2 ? p : rot13(p)).join('');
+    const textOf = el => { if (!el) return ''; const c = el.cloneNode(true); c.querySelectorAll('br').forEach(b => b.replaceWith('\n')); return c.textContent.replace(/[ \t]+\n/g, '\n').trim(); };
+    // A log date as the site shows it (in your own date format) → ISO.
+    function logDate(v) {
+      const t = String(v || '').trim();
+      let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}T19:00:00Z`;
+      m = t.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+      if (m) {                                       // dd.mm.yyyy, dd-mm-yyyy; with / mm/dd/yyyy unless the first number is above 12
+        const us = t.includes('/') && +m[1] <= 12, day = us ? m[2] : m[1], mon = us ? m[1] : m[2];
+        return `${m[3]}-${mon.padStart(2, '0')}-${day.padStart(2, '0')}T19:00:00Z`;
+      }
+      const d = new Date(t); return isNaN(d) ? '' : d.toISOString().replace(/\.\d+Z$/, 'Z');
+    }
+    const gcPages = new Map();                        // code -> Promise<{ html, url, doc }>
+    function gcPage(code) {
+      if (!gcPages.has(code)) gcPages.set(code, fetch('/geocache/' + encodeURIComponent(code), { credentials: 'same-origin' })
+        .then(async r => { if (!r.ok) throw new Error('HTTP ' + r.status); const html = await r.text(); return { html, url: r.url || location.href, doc: new DOMParser().parseFromString(html, 'text/html') }; })
+        .catch(e => { gcPages.delete(code); throw e; }));
+      return gcPages.get(code);
+    }
+    // The cache page's own GPX file (the "GPX file" button, Premium): a postback of the page's form.
+    async function officialGpx(pg) {
+      const form = pg.doc.querySelector('form#aspnetForm') || pg.doc.forms[0];
+      const btn = pg.doc.querySelector('input[type=submit][name$="btnGPXDL"], input[type=submit][id$="btnGPXDL"]');
+      if (!form || !btn) return null;
+      const body = new URLSearchParams();
+      form.querySelectorAll('input[type=hidden][name]').forEach(i => body.append(i.name, i.value || ''));
+      body.append(btn.name, btn.value || 'GPX file');
+      const r = await fetch(new URL(form.getAttribute('action') || pg.url, pg.url).href, { method: 'POST', body, credentials: 'same-origin' });
+      if (!r.ok) return null;
+      const x = new DOMParser().parseFromString(await r.text(), 'application/xml');
+      if (x.querySelector('parsererror') || !x.documentElement || x.documentElement.localName !== 'gpx') return null;
+      const w = [...x.documentElement.children].filter(e => e.localName === 'wpt');
+      return w.length && w.some(e => e.getElementsByTagNameNS(GS_NS, 'cache').length) ? w : null;
+    }
+    // The same waypoints read from the cache page.
+    function pageWpts(code, pg, i) {
+      const doc = pg.doc, $ = sel => doc.querySelector(sel), html = pg.html;
+      const pc = pageCoords(html), q = pc.posted || i.posted || knownPos.get(code) || {};
+      const name = textOf($('#ctl00_ContentBody_CacheName')) || i.name || code;
+      const ownerEl = $('#ctl00_ContentBody_mcd1 a'), owner = ownerEl ? ownerEl.textContent.trim() : (i.ownerName || '');
+      const tl = $('a[href*="cache_types"][title], a[href*="cache_types"] img[alt]');
+      const type = GS_TYPE[i.type] || (tl && (tl.getAttribute('title') || tl.getAttribute('alt'))) || 'Geocache';
+      const star = id => { const m = html.match(new RegExp(id + '[\\s\\S]{0,400}?stars(\\d)(?:_(5))?\\.')); return m ? Number(m[1]) + (m[2] ? 0.5 : 0) : null; };
+      const diff = i.diff ?? star('uxLegendScale'), terr = i.terr ?? star('Localize12');
+      const sz = (html.match(/\/images\/icons\/container\/([a-z_]+)\.(?:gif|png|svg)/i) || [])[1] || '';
+      const container = ({ micro: 'Micro', small: 'Small', regular: 'Regular', large: 'Large', other: 'Other', virtual: 'Virtual', not_chosen: 'Not chosen', unknown: 'Unknown' })[sz.toLowerCase()] || 'Not chosen';
+      const loc = textOf($('#ctl00_ContentBody_Location')).replace(/^\S+\s+/, '').split(',').map(t => t.trim()).filter(Boolean);
+      const country = loc.length ? loc[loc.length - 1] : '', state = loc.length > 1 ? loc.slice(0, -1).join(', ') : '';
+      const attrs = [...doc.querySelectorAll('img[src*="/images/attributes/"]')].map(im => {
+        const m = (im.getAttribute('src') || '').match(/attributes\/([\w-]+?)-(yes|no)\./i);
+        return m && GS_ATTR[m[1].toLowerCase()] ? `        <groundspeak:attribute id="${GS_ATTR[m[1].toLowerCase()]}" inc="${m[2].toLowerCase() === 'yes' ? 1 : 0}">${xmlEsc(im.getAttribute('title') || im.getAttribute('alt') || m[1])}</groundspeak:attribute>` : '';
+      }).filter(Boolean);
+      const hintEl = $('#div_hint'), dh = $('#ctl00_ContentBody_lnkDH');
+      let hint = textOf(hintEl);
+      if (hint && !(dh && /^\s*(encrypt|krypter)/i.test(dh.textContent))) hint = unRot(hint);
+      const sd = $('#ctl00_ContentBody_ShortDescription'), ld = $('#ctl00_ContentBody_LongDescription');
+      const id = (html.match(/[?&]ID=(\d+)/i) || html.match(/"cacheId"\s*:\s*(\d+)/i) || [])[1] || '';
+      const st = i.status, available = st == null || st === 0, archived = st === 2 || st === 'Archived';
+      const logsJ = jsonAfter(html, 'initalLogs', 2000000) || jsonAfter(html, 'initialLogs', 2000000);
+      const logs = ((logsJ && logsJ.data) || []).slice(0, 20).map(l => {
+        const tmp = doc.createElement('div'); tmp.innerHTML = String(l.LogText || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>\s*/gi, '\n\n');
+        return `        <groundspeak:log id="${xmlEsc(l.LogID || '')}">
+          <groundspeak:date>${xmlEsc(logDate(l.Visited || l.Created))}</groundspeak:date>
+          <groundspeak:type>${xmlEsc(l.LogType || '')}</groundspeak:type>
+          <groundspeak:finder id="${xmlEsc(l.AccountID || '')}">${xmlEsc(l.UserName || '')}</groundspeak:finder>
+          <groundspeak:text encoded="False">${xmlEsc(tmp.textContent.trim())}</groundspeak:text>
+        </groundspeak:log>`;
+      });
+      const dt = `${diff ?? ''}/${terr ?? ''}`, placed = isoDate(i.placed);
+      const out = [`  <wpt lat="${(+q.lat).toFixed(6)}" lon="${(+q.lng).toFixed(6)}">${placed ? `\n    <time>${placed}</time>` : ''}
+    <name>${code}</name>
+    <desc>${xmlEsc(`${name} by ${owner}, ${type} (${dt})`)}</desc>
+    <url>https://www.geocaching.com/geocache/${code}</url>
+    <urlname>${xmlEsc(name)}</urlname>
+    <sym>Geocache</sym>
+    <type>Geocache|${xmlEsc(type)}</type>
+    <groundspeak:cache id="${xmlEsc(id)}" available="${available ? 'True' : 'False'}" archived="${archived ? 'True' : 'False'}" xmlns:groundspeak="${GS_NS}">
+      <groundspeak:name>${xmlEsc(name)}</groundspeak:name>
+      <groundspeak:placed_by>${xmlEsc(owner)}</groundspeak:placed_by>
+      <groundspeak:owner>${xmlEsc(owner)}</groundspeak:owner>
+      <groundspeak:type>${xmlEsc(type)}</groundspeak:type>
+      <groundspeak:container>${container}</groundspeak:container>
+      <groundspeak:attributes>${attrs.length ? '\n' + attrs.join('\n') + '\n      ' : ''}</groundspeak:attributes>
+      <groundspeak:difficulty>${xmlEsc(diff ?? '')}</groundspeak:difficulty>
+      <groundspeak:terrain>${xmlEsc(terr ?? '')}</groundspeak:terrain>
+      <groundspeak:country>${xmlEsc(country)}</groundspeak:country>
+      <groundspeak:state>${xmlEsc(state)}</groundspeak:state>
+      <groundspeak:short_description html="True">${xmlEsc(sd ? sd.innerHTML.trim() : '')}</groundspeak:short_description>
+      <groundspeak:long_description html="True">${xmlEsc(ld ? ld.innerHTML.trim() : '')}</groundspeak:long_description>
+      <groundspeak:encoded_hints>${xmlEsc(hint)}</groundspeak:encoded_hints>
+      <groundspeak:logs>${logs.length ? '\n' + logs.join('\n') + '\n      ' : ''}</groundspeak:logs>
+      <groundspeak:travelbugs />
+    </groundspeak:cache>
+  </wpt>`];
+      // Additional waypoints with coordinates (parking, stages …), named like the site does: prefix + code without "GC".
+      const tbl = $('#ctl00_ContentBody_Waypoints');
+      if (tbl) [...tbl.querySelectorAll('tbody tr')].forEach((tr, k, rows) => {
+        const cells = [...tr.children], ctext = cells.map(c => c.textContent.replace(/\s+/g, ' ').trim());
+        const cc = ctext.find(t => /[NS]\s*\d{1,2}°\s*\d/.test(t)), ll = cc && parseCoord(cc.replace(/,/g, '.'));
+        if (!ll) return;
+        const prefix = (ctext.find(t => /^[A-Z0-9]{2}$/.test(t)) || '').trim();
+        if (!prefix) return;
+        const a = tr.querySelector('a'), wname = a ? a.textContent.trim() : prefix;
+        const img = tr.querySelector('img[src*="wpttypes"]'), wtype = (img && (img.getAttribute('title') || img.getAttribute('alt'))) || ((tr.textContent.match(/\(([^)]+)\)/) || [])[1]) || 'Reference Point';
+        const next = rows[k + 1], note = next && !/[NS]\s*\d{1,2}°/.test(next.textContent) ? textOf(next.children[next.children.length - 1]) : '';
+        out.push(`  <wpt lat="${ll[0].toFixed(6)}" lon="${ll[1].toFixed(6)}">
+    <name>${xmlEsc(prefix + code.slice(2))}</name>
+    <cmt>${xmlEsc(note)}</cmt>
+    <desc>${xmlEsc(wname)}</desc>
+    <url>https://www.geocaching.com/geocache/${code}</url>
+    <urlname>${xmlEsc(wname)}</urlname>
+    <sym>${xmlEsc(wtype)}</sym>
+    <type>Waypoint|${xmlEsc(wtype)}</type>
+  </wpt>`);
+      });
+      return out;
+    }
+    // The waypoints for one geocache as GPX 1.0 text. Solved caches get the solved coordinates.
+    async function cacheWpts(code) {
+      const i = CACHE_INFO.get(code) || {}, solved = i.solved && i.corrected ? i.corrected : null;
+      const pg = await gcPage(code);
+      let list = null;
+      try {
+        const w = await officialGpx(pg);
+        if (w) list = w.map(e => {
+          const nm = [...e.children].find(c => c.localName === 'name');
+          if (nm && nm.textContent.trim() === code) {
+            if (solved) { e.setAttribute('lat', solved.lat); e.setAttribute('lon', solved.lng); }
+            const sym = [...e.children].find(c => c.localName === 'sym');
+            if (sym && i.found === true) sym.textContent = 'Geocache Found';
+          }
+          return '  ' + new XMLSerializer().serializeToString(e).replace(/ xmlns="http:\/\/www\.topografix\.com\/GPX\/1\/0"/, '');
+        });
+      } catch (e) { list = null; }
+      if (!list) {
+        list = pageWpts(code, pg, i);
+        if (solved) list[0] = list[0].replace(/^ {2}<wpt lat="[^"]*" lon="[^"]*">/, `  <wpt lat="${solved.lat}" lon="${solved.lng}">`);
+        if (i.found === true) list[0] = list[0].replace('<sym>Geocache</sym>', '<sym>Geocache Found</sym>');
+      }
+      return list;
+    }
+    async function routeGpx(progress) {
+      const codes = [...new Set(route.filter(r => r.kind === 'cache').map(r => r.code))];
+      const wpts = [], failed = [];
+      let done = 0;
+      for (let k = 0; k < codes.length; k += 3) {           // three at a time
+        const part = await Promise.all(codes.slice(k, k + 3).map(c => cacheWpts(c).catch(() => { failed.push(c); return []; })
+          .finally(() => progress && progress(++done, codes.length))));
+        part.forEach(l => wpts.push(...l));
+      }
       const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
+      const lats = route.map(r => r.lat), lngs = route.map(r => r.lng);
+      const text = `<?xml version="1.0" encoding="utf-8"?>
+<gpx xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0" creator="Geocaching Map – Custom Tile Layers" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd http://www.groundspeak.com/cache/1/0/1 http://www.groundspeak.com/cache/1/0/1/cache.xsd" xmlns="http://www.topografix.com/GPX/1/0">
+  <name>${xmlEsc(name)}</name>
+  <desc>${xmlEsc(T('Route with {n} stops from geocaching.com', { n: route.length }))}</desc>
+  <url>https://www.geocaching.com</url>
+  <time>${new Date().toISOString()}</time>
+  <keywords>cache, geocache</keywords>
+  <bounds minlat="${Math.min(...lats)}" minlon="${Math.min(...lngs)}" maxlat="${Math.max(...lats)}" maxlon="${Math.max(...lngs)}" />
+${wpts.join('\n')}${wpts.length ? '\n' : ''}  <rte>
+    <name>${xmlEsc(name)}</name>
+${pts}
+  </rte>
+</gpx>
+`;
+      return { text, failed };
     }
     function saveFile(text, fileName, type) {
       const a = document.createElement('a');
@@ -5394,7 +5584,16 @@
         route = out; changed();
       };
       d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); };
-      d.querySelector('[data-a=gpx]').onclick = () => { if (route.length) saveFile(routeGpx(), `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml'); };
+      d.querySelector('[data-a=gpx]').onclick = async e => {
+        const b = e.currentTarget;
+        if (!route.length || b.disabled) return;
+        b.disabled = true;
+        try {
+          const { text, failed } = await routeGpx((n, of) => { if (n === 1 && of > 1) toast(T('Fetching {n} geocaches …', { n: of })); });
+          saveFile(text, `route-${new Date().toISOString().slice(0, 10)}.gpx`, 'application/gpx+xml');
+          if (failed.length) toast(T('Could not fetch {list} – only in the route, without description.', { list: failed.join(', ') }));
+        } finally { b.disabled = false; }
+      };
       function goStop(i) { const r = route[i]; if (r) map.setView(L.latLng(r.lat, r.lng), Math.max(map.getZoom(), 16)); }
       q.oninput = drawList;
       q.addEventListener('keydown', e => e.stopPropagation());
