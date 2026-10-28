@@ -181,6 +181,9 @@
   .news .rel::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px;
     border-radius: 50%; background: var(--paper); border: 2px solid var(--forest); }
   .news .rel:first-child::before { background: var(--accent); border-color: var(--accent); }
+  .news .rel.big { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 16px 24px; margin: 0 0 22px 14px; }
+  .news .rel.big::before { left: -21px; top: 20px; }
+  .news .rel-h { font: 700 19px/1.3 "IBM Plex Sans", sans-serif; color: var(--ink); margin: 0 0 6px; }
   .news .ver { font: 600 14px "IBM Plex Mono", monospace; color: var(--forest); margin-bottom: 6px; }
   .news .new { font: 600 11px "IBM Plex Sans", sans-serif; text-transform: uppercase; letter-spacing: .04em;
     color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 8px; margin-left: 8px; vertical-align: 1px; }
@@ -236,7 +239,7 @@
   <div class="wrap">
     <span class="tag" data-no="Brukerskript · geocaching.com">Userscript · geocaching.com</span>
     <h1>Geocaching Map <span class="dash">–</span> Custom Tile Layers</h1>
-    <p class="lede" data-no="Bruk hvilket som helst XYZ-, TMS-, WMS- eller WMTS-kart som bakgrunn på geocaching.com-kartene – se cachenes favorittpoeng og D/T rett på kartet, og få stedssøk, koordinat- og måleverktøy og 161&amp;nbsp;m-sirkler.">Use any XYZ, TMS, WMS or WMTS map as a background on the geocaching.com maps – see every cache’s favourite points and D/T right on the map, plus place search, coordinate and measuring tools and 161&nbsp;m circles.</p>
+    <p class="lede" data-no="Bruk hvilket som helst XYZ-, TMS-, WMS- eller WMTS-kart som bakgrunn på geocaching.com-kartene – se cachenes favorittpoeng og D/T rett på kartet, lag ruter til GPS-en, og få stedssøk, koordinat- og måleverktøy og 161&amp;nbsp;m-sirkler.">Use any XYZ, TMS, WMS or WMTS map as a background on the geocaching.com maps – see every cache’s favourite points and D/T right on the map, build routes for your GPS, plus place search, coordinate and measuring tools and 161&nbsp;m circles.</p>
     <div class="cta">
       <!-- EDIT: file name of the script in the repo -->
       <a class="btn btn-primary" href="geocaching-custom-tiles.user.js">
@@ -248,7 +251,7 @@
       <a class="btn btn-ghost" href="https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers">Greasy Fork</a>
     </div>
     <!-- EDIT: version number -->
-    <p class="meta" data-no="v1.47.0 · MIT-lisens · Virker på &lt;code&gt;/map&lt;/code&gt; og &lt;code&gt;/play/map&lt;/code&gt;">v1.47.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
+    <p class="meta" data-no="v1.50.0 · MIT-lisens · Virker på &lt;code&gt;/map&lt;/code&gt; og &lt;code&gt;/play/map&lt;/code&gt;">v1.50.0 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
     <p class="stats" id="stats" hidden>
       <span><b id="st-total"></b> <span data-no="installasjoner totalt">total installs</span></span>
       <span><b id="st-daily"></b> <span data-no="daglige installasjoner">daily installs</span></span>
@@ -275,8 +278,17 @@
       <p class="sub" data-no="Høydepunkter fra de siste versjonene.">Highlights from recent versions.</p>
       <!-- Add the newest release at the top; mark it with the "Latest" label. -->
       <ol class="news">
+        <li class="rel big">
+          <div class="ver">v1.50 <span class="new" data-no="Nyest">Latest</span></div>
+          <p class="rel-h" data-no="Ruter til GPS-en">Routes for your GPS</p>
+          <ul>
+            <li data-no="Velg geocacher og merkenåler fra en &lt;b&gt;søkbar liste&lt;/b&gt; – også hvilken som helst GC-kode i verden – eller &lt;b&gt;klikk på dem i kartet&lt;/b&gt;.">Pick geocaches and pins from a <b>searchable list</b> – also any GC code worldwide – or <b>click them on the map</b>.</li>
+            <li data-no="Sett dem i rekkefølge, se avstand og retning for hver etappe, og &lt;b&gt;forhåndsvis&lt;/b&gt; hele ruten.">Put them in order, see the distance and bearing of every leg, and <b>preview</b> the whole route.</li>
+            <li data-no="&lt;b&gt;Last ned som GPX-rute&lt;/b&gt; til Garmin og andre GPS-er, med geocache- og nålesymboler."><b>Download it as a GPX route</b> for Garmin and other GPS units, with geocache and pin symbols.</li>
+          </ul>
+        </li>
         <li class="rel">
-          <div class="ver">v1.47 <span class="new" data-no="Nyest">Latest</span></div>
+          <div class="ver">v1.47</div>
           <ul>
             <li data-no="&lt;b&gt;Merkenåler med navn&lt;/b&gt; som kan eksporteres som &lt;b&gt;GPX&lt;/b&gt; til GPS-en – én nål eller alle."><b>Named pins</b> you can export as <b>GPX</b> for your GPS – one pin or all of them.</li>
             <li data-no="Merkene ved løste cacher vises fra zoom 10, og de løste cachene huskes – også Wherigoer langt fra startpunktet.">Marks at solved caches from zoom 10, and solved caches are remembered – also Wherigos far from their posted coordinates.</li>
@@ -342,6 +354,11 @@
           <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg></div>
           <h3 data-no="Alle karttjenester">Any map service</h3>
           <p data-no="XYZ-, TMS-, WMS- og WMTS-lag på både /map og /play/map.">XYZ, TMS, WMS and WMTS layers on both /map and /play/map.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/></svg></div>
+          <h3 data-no="Ruter til GPS-en">Routes for your GPS</h3>
+          <p data-no="Velg cacher og merkenåler i en liste eller rett på kartet, forhåndsvis ruten og last den ned som GPX.">Pick caches and pins from a list or right on the map, preview the route and download it as GPX.</p>
         </div>
         <div class="card">
           <div class="ico" style="color:#d1242f"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.8 6.8 4.6c2.1-.1 3.9 1.1 5.2 3 1.3-1.9 3.1-3.1 5.2-3 3.4.2 5.3 3.6 4.1 6.7-1.8 4.6-9.3 9.2-9.3 9.2Z"/></svg></div>
