@@ -218,6 +218,9 @@
     "Back": "Tilbake",
     "Download GPX route": "Last ned GPX-rute",
     "Full cache data": "Fulle cachedata",
+    "Back to the start": "Tilbake til start",
+    "End the route at the first stop again": "Avslutt ruten ved første stopp igjen",
+    "round trip": "rundtur",
     "Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.": "Hver geocache med beskrivelse, hint, attributter, logger og ekstra veipunkter, som GPX-fila på cachesiden. Tar litt tid, siden hver cacheside hentes.",
     "This is what the GPX file will contain – the map shows the whole route.": "Slik blir GPX-filen – kartet viser hele ruten.",
     "Name in GPS": "Navn i GPS",
@@ -410,6 +413,7 @@
     flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
     route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/>',
     up: '<path d="m6 15 6-6 6 6"/>',
+    undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
     ftf: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
@@ -3614,7 +3618,9 @@
       .gcct-route em.tag-abroad{background:#fbefff;color:#6639ba}
       .gcct-route .rt-full{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:13px;white-space:nowrap;cursor:pointer}
       .gcct-route .rt-full input{margin:0}
-      .gcct-route .rt-pv-btns{flex-wrap:wrap;row-gap:8px}
+      .gcct-route .rt-pv-btns, .gcct-route .rt-edit-btns{flex-wrap:wrap;row-gap:8px}
+      .gcct-route .rt-back{color:var(--muted)}
+      .gcct-route .rt-back .rt-n{opacity:.6}
       .gcct-route .rt-pv-btns .rt-gpx{margin-left:auto}
       .gcct-route .rt-ic-place{color:#1a7f37;display:inline-flex;align-items:center;justify-content:center}
       .gcct-route .rt-sec{padding:6px 10px 4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
@@ -5192,12 +5198,18 @@
     let route = [];
     try { route = JSON.parse(sessionStorage.getItem(ROUTE_KEY) || '[]') || []; } catch (e) { route = []; }
     const saveRoute = () => { try { sessionStorage.setItem(ROUTE_KEY, JSON.stringify(route)); } catch (e) { /* blocked */ } };
+    // A round trip: back to the first stop at the end (kept for the tab like the route).
+    let routeLoop = false;
+    try { routeLoop = sessionStorage.getItem('gcct.routeLoop') === '1'; } catch (e) { /* blocked */ }
+    const setRouteLoop = on => { routeLoop = !!on; try { sessionStorage.setItem('gcct.routeLoop', routeLoop ? '1' : '0'); } catch (e) { /* blocked */ } };
+    // The stops in order, with the start again at the end when the route is a round trip.
+    const routeStops = () => routeLoop && route.length > 1 ? route.concat([route[0]]) : route;
     const routeLayer = L.layerGroup().addTo(map);
     routeLayer.__gcct = true;
     function drawRoute() {
       routeLayer.clearLayers();
       if (!route.length) return;
-      const lls = route.map(r => L.latLng(r.lat, r.lng));
+      const lls = routeStops().map(r => L.latLng(r.lat, r.lng));
       if (lls.length > 1) routeLayer.addLayer(L.polyline(lls, { color: '#8250df', weight: 3, opacity: 0.85, dashArray: '6 6', interactive: false }));
       route.forEach((r, i) => {
         const m = L.marker(lls[i], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gcct-rtnum', html: `<span>${i + 1}</span>`, iconSize: [18, 18], iconAnchor: [9, 26] }) });
@@ -5207,13 +5219,13 @@
     }
     const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
     // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
-    const legText = i => { const a = L.latLng(route[i - 1].lat, route[i - 1].lng), b = L.latLng(route[i].lat, route[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
+    const legText = (i, pts = routeStops()) => { const a = L.latLng(pts[i - 1].lat, pts[i - 1].lng), b = L.latLng(pts[i].lat, pts[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
     function fitRoute() {
       if (!route.length) return;
       if (route.length === 1) { map.setView(L.latLng(route[0].lat, route[0].lng), Math.max(map.getZoom(), 15)); return; }
       try { map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { padding: [60, 60], maxZoom: 17 }); } catch (e) { /* ignore */ }
     }
-    const routeLength = () => route.reduce((sum, r, i) => i ? sum + distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
+    const routeLength = () => routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
     // Everything you can pick: pins, and every geocache the script knows a position for (solved ones at the solved spot).
     function routeCandidates() {
       const out = [];
@@ -5394,7 +5406,7 @@
     }
     // The plain route: only the stops (GPX 1.1).
     function plainRouteGpx() {
-      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
+      const pts = routeStops().map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
       return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
     }
@@ -5408,7 +5420,7 @@
           .finally(() => progress && progress(++done, codes.length))));
         part.forEach(l => wpts.push(...l));
       }
-      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
+      const pts = routeStops().map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
       const lats = route.map(r => r.lat), lngs = route.map(r => r.lng);
       const text = `<?xml version="1.0" encoding="utf-8"?>
@@ -5471,7 +5483,7 @@ ${pts}
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
         <ol class="rt-route"></ol>
         <div class="rt-pv" style="display:none"></div>
-        <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
+        <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
       const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
@@ -5552,8 +5564,9 @@ ${pts}
         ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t rt-go" title="${esc(T('Show on the map'))}">${typeIcon(r)}${title(r)}${i ? ` <small class="rt-leg">+${legText(i)}</small>` : ''}</span>
             <button data-m="up" title="${esc(T('Move up'))}" ${i ? '' : 'disabled'}>${icon('up', 14)}</button><button data-m="down" title="${esc(T('Move down'))}" ${i < route.length - 1 ? '' : 'disabled'}>${icon('down', 14)}</button><button data-m="del" title="${esc(T('Remove'))}">${icon('x', 14)}</button></li>`).join('')
           : `<li class="gm">${esc(T('No stops yet.'))}</li>`;
+        if (routeLoop && route.length > 1) ol.insertAdjacentHTML('beforeend', `<li class="rt-back"><span class="rt-n">1</span><span class="rt-t rt-go" data-go="0" title="${esc(T('Show on the map'))}">${icon('undo', 14)} ${esc(T('Back to the start'))} <small class="rt-leg">+${legText(route.length)}</small></span></li>`);
         sum.textContent = route.length ? T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }) : '';
-        ol.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('li').dataset.i));
+        ol.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(el.dataset.go != null ? +el.dataset.go : +el.closest('li').dataset.i));
         ol.querySelectorAll('button[data-m]').forEach(b => b.onclick = () => {
           const i = +b.closest('li').dataset.i, m = b.dataset.m;
           if (m === 'del') route.splice(i, 1);
@@ -5569,15 +5582,16 @@ ${pts}
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
         if (!on) return;
         let tot = 0;
-        const rows = route.map((r, i) => {
-          const leg = i ? distM(L.latLng(route[i - 1].lat, route[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
+        const pts = routeStops();
+        const rows = pts.map((r, i) => {
+          const leg = i ? distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
           tot += leg;
-          return `<tr data-i="${i}"><td><span class="rt-n">${i + 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
-            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
+          return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i, pts))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
         pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))} · ${esc(T('Straight-line distances; the way there is usually longer.'))}</p>`;
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is usually longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         fitRoute();
       }
@@ -5597,6 +5611,9 @@ ${pts}
         route = out; changed();
       };
       d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); };
+      const loopBox = d.querySelector('[data-a=loop]');
+      loopBox.checked = routeLoop;
+      loopBox.onchange = () => { setRouteLoop(loopBox.checked); changed(); };
       // Full cache data is a choice, off unless you turn it on (remembered for the session).
       const fullBox = d.querySelector('[data-a=full]');
       try { fullBox.checked = sessionStorage.getItem('gcct.gpxFull') === '1'; } catch (e) { /* ignore */ }
