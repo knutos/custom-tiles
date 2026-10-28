@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.50.0
+// @version      1.50.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -196,6 +196,9 @@
     "Click to rename": "Klikk for å gi nytt navn",
     "Drag to resize": "Dra for å endre høyden",
     "Looking up {code} …": "Slår opp {code} …",
+    "Places and addresses": "Steder og adresser",
+    "Searching places …": "Søker etter steder …",
+    "Place (tag)": "Sted",
     "{code} not found.": "Fant ikke {code}.",
     "Route": "Rute",
     "Route: pick geocaches and pins, and export them as a GPX route": "Rute: velg geocacher og merkenåler, og eksporter dem som en GPX-rute",
@@ -399,6 +402,7 @@
 
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
+    flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
     route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/>',
     up: '<path d="m6 15 6-6 6 6"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
@@ -3600,6 +3604,9 @@
       .gcct-route .rt-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
       .gcct-route .rt-m{font-size:12px;color:var(--muted)}
       .gcct-route em.tag{font-style:normal;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;margin-left:4px}
+      .gcct-route em.tag-place{background:#fff1e5;color:#953800}
+      .gcct-route .rt-ic-place{color:#1a7f37;display:inline-flex;align-items:center;justify-content:center}
+      .gcct-route .rt-sec{padding:6px 10px 4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
       .gcct-route em.tag-solved{background:#e8f0fa;color:#336699}
       .gcct-route em.tag-found{background:#dafbe1;color:#116329}
@@ -5211,7 +5218,7 @@
       return out;
     }
     function routeGpx() {
-      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
+      const pts = route.map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
       return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
     }
@@ -5262,11 +5269,12 @@
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
-      const title = c => c.kind === 'pin' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
+      const tag = c => c.kind === 'place' ? `<em class="tag tag-place">${esc(LANG === 'no' ? T('Place (tag)') : 'Place')}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : ''].join('');
+      const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
       const typeIcon = c => {
         if (c.kind === 'pin') return `<span class="rt-ic rt-ic-pin">${icon('pin', 14)}</span>`;
+        if (c.kind === 'place') return `<span class="rt-ic rt-ic-place">${icon('flag', 14)}</span>`;
         const t = c.type != null ? c.type : (CACHE_INFO.get(c.code) || {}).type;
         return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
           : '<span class="rt-ic rt-ic-dot"></span>';
@@ -5281,6 +5289,21 @@
           looked.set(code, rows.length ? rows.map((r, k) => ({ key: 'c:' + code, kind: 'cache', code, name: (r.name || '').replace(code, '').replace(/^[\s·]+/, ''),
             lat: r.lat, lng: r.lng, solved: rows.length > 1 && k === 0, found: i.found === true, type: i.type })).slice(0, 1) : 'none');
         }).catch(() => looked.set(code, 'none')).finally(() => { if (routeOpen()) drawList(); });
+      }
+      // Places and addresses (Kartverket, Photon) – the same sources as Find a place, a moment after typing.
+      const placeRes = new Map();                     // text -> 'busy' | [places]
+      let placeTimer = null;
+      function findPlaces(text) {
+        if (placeRes.has(text)) return;
+        clearTimeout(placeTimer);
+        placeTimer = setTimeout(() => {
+          placeRes.set(text, 'busy');
+          Promise.allSettled([searchNorwayPlaces(text), searchNorwayAddresses(text), searchAbroad(text)]).then(rs => {
+            const all = rs.flatMap(r => r.status === 'fulfilled' ? r.value : []).slice(0, 8);
+            placeRes.set(text, all.map(p => ({ key: 'g:' + p.lat.toFixed(5) + ',' + p.lng.toFixed(5), kind: 'place', name: p.name + (p.sub && p.kind === 'addr' ? ', ' + p.sub.split(' · ')[0] : ''), sub: p.kind === 'addr' ? (p.sub || '').split(' · ').slice(1).join(' · ') : (p.sub || ''), lat: p.lat, lng: p.lng })));
+            if (routeOpen() && q.value.trim().toLowerCase() === text) drawList();
+          });
+        }, 350);
       }
       function drawList() {
         const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
@@ -5299,9 +5322,20 @@
         c.sort((a, b) => a.d - b.d);
         pre.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
         c = pre.concat(c.slice(0, 100));
-        list.innerHTML = c.length ? c.map((x, i) => `<div class="rt-row${inRoute.has(x.key) ? ' in' : ''}" data-i="${i}">
-            <span class="rt-t">${typeIcon(x)}${title(x)} ${tag(x)}</span><span class="rt-m">${x.dt ? esc(x.dt) + ' · ' : ''}${fmtDist(x.d)}${inRoute.has(x.key) ? ' · ' + esc(T('In the route')) : ''}</span></div>`).join('')
-          : (extra ? '' : `<div class="gm">${esc(T('Nothing found.'))}</div>`);
+        // Places and addresses for a text that is not a GC code.
+        let places = [], placeNote = '';
+        if (text.length >= 3 && !gc) {
+          const pr = placeRes.get(text);
+          if (Array.isArray(pr)) places = pr.map(x => Object.assign({}, x, { d: distM(ctr, L.latLng(x.lat, x.lng)) }));
+          else { placeNote = `<div class="gm">${esc(T('Searching places …'))}</div>`; findPlaces(text); }
+        }
+        const rowHtml = (x, i) => `<div class="rt-row${inRoute.has(x.key) ? ' in' : ''}" data-i="${i}">
+            <span class="rt-t">${typeIcon(x)}${title(x)} ${tag(x)}</span><span class="rt-m">${x.sub ? esc(x.sub) + ' · ' : ''}${x.dt ? esc(x.dt) + ' · ' : ''}${fmtDist(x.d)}${inRoute.has(x.key) ? ' · ' + esc(T('In the route')) : ''}</span></div>`;
+        const n0 = c.length;
+        c = c.concat(places);
+        list.innerHTML = (n0 ? c.slice(0, n0).map(rowHtml).join('') : '')
+          + (places.length || placeNote ? `<div class="rt-sec">${esc(T('Places and addresses'))}</div>` + placeNote + places.map((x, k) => rowHtml(x, n0 + k)).join('') : '')
+          || (extra ? '' : `<div class="gm">${esc(T('Nothing found.'))}</div>`);
         if (extra) list.insertAdjacentHTML('afterbegin', extra);
         list.querySelectorAll('.rt-row').forEach(el => el.onclick = () => {
           addStop(c[+el.dataset.i]);
