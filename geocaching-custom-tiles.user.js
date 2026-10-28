@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.49.4
+// @version      1.49.5
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2090,6 +2090,13 @@
           const pos = besideToolbar(p.offsetWidth || 340, p.offsetHeight || 500);
           Object.assign(p.style, { position: 'fixed', left: pos.left + 'px', right: 'auto', maxHeight: pos.maxHeight,
             top: pos.top == null ? 'auto' : pos.top + 'px', bottom: pos.top == null ? pos.bottom + 'px' : 'auto' });
+          // A moved toolbar (centred at the top or bottom) makes "fixed" relative to the toolbar instead of the
+          // window: measure where the panel ended up and correct for that.
+          const r = p.getBoundingClientRect(), vh = window.innerHeight;
+          const dx = r.left - pos.left;
+          if (Math.abs(dx) > 1) p.style.left = (pos.left - dx) + 'px';
+          if (pos.top != null) { const dy = r.top - pos.top; if (Math.abs(dy) > 1) p.style.top = (pos.top - dy) + 'px'; }
+          else { const dy = (vh - r.bottom) - pos.bottom; if (Math.abs(dy) > 1) p.style.bottom = (pos.bottom - dy) + 'px'; }
         };
         this._box = box;
         return box;
