@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.26
+// @version      1.54.40
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -801,7 +801,10 @@
       const p = placed && Date.parse(placed);
       return !!(p && isFinite(p) && t < p);
     };
-    const neverFound = 'lastFoundDate' in o ? noFind(o.lastFoundDate) : (searchLike ? true : prev.neverFound);
+    // An answer without the field (another view of the same cache, e.g. the selected cache on /play/map) only
+    // counts as "never found" when nothing better is known – a find date seen earlier wins.
+    const neverFound = 'lastFoundDate' in o ? noFind(o.lastFoundDate)
+      : prev.lastFound ? noFind(prev.lastFound) : prev.neverFound != null ? prev.neverFound : (searchLike ? true : undefined);
     const status = o.cacheStatus != null ? o.cacheStatus : prev.status;
     // Favourite points, whatever the site calls the field.
     let fav = prev.fav;
@@ -843,7 +846,28 @@
     return typeof v === 'number' ? (Number.isInteger(v) && Math.abs(v) < 100 ? v : 'number') : typeof v;
   }
   const shapes = [];
+  // /play/map: the caches in the site's own latest search ("Search this area"), so our marks follow its icons.
+  const ownSearchUrls = new Set();
+  let siteSearch = null, siteSearchGen = 0, siteSearchPath = null;
+  function noteSiteSearch(url, json) {
+    try {
+      const u = new URL(url, location.href);
+      if (ownSearchUrls.has(u.pathname + u.search) || ownSearchUrls.has(url)) return;
+      // Any answer that is a list of caches with their positions (whatever the site calls the endpoint).
+      const list = json && (Array.isArray(json) ? json : json.results || json.data || json.geocaches || json.items);
+      if (!Array.isArray(list) || !list.length) return;
+      const isCache = r => r && /^GC[0-9A-Z]+$/i.test(String(r.code || r.referenceCode || '')) && (r.postedCoordinates || r.coordinates || r.location || r.lat != null || r.latitude != null);
+      if (!isCache(list[0])) return;
+      const codes = list.filter(isCache).map(r => String(r.code || r.referenceCode).toUpperCase());
+      siteSearchPath = u.pathname;
+      if (!(+u.searchParams.get('skip') > 0) || !siteSearch) siteSearch = new Set();
+      codes.forEach(c => siteSearch.add(c));
+      siteSearchGen++;
+      if (window.__gcctInfoChanged) setTimeout(() => window.__gcctInfoChanged(), 0);
+    } catch (e) { /* ignore */ }
+  }
   function sniffed(url, json) {
+    noteSiteSearch(url, json);
     try {
       infoStats.responses++;
       const path = new URL(url, location.href).pathname;
@@ -905,6 +929,15 @@
   const searchedAreas = () => searched;
   const searchedComplete = [];     // areas whose search answer was complete (fewer than 500 caches)
   let searchBusy = false;
+  // The site answers "429 Too Many Requests" when asked too often – and then its own "Search this area"
+  // fails too. So: at most one request every few seconds, a long pause after a 429, and on /play/map
+  // never right after the site's own search.
+  let searchNextAt = 0, searchBackoff = 0, searchPending = null, searchPendingT = null;
+  const SEARCH_GAP = 5000;
+  // On /play/map the site only searches when you press "Search this area": we ask once after it (and once
+  // when the map opens), never on our own while you pan.
+  let searchTokens = 1;
+  window.__gcctSiteSearched = () => { searchTokens = 1; searchNextAt = Math.max(searchNextAt, Date.now() + 3000); };
   async function siteToken() {
     if (siteAuth) return siteAuth;
     try {
@@ -915,13 +948,23 @@
     return siteAuth;
   }
   async function searchArea(b) {
-    if (searchBusy || !b || searchedComplete.some(x => x.contains(b))) return;
+    if (!b || searchedComplete.some(x => x.contains(b))) return;
+    if (PLAY_MAP && searchTokens <= 0 && !searchPendingT) return;
+    const wait = searchNextAt - Date.now();
+    if (searchBusy || wait > 0) {                 // later, for the latest area asked for
+      searchPending = b;
+      if (!searchPendingT) searchPendingT = setTimeout(() => { searchPendingT = null; const x = searchPending; searchPending = null; if (x) searchArea(x); }, Math.max(500, wait));
+      return;
+    }
     const sz = x => (x.getNorth() - x.getSouth()) * (x.getEast() - x.getWest());
     // An earlier answer that hit the 500-cache limit doesn't tell which caches are missing: ask again for
     // this smaller area (unless it is hardly smaller), so your own caches can be told apart.
     const cut = searched.find(x => x.contains(b));
     if (cut && sz(cut) < 3 * sz(b)) return;
+    if (PLAY_MAP) searchTokens--;
     searchBusy = true;
+    let failed = false;
+    searchNextAt = Date.now() + SEARCH_GAP;
     try {
       const area = cut ? b : (b.pad ? b.pad(0.3) : b);
       const n = area.getNorth(), so = area.getSouth(), w = area.getWest(), e = area.getEast();
@@ -929,12 +972,19 @@
       for (const f of formats) {
         const box = (f === 'nwse' ? [n, w, so, e] : [so, w, n, e]).map(v => v.toFixed(5)).join(',');
         const url = `/api/proxy/web/search/v2?skip=0&take=500&asc=true&sort=distance&box=${box}`;
+        ownSearchUrls.add(url);
         const get = auth => fetch(url, { credentials: 'same-origin', headers: Object.assign({ Accept: 'application/json' }, auth ? { Authorization: auth } : {}) });
         searchState.requests++;
         let r = await get(siteAuth);
         if (r.status === 401 || r.status === 403) { const a = await siteToken(); if (a) { searchState.authUsed = true; r = await get(a); } }
         searchState.lastStatus = r.status;
-        if (!r.ok) continue;
+        if (r.status === 429) {
+          searchBackoff = Math.min(600000, searchBackoff ? searchBackoff * 2 : 60000);
+          searchNextAt = Date.now() + searchBackoff; searchState.error = 'rate limited – pausing ' + Math.round(searchBackoff / 1000) + ' s';
+          failed = true; break;
+        }
+        if (!r.ok) { failed = true; continue; }
+        searchBackoff = 0; failed = false;
         const j = await r.json();
         harvest(j, 0, 'search');
         const list = (j && (j.results || j.data || j.geocaches)) || [];
@@ -945,8 +995,9 @@
           break;
         }
       }
-    } catch (e) { searchState.error = String(e); }
+    } catch (e) { searchState.error = String(e); failed = true; }
     searchBusy = false;
+    if (failed) return;                                   // nothing new – and no new round that asks again
     if (window.__gcctFavKick) window.__gcctFavKick();     // favourite points have arrived
     if (window.__gcctInfoChanged) window.__gcctInfoChanged();
   }
@@ -1056,6 +1107,13 @@
     if (pc.posted) i.posted = pc.posted;
     const fv = html.match(/class="favorite-value"[^>]*>\s*(\d+)/i) || html.match(/(\d+)\s*(?:Favorites|Favoritter)\b/i);
     if (fv && i.fav == null) i.fav = Number(fv[1]);
+    // The cache type from the page's type icon (your own caches are left out of the site's search, so their
+    // type – and with it the traditionals' 161 m circle – is only known from here).
+    if (i.type == null) {
+      const tm = html.match(/cache-types\.svg#icon-(\d{1,4})\b/i) || html.match(/id="uxCacheImage"[\s\S]{0,300}?\/images\/wpttypes\/(?:sm\/)?(\d{1,4})\./i);
+      if (tm) i.type = Number(tm[1]);
+      else if (/title="Traditional (?:Cache|Geocache)"/i.test(html)) i.type = TRADITIONAL;
+    }
     // D/T from the star images: stars1_5.gif = 1.5.
     const star = id => { const m = html.match(new RegExp(id + '[\\s\\S]{0,400}?stars(\\d)(?:_(5))?\\.')); return m ? Number(m[1]) + (m[2] ? 0.5 : 0) : null; };
     if (i.diff == null) i.diff = star('uxLegendScale');
@@ -4646,6 +4704,49 @@
     dtLayer.__gcct = true;
     let dtLive = new Map(), dtSig = '';
     // "FTF" on the right of caches nobody has found yet.
+    // The FTF badges, D/T and favourite labels always above the cache icons – also above the site's own
+    // markers on /play/map (like the selected cache) – but below popups.
+    // On /play/map the cache icons are drawn by the site's WebGL layer, which can sit in a pane with a high
+    // z-index – so our label pane is lifted above whatever pane holds that layer (and above the marker pane).
+    function labelZ() {
+      let z = 640;
+      try {
+        const top = map._mapPane || (map.getPanes && map.getPanes().mapPane);
+        map.eachLayer(l => {
+          if (!l._glMap) return;
+          let el = l._container || (l.getContainer && l.getContainer());
+          while (el && el.parentElement && el.parentElement !== top && el !== top) {
+            const zz = parseInt(getComputedStyle(el).zIndex, 10); if (zz >= z) z = zz + 1;
+            el = el.parentElement;
+          }
+          if (el && el !== top) { const zz = parseInt(getComputedStyle(el).zIndex, 10); if (zz >= z) z = zz + 1; }
+        });
+        document.querySelectorAll('.leaflet-map-pane > .leaflet-pane').forEach(p => {
+          if (p.classList.contains('leaflet-gcctLabels-pane') || /popup|tooltip|gcctPopup/i.test(p.className)) return;
+          if (!p.querySelector('canvas, .leaflet-marker-icon')) return;
+          const zz = parseInt(getComputedStyle(p).zIndex, 10); if (zz >= z) z = zz + 1;
+        });
+      } catch (e) {}
+      return z;
+    }
+    function labelPane() {
+      try {
+        if (!map.createPane) return {};
+        let p = map.getPane('gcctLabels');
+        if (!p) { p = map.createPane('gcctLabels'); p.style.pointerEvents = 'none'; }
+        const z = String(labelZ()); if (p.style.zIndex !== z) p.style.zIndex = z;
+        return { pane: 'gcctLabels' };
+      } catch (e) { return {}; }
+    }
+    window.gcctLabelDebug = () => {
+      const out = { labelPaneZ: map.getPane && map.getPane('gcctLabels') ? map.getPane('gcctLabels').style.zIndex : null, panes: [], gl: [] };
+      document.querySelectorAll('.leaflet-map-pane > .leaflet-pane').forEach(p => out.panes.push(p.className.replace(/leaflet-pane\s*/, '') + ' z=' + getComputedStyle(p).zIndex +
+        (p.querySelector('canvas') ? ' canvas' : '') + ' icons=' + p.querySelectorAll('.leaflet-marker-icon').length));
+      map.eachLayer(l => { if (!l._glMap) return; const el = l._container || (l.getContainer && l.getContainer());
+        const chain = []; for (let e = el; e && !e.classList.contains('leaflet-container'); e = e.parentElement) chain.push((e.className && String(e.className).split(' ')[0] || e.tagName) + ':' + getComputedStyle(e).zIndex);
+        out.gl.push(chain.join(' < ')); });
+      console.log(JSON.stringify(out, null, 1)); return out;
+    };
     const ftfLayer = L.layerGroup().addTo(map);
     ftfLayer.__gcct = true;
     let ftfLive = new Map(), ftfSig = '';
@@ -4674,6 +4775,8 @@
           const gl = glDrawnCodes();
           if (gl && gl.size) drawn = gl;
           if (iconAt.size) { drawn = drawn || new Set(); iconAt.forEach((v, k) => drawn.add(k)); }
+          const ss = siteShownCodes();                     // /play/map: only where the site has drawn its icon
+          if (ss) { drawn = drawn || new Set(); ss.forEach(k => drawn.add(k)); }
         }
         const want = new Map(), wantDt = new Map(), wantFtf = new Map();
         const consider = (i, code, atMark) => {
@@ -4686,7 +4789,7 @@
           if (on.show && i.fav != null && i.fav >= on.min) want.set(`${code}|${i.fav}|${at}`, { ll, fav: i.fav });
           if (dt.show && i.diff != null && i.terr != null) wantDt.set(`${code}|${i.diff}/${i.terr}|${at}`, { ll, txt: `${i.diff}/${i.terr}` });
           // FTF: active caches (not events) that nobody has found yet.
-          if (!atMark && ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true)
+          if (!atMark && ftf.show && i.neverFound === true && (i.status == null || i.status === 0) && !EVENT_TYPES.has(Number(i.type)) && i.found !== true && i.owned !== true && !(window.__gcctLikelyOwn && window.__gcctLikelyOwn(code)))
             wantFtf.set(`${code}|ftf|${at}`, { ll });
         };
         const sf = siteFilter();
@@ -4721,7 +4824,7 @@
           ftfLive.forEach((m, k) => { if (!wantFtf.has(k)) { ftfLayer.removeLayer(m); ftfLive.delete(k); } });
           wantFtf.forEach((x, k) => {
             if (ftfLive.has(k)) return;
-            const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, title: T('Never found – first to find is still open'),
+            const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, title: T('Never found – first to find is still open'), ...labelPane(),
               icon: L.divIcon({ className: 'gcct-ftflbl', html: '<span>FTF</span>', iconSize: null, iconAnchor: [-5, 7] }) });
             m.__gcct = true;
             ftfLayer.addLayer(m);
@@ -4735,7 +4838,7 @@
           dtLive.forEach((m, k) => { if (!wantDt.has(k)) { dtLayer.removeLayer(m); dtLive.delete(k); } });
           wantDt.forEach((x, k) => {
             if (dtLive.has(k)) return;
-            const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false,
+            const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, ...labelPane(),
               icon: L.divIcon({ className: 'gcct-dtlbl', html: `<span>${x.txt}</span>`, iconSize: null, iconAnchor: [0, -9 - x.n * 14] }) });
             m.__gcct = true;
             dtLayer.addLayer(m);
@@ -4748,7 +4851,7 @@
         favLive.forEach((m, k) => { if (!want.has(k)) { favLayer.removeLayer(m); favLive.delete(k); } });
         want.forEach((x, k) => {
           if (favLive.has(k)) return;
-          const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false,
+          const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, ...labelPane(),
             icon: L.divIcon({ className: 'gcct-favlbl', html: `<span><i>♥</i>${x.fav}</span>`, iconSize: null, iconAnchor: [0, 27 + x.n * 17] }) });
           m.__gcct = true;
           favLayer.addLayer(m);
@@ -4905,6 +5008,28 @@
       if (!i.solved && /correct|solved/i.test(txt)) { i.solved = true; changed = true; }
       if (changed) CACHE_INFO.set(code, i);
     }
+    // /play/map draws its cache icons as plain markers without GC codes: a cache counts as shown by the site
+    // when one of those markers sits on its posted or corrected position.
+    let siteShownCache = null, siteShownAt = 0;
+    function siteShownCodes() {
+      if (!PLAY_MAP) return null;
+      if (siteShownCache && Date.now() - siteShownAt < 250) return siteShownCache;
+      const set = new Set(), cell = new Map(), key = (la, ln) => Math.round(la * 2000) + ':' + Math.round(ln * 1000);
+      try {
+        markerCaches().forEach(c => {
+          if (c.code) set.add(c.code);
+          const la = c.ll.lat, ln = c.ll.lng;
+          for (const dy of [-1, 0, 1]) for (const dx of [-1, 0, 1]) {
+            const k = (Math.round(la * 2000) + dy) + ':' + (Math.round(ln * 1000) + dx);
+            (cell.get(k) || cell.set(k, []).get(k)).push(c.ll);
+          }
+        });
+        const hit = q => !!q && (cell.get(key(q.lat, q.lng)) || []).some(ll => distM(ll, q) < 8);
+        if (cell.size) CACHE_INFO.forEach((i, code) => { if (!set.has(code) && (hit(i.posted) || hit(i.corrected))) set.add(code); });
+      } catch (e) { /* ignore */ }
+      siteShownCache = set; siteShownAt = Date.now();
+      return set;
+    }
     function markerCaches() {
       const out = [], seen = new Set();
       const visit = l => {
@@ -4955,6 +5080,96 @@
       return out;
     };
     // GC codes of all caches the WebGL map (/play/map) has drawn in view, or null when there is none.
+    // Every cache the WebGL map (/play/map) shows in view: its code and position.
+    // /play/map only searches when you press its "Search this area" button, so after panning our circles,
+    // favourites and D/T (from the full search) can show where the site's own icons are missing. From zoom 15
+    // the button is pressed for you when the map stops, so icons and extras stay in sync.
+    const AUTOSEARCH_MIN_ZOOM = 15;
+    const SEARCH_AREA_RE = /^\s*(search this area|søk i dette området|søk i området|sök i det här området|søg i dette område|in diesem bereich suchen|diesen bereich durchsuchen|rechercher dans cette zone|buscar en esta área|buscar en esta zona|cerca in quest'area|zoek in dit gebied|szukaj w tym obszarze|hae tältä alueelta|pesquisar nesta área|vyhledat v této oblasti)\s*$/i;
+    function searchAreaButton() {
+      const els = document.querySelectorAll('button, [role=button], a');
+      for (const el of els) {
+        if (el.closest('.gcct-dialog, .gcct-toolbar, [class*=gcct]')) continue;
+        const t = (el.textContent || '').replace(/\s+/g, ' ');
+        if (t.length > 40 || !SEARCH_AREA_RE.test(t)) continue;
+        const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+        if (!r.width || !r.height || cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0 || el.disabled) continue;
+        return el;
+      }
+      return null;
+    }
+    if (false) {        // auto-pressing "Search this area" removed in 1.54.40: too many requests for the site
+      let asTimer = null, asLast = 0;
+      window.__gcctAutoSearchTest = { clicks: 0, last: null };
+      const tryAutoSearch = () => {
+        asTimer = null;
+        if (load(STORE_STATE, {}).autoSearch === false) return;
+        if (map.getZoom() < AUTOSEARCH_MIN_ZOOM || map._animatingZoom || (map.dragging && map.dragging._draggable && map.dragging._draggable._moving)) return;
+        const b = searchAreaButton();
+        if (!b) return;
+        if (Date.now() - asLast < 800) { asTimer = setTimeout(tryAutoSearch, 800); return; }
+        asLast = Date.now();
+        window.__gcctAutoSearchTest.clicks++; window.__gcctAutoSearchTest.last = new Date().toISOString();
+        b.click();
+      };
+      const schedule = () => { clearTimeout(asTimer); asTimer = setTimeout(tryAutoSearch, 600); };
+      map.on('moveend', schedule);
+      map.on('zoomend', schedule);
+      // the button may show up a moment after the map stops
+      new MutationObserver(() => { if (!asTimer && map.getZoom() >= AUTOSEARCH_MIN_ZOOM && searchAreaButton()) schedule(); })
+        .observe(document.body, { childList: true, subtree: true });
+    }
+    // Diagnostics: how does the site draw its cache icons right now? Only counts, layer names and property names.
+    window.gcctIconDebug = () => {
+      const out = { zoom: map.getZoom(), gl: [], leaflet: {}, dom: {} };
+      try {
+        map.eachLayer(l => {
+          const m = l._glMap;
+          if (!m || !m.queryRenderedFeatures) return;
+          const by = {};
+          (m.queryRenderedFeatures() || []).forEach(f => {
+            const id = (f.layer && f.layer.id) || '?';
+            const o = by[id] || (by[id] = { n: 0, source: f.source + (f.sourceLayer ? '/' + f.sourceLayer : ''), geom: {}, keys: new Set(), gc: 0, numId: 0 });
+            o.n++; const g = f.geometry && f.geometry.type; o.geom[g] = (o.geom[g] || 0) + 1;
+            Object.keys(f.properties || {}).slice(0, 25).forEach(k => o.keys.add(k));
+            if (/\bGC[0-9A-Z]{1,6}\b/i.test(JSON.stringify(f.properties || {}))) o.gc++;
+            if (f.id != null) o.numId++;
+          });
+          Object.entries(by).filter(([, o]) => o.geom.Point).forEach(([id, o]) => out.gl.push({ layer: id, source: o.source, n: o.n, geom: o.geom, gcInProps: o.gc, withId: o.numId, keys: [...o.keys].join(',') }));
+          try { out.glSources = Object.entries(m.getStyle().sources || {}).map(([k, v]) => k + ':' + v.type); } catch (e) { /* ignore */ }
+        });
+      } catch (e) { out.glError = String(e && e.message || e); }
+      try {
+        const cnt = {}; map.eachLayer(l => { if (l.__gcct) return; const t = l._glMap ? 'webgl' : L.Marker && l instanceof L.Marker ? 'marker' : L.CircleMarker && l instanceof L.CircleMarker ? 'circleMarker' : L.LayerGroup && l instanceof L.LayerGroup ? 'group' : L.Path && l instanceof L.Path ? 'path' : L.GridLayer && l instanceof L.GridLayer ? 'grid' : 'other'; cnt[t] = (cnt[t] || 0) + 1; });
+        out.leaflet = cnt;
+        out.markersWithCode = markerCaches().filter(c => c.code).length; out.markersAll = markerCaches().length;
+      } catch (e) { /* ignore */ }
+      const mc = map.getContainer();
+      out.dom = { markerIcons: mc.querySelectorAll('.leaflet-marker-icon:not([class*=gcct])').length, canvases: mc.querySelectorAll('canvas').length,
+        imgs: [...new Set([...mc.querySelectorAll('.leaflet-marker-icon:not([class*=gcct]) img, img.leaflet-marker-icon')].map(i => (i.src || '').split('/').pop().split('?')[0]))].slice(0, 10) };
+      console.log(JSON.stringify(out, null, 1)); return out;
+    };
+    function glCachesInView() {
+      const out = [];
+      try {
+        map.eachLayer(l => {
+          const m = l._glMap;
+          if (!m || !m.queryRenderedFeatures) return;
+          (m.queryRenderedFeatures() || []).forEach(f => {
+            if (!f.geometry || f.geometry.type !== 'Point') return;
+            const mm = JSON.stringify(f.properties || {}).match(/\bGC[0-9A-HJKMNP-TV-Z]{1,6}\b/i);
+            if (!mm) return;
+            const code = mm[0].toUpperCase(), [lng, lat] = f.geometry.coordinates, i = CACHE_INFO.get(code) || {};
+            const q = i.posted && distM(i.posted, { lat, lng }) < 30 ? i.posted : { lat, lng };
+            out.push({ code, ll: L.latLng(q.lat, q.lng), name: i.name || '' });
+          });
+        });
+      } catch (e) { /* no WebGL map */ }
+      const seen = new Set();
+      return out.filter(c => !seen.has(c.code) && seen.add(c.code));
+    }
+    let glLearnt = 0;
+    window.__gcctGlLearnt = () => glLearnt;
     function glDrawnCodes() {
       let set = null;
       try {
@@ -4963,8 +5178,23 @@
           if (!m || !m.queryRenderedFeatures) return;
           set = set || new Set();
           (m.queryRenderedFeatures() || []).forEach(f => {
-            const mm = JSON.stringify(f.properties || {}).match(/\bGC[0-9A-HJKMNP-TV-Z]{1,6}\b/i);
-            if (mm) set.add(mm[0].toUpperCase());
+            const props = f.properties || {}, mm = JSON.stringify(props).match(/\bGC[0-9A-HJKMNP-TV-Z]{1,6}\b/i);
+            if (!mm) return;
+            const code = mm[0].toUpperCase();
+            set.add(code);
+            // What the map itself knows about caches the site's search leaves out (your own): the type and
+            // the exact posted position – so they get their 161 m circle like any other.
+            try {
+              const i = CACHE_INFO.get(code);
+              if (i && i.type != null && i.posted) return;
+              const tv = props.geocacheType ?? props.cacheType ?? props.typeId ?? props.type ?? props.gt;
+              const tn = typeof tv === 'number' ? tv : /^\d{1,4}$/.test(String(tv ?? '')) ? Number(tv) : /tradi/i.test(String(tv || props.icon || '')) ? TRADITIONAL : null;
+              const pt = f.geometry && f.geometry.type === 'Point' ? f.geometry.coordinates : null;
+              const add = {};
+              if ((!i || i.type == null) && tn != null) add.type = tn;
+              if ((!i || !i.posted) && pt && isFinite(pt[0]) && isFinite(pt[1])) add.posted = { lat: +pt[1], lng: +pt[0] };
+              if (Object.keys(add).length) { CACHE_INFO.set(code, Object.assign({ type: null, solved: false, corrected: null }, i || {}, add)); glLearnt++; }
+            } catch (e) { /* ignore */ }
           });
         });
       } catch (e) { return null; }
@@ -4984,6 +5214,12 @@
             const mm = s.match(/\bGC[0-9A-HJKMNP-TV-Z]{1,6}\b/i);
             if (!mm || !f.geometry || f.geometry.type !== 'Point') return;
             const code = mm[0].toUpperCase(), [lng, lat] = f.geometry.coordinates, i = CACHE_INFO.get(code) || {};
+            // The new map knows each cache's type: keep it (your own caches are not in the site's search).
+            if (i.type == null) {
+              const tv = props.geocacheType ?? props.cacheType ?? props.typeId ?? props.type ?? props.gt;
+              const tn = typeof tv === 'number' ? tv : /^\d{1,4}$/.test(String(tv || '')) ? Number(tv) : /tradi/i.test(String(tv || props.icon || '')) ? TRADITIONAL : null;
+              if (tn != null) { CACHE_INFO.set(code, Object.assign({ solved: false, corrected: null }, i, { type: tn })); }
+            }
             const name = i.name || props.name || props.title || props.cacheName || '';
             // A solved cache is drawn at its corrected position: use the exact known one when it lies there.
             let at = L.latLng(lat, lng);
@@ -5239,6 +5475,49 @@
       } catch (e) { /* no information */ }
       return () => false;
     }
+    // On /play/map the solved-cache icons only come with the site's own search, like its icons do.
+    // A cache counts as shown when the site draws its icon now, or its own latest search returned it.
+    // The site's search answers can't be read on /play/map, so we note the area it searched: the view when
+    // the map opened, and the view each time "Search this area" is pressed (by you or by us). The site only
+    // draws icons for that area, so the solved-cache icons are kept to it too.
+    let drawnNow = null, syncSkipped = [], searchedArea = null;
+    const inSiteSearch = (code, ll) => {
+      if (!PLAY_MAP) return true;
+      const ss = siteShownCodes();
+      const ok = (ss && ss.has(code)) || (!!drawnNow && drawnNow.has(code));
+      if (!ok && syncSkipped.length < 30) syncSkipped.push(code);
+      return ok;
+    };
+    // /play/map: when the site adds or removes its cache icons, our extras follow at once.
+    if (PLAY_MAP) {
+      let iconT = null;
+      const iconsChanged = e => {
+        const l = e && e.layer;
+        if (!l || l.__gcct || !(l instanceof L.Marker || (L.LayerGroup && l instanceof L.LayerGroup))) return;
+        clearTimeout(iconT);
+        iconT = setTimeout(() => { siteShownCache = null; try { refreshAuto(true); } catch (err) { /* ignore */ } if (window.__gcctFavKick) window.__gcctFavKick(); }, 150);
+      };
+      map.on('layeradd', iconsChanged);
+      map.on('layerremove', iconsChanged);
+    }
+    if (PLAY_MAP) {
+      const noteArea = () => { try { const b = map.getBounds(); searchedArea = b.pad ? b.pad(0.02) : b; } catch (e) { /* not ready */ } };
+      const later = () => [300, 1200, 2500].forEach(t => setTimeout(() => { try { refreshAuto(true); } catch (e) { /* ignore */ } }, t));
+      if (map._loaded) noteArea(); else map.whenReady ? map.whenReady(noteArea) : map.once('load', noteArea);
+      document.addEventListener('click', e => {
+        try {
+          const b = e.target && e.target.closest && e.target.closest('button, [role=button], a');
+          if (!b || !SEARCH_AREA_RE.test((b.textContent || '').replace(/\s+/g, ' '))) return;
+          if (window.__gcctSiteSearched) window.__gcctSiteSearched();
+          noteArea(); later();
+        } catch (err) { /* ignore */ }
+      }, true);
+    }
+    window.gcctSyncDebug = () => {
+      const o = { siteSearchPath, siteSearch: siteSearch ? siteSearch.size : null, searches: siteSearchGen, drawnNow: drawnNow ? drawnNow.size : null, siteIcons: (() => { try { return markerCaches().length; } catch (e) { return null; } })(), siteShown: siteShownCodes() ? siteShownCodes().size : null, ourSearch: Object.assign({}, searchState), searchedArea: !!searchedArea, inSearchedArea: searchedArea ? searchedArea.contains(map.getCenter()) : null,
+        solvedMarksHeldBack: syncSkipped.length, zoom: map.getZoom() };
+      console.log(JSON.stringify(o, null, 1)); return o;
+    };
     function refreshAuto(force) {
       try {
         if (!(autoOn || marksOn) || map.getZoom() < MARK_MIN_ZOOM) {
@@ -5254,6 +5533,22 @@
           extra = Object.keys(grid._cache).length;
         } else {
           all = markerCaches();
+          // /play/map draws most caches with WebGL, not as markers: add every cache that map shows, at its
+          // exact posted position, so each one can get its circle.
+          const have = new Set(all.map(c => c.code).filter(Boolean));
+          glCachesInView().forEach(c => { if (!have.has(c.code)) { have.add(c.code); all.push(c); } });
+          // And every cache the site's own search has returned for this area, at its posted coordinates
+          // (the search covers what the map shows, your own caches included).
+          try {
+            const vb = map.getBounds().pad(0.3), drawnGl = glDrawnCodes();
+            const ssc = siteShownCodes();
+            const shownGl = drawnGl && drawnGl.size ? drawnGl : ssc;      // when we can tell which the site draws: only those
+            CACHE_INFO.forEach((i, code) => {
+              if (have.has(code) || !inSearch.has(code) || !i.posted || !vb.contains(L.latLng(i.posted.lat, i.posted.lng))) return;
+              if (shownGl && !shownGl.has(code)) return;
+              have.add(code); all.push({ code, ll: L.latLng(i.posted.lat, i.posted.lng), name: i.name || '' });
+            });
+          } catch (e) { /* no bounds yet */ }
         }
         const sf = siteFilter();
         all = all.filter(c => !filteredOut(c.code, sf, c.ll));
@@ -5270,6 +5565,7 @@
         if (visible.some(c => !c.code || !inSearch.has(c.code))) searchArea(map.getBounds());
         const pos = [], solvedMarks = [], done = new Set();
         circleWhy = [];
+        if (PLAY_MAP) { syncSkipped = []; const g = glDrawnCodes(); drawnNow = g || null; }
         let unknown = 0;
         all.forEach(c => {
           const p = circlePosition(c.code, c.ll);
@@ -5286,7 +5582,8 @@
           // put a clickable mark in the middle of its circle.
           const ci = c.code && CACHE_INFO.get(c.code);
           // Your own solved caches keep the site's icon: an invisible mark on top of it only gives the hover text.
-          if (ci && wantsMark(ci) && distM(sp, c.ll) > 10) solvedMarks.push({ ll: sp, code: c.code });
+          if (ci && !inSiteSearch(c.code, sp)) { /* /play/map: the site doesn't show it yet – wait for its search */ }
+          else if (ci && wantsMark(ci) && distM(sp, c.ll) > 10) solvedMarks.push({ ll: sp, code: c.code });
           // Every other solved cache (your own, and ones you haven't found) whose icon sits on the corrected spot.
           else if (ci && ci.solved && ci.corrected && !wantsMark(ci) && distM(sp, c.ll) <= 25) solvedMarks.push({ ll: sp, code: c.code, ghost: true });
         });
@@ -5318,7 +5615,7 @@
           if (!near(sp)) return;
           pos.push(sp);
           circleWhy.push({ code, from: 'solved, icon elsewhere', found: i.found, at: [+sp.lat.toFixed(5), +sp.lng.toFixed(5)] });
-          if (wantsMark(i) || ownMark(i)) solvedMarks.push({ ll: sp, code });
+          if ((wantsMark(i) || ownMark(i)) && inSiteSearch(code, sp)) solvedMarks.push({ ll: sp, code });
         });
         autoStats = { caches: all.length, inView: visible.length, circles: autoOn ? pos.length : 0, marks: solvedMarks.length + lastStages.length, unknownType: unknown };
         if (visible.length && unknown === visible.length && !typeWarned && ++noTypeTries === 6) {
@@ -5335,7 +5632,7 @@
           }
         } else noCacheTries = 0;
         const bounds = map.getBounds();
-        const sig = [sf.sig, autoOn, marksOn, map.getZoom(), bounds.toBBoxString ? bounds.toBBoxString() : JSON.stringify(bounds), pos.length, all.length, extra, CACHE_INFO.size].join('|');
+        const sig = [sf.sig, autoOn, marksOn, map.getZoom(), bounds.toBBoxString ? bounds.toBBoxString() : JSON.stringify(bounds), pos.length, all.length, extra, CACHE_INFO.size, siteSearchGen].join('|');
         if (!force && sig === autoSig) return;
         autoSig = sig;
         autoLayer.clearLayers();
