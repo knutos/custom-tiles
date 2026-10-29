@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.40
+// @version      1.54.43
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2332,16 +2332,27 @@
           render();
           // Open in the same place as the dialogs: beside the toolbar, at the top of the map.
           const p = box.querySelector('.gcct-panel');
+          p.dataset.posKey = 'layers';
           const pos = besideToolbar(p.offsetWidth || 340, p.offsetHeight || 500);
+          // Where you last dragged it (kept inside the window), if you have.
+          const sv = load('gcct.dlgPos', {}).layers;
+          if (sv && isFinite(sv.left) && isFinite(sv.top)) {
+            const vw = document.documentElement.clientWidth;
+            pos.left = Math.max(0, Math.min(vw - 120, sv.left)); pos.top = Math.max(0, Math.min(window.innerHeight - 60, sv.top));
+            pos.maxHeight = `calc(100vh - ${pos.top + 10}px)`;
+          }
           Object.assign(p.style, { position: 'fixed', left: pos.left + 'px', right: 'auto', maxHeight: pos.maxHeight,
             top: pos.top == null ? 'auto' : pos.top + 'px', bottom: pos.top == null ? pos.bottom + 'px' : 'auto' });
           // A moved toolbar (centred at the top or bottom) makes "fixed" relative to the toolbar instead of the
           // window: measure where the panel ended up and correct for that.
-          const r = p.getBoundingClientRect(), vh = window.innerHeight;
-          const dx = r.left - pos.left;
-          if (Math.abs(dx) > 1) p.style.left = (pos.left - dx) + 'px';
-          if (pos.top != null) { const dy = r.top - pos.top; if (Math.abs(dy) > 1) p.style.top = (pos.top - dy) + 'px'; }
-          else { const dy = (vh - r.bottom) - pos.bottom; if (Math.abs(dy) > 1) p.style.bottom = (pos.bottom - dy) + 'px'; }
+          // (Measured with a probe at 0,0 – the panel itself is mid-animation and would be a few px off.)
+          const probe = document.createElement('div');
+          probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden';
+          p.parentNode.appendChild(probe);
+          const o = probe.getBoundingClientRect(); probe.remove();
+          if (Math.abs(o.left) > 0.5) p.style.left = (pos.left - o.left) + 'px';
+          if (pos.top != null) { if (Math.abs(o.top) > 0.5) p.style.top = (pos.top - o.top) + 'px'; }
+          else { const r = p.getBoundingClientRect(), dy = (window.innerHeight - r.bottom) - pos.bottom; if (Math.abs(dy) > 1) p.style.bottom = (pos.bottom - dy) + 'px'; }
         };
         this._box = box;
         return box;
@@ -2597,10 +2608,28 @@
         const up = () => {
           window.removeEventListener('pointermove', mv, true);
           ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.removeEventListener(ev, up, true));
+          if (box.dataset.posKey && box.dataset.moved) savePos(box);
         };
         window.addEventListener('pointermove', mv, true);
         ['pointerup', 'pointercancel', 'blur'].forEach(ev => window.addEventListener(ev, up, true));
       });
+    }
+    // Dialogs you have dragged (search, settings) open where you left them, also in a later session.
+    const POS_KEY = 'gcct.dlgPos';
+    function savePos(box) {
+      const r = box.getBoundingClientRect(), all = load(POS_KEY, {});
+      const cs = getComputedStyle(box);   // the left/top that put it here: the margin is outside the box
+      all[box.dataset.posKey] = { left: Math.round(r.left - (parseFloat(cs.marginLeft) || 0)), top: Math.round(r.top - (parseFloat(cs.marginTop) || 0)) };
+      save(POS_KEY, all);
+    }
+    function restorePos(d) {
+      const p = d.dataset.posKey && load(POS_KEY, {})[d.dataset.posKey];
+      if (!p || !isFinite(p.left) || !isFinite(p.top)) return false;
+      const vw = document.documentElement.clientWidth, vh = window.innerHeight, w = d.offsetWidth || 300;
+      const left = Math.max(0, Math.min(vw - Math.min(w, 120), p.left)), top = Math.max(0, Math.min(vh - 60, p.top));
+      Object.assign(d.style, { left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto', maxHeight: `calc(100vh - ${top + 10}px)` });
+      d.dataset.moved = '1';
+      return true;
     }
     // Drag the top or bottom edge of a dialog to make it taller or shorter, upwards or downwards.
     function resizeBy(box) {
@@ -2641,6 +2670,7 @@
       // Custom element name: no site CSS selector targets it.
       const d = document.createElement('gcct-dialog');
       d.className = 'gcct-dlg' + (opts.small ? ' sm' : '') + (opts.cls ? ' ' + opts.cls : '');
+      if (opts.key) d.dataset.posKey = opts.key;
       d.innerHTML = `<div class="hd" title="${T('Drag to move')}"><h3>${esc(title)}</h3><span class="x" title="${T('Close (Esc)')}">${icon('x', 18)}</span></div><div class="bd">${html}</div>`;
       noSubmit(d);
       L.DomEvent.disableClickPropagation(d);
@@ -2672,6 +2702,7 @@
     // Dialogs open beside the toolbar, never on top of it: to its left when it is on the right, to its
     // right when it is on the left, below it at the top and above it at the bottom – inside the window.
     function placeDialog(d) {
+      if (d.dataset.posKey && restorePos(d)) return;
       const p = besideToolbar(d.offsetWidth || 440, d.offsetHeight || 300);
       d.style.left = p.left + 'px';
       d.style.right = 'auto';
@@ -3119,7 +3150,7 @@
         <label class="chk"><input type="checkbox" data-a="sw" ${state.showSiteSwitcher ? 'checked' : ''}> ${T('Show geocaching.com’s own map buttons too')}</label>
         <label class="chk"><input type="checkbox" data-a="autoretract" ${state.autoRetract ? 'checked' : ''}> ${T('Fold the site’s side panel away when the map opens')}</label>
         <label class="chk"><input type="checkbox" data-a="sitemenu" ${state.siteRightClick ? 'checked' : ''}> ${T('Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours')}</label>
-        <div class="btns"><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true });
+        <div class="btns"><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true, key: 'settings' });
       d.querySelector('[data-a=cancel]').onclick = closeDialog;
       d.querySelector('[data-a=tbside]').onchange = e => { state.tbSide = e.target.value; save(STORE_STATE, state); applyToolbarLayout(); };
       const cls = d.querySelector('[data-a=clside]');
@@ -4085,8 +4116,8 @@
       .gcct-favlbl span{transform:translateX(-50%)}            /* centred over the cache icon */
       .gcct-nocache .gcct-favlbl,.gcct-nocache .gcct-dtlbl,.gcct-nocache .gcct-ftflbl{visibility:hidden!important}
       .gcct-ftflbl{pointer-events:none!important}
-      .gcct-ftflbl span{display:inline-block;transform:translateY(-50%);background:#d1242f;color:#fff;border:1.5px solid #fff;border-radius:6px;
-        padding:0 4px;font:800 10px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+      .gcct-ftflbl span{display:inline-block;transform:translateY(-50%);background:#d1242f;color:#fff;border:1.5px solid #fff;border-radius:999px;
+        padding:0 6px;font:600 10px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
       .gcct-dtlbl{pointer-events:none!important}
       .gcct-dtlbl span{display:inline-block;transform:translateX(-50%);color:#1f2328;white-space:nowrap;
         font:600 11px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -5847,7 +5878,7 @@
           ? T('Search for your address and pick it from the list. You can also right-click the map and choose “Set as home”.')
           : T('Places in Norway, addresses and places abroad appear as you type. A GC code finds the geocache. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.')}</p>
         ${homeMode && home ? `<p class="hint homeline">${icon('home', 16)} <b>${esc(home.name)}</b> &nbsp;<button data-a="clearhome">${T('Remove home address')}</button></p>` : ''}
-        <div class="gcct-results"></div>`);
+        <div class="gcct-results"></div>`, { key: 'search' });
       const ch = d.querySelector('[data-a=clearhome]');
       if (ch) ch.onclick = () => {
         try { localStorage.removeItem('gcct.home'); } catch (e) { /* ignore */ }
