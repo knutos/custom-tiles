@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.53.11
+// @version      1.54.19
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -213,6 +213,7 @@
     "Owned": "Eiet",
     "Geocaches on the map": "Geocacher på kartet",
     "Cache list and route": "Cacheliste og rute",
+    "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
     "Route window": "Rutevindu",
     "Zoom to it on the map": "Zoom til den på kartet",
     "Open the cache page in a new tab": "Åpne cachesiden i en ny fane",
@@ -469,6 +470,88 @@
   // submit button there, and clicking it posts the form and reloads the page. So every button we
   // create gets type="button", and as a safety net we cancel any submit that starts in our UI.
   const OUR_UI = '.gcct, .gcct-dlg, .gcct-bar, .gcct-pop, .gcct-coord';
+  // Start with the site's side panel folded away (Settings): the panel is hidden from the very start of
+  // the page – by what it looked like last time – and only shown again once it has been folded, without
+  // its slide animation. So you never see it open and close.
+  // What we know about the site's side panel, one record per map page (/map and /play/map).
+  const panelPath = () => location.pathname.replace(/\/+$/, '').split('/').slice(0, 3).join('/');
+  const loadPanelSel = () => {
+    try {
+      const all = JSON.parse(localStorage.getItem('gcct.panelSels') || '{}') || {};
+      const r = all[panelPath()];
+      return r && r.v === 2 ? r : null;                      // older records are learnt again (once)
+    } catch (e) { return null; }
+  };
+  const savePanelSel = rec => {
+    try {
+      const all = JSON.parse(localStorage.getItem('gcct.panelSels') || '{}') || {};
+      all[panelPath()] = rec;
+      localStorage.setItem('gcct.panelSels', JSON.stringify(all));
+    } catch (e) { /* ignore */ }
+  };
+  // For the console: what the early fold did on this page load (element kinds and sizes only).
+  const earlyInfo = { reason: null };
+  window.gcctEarlyTest = () => {
+    const out = Object.assign({}, earlyInfo);
+    try { out.paints = performance.getEntriesByType('paint').map(p => [p.name, Math.round(p.startTime)]); } catch (e) { /* none */ }
+    try {
+      const k = loadPanelSel();
+      out.stored = k;
+      const el = k && k.sel && document.querySelector(k.sel.startsWith('#') || k.sel.includes('>') ? k.sel : k.sel.replace(/^([a-z0-9]+\.[\w-]+).*$/i, '$1'));
+      out.chain = [];
+      for (let q = el, n = 0; q && q !== document.body && n < 6; q = q.parentElement, n++) {
+        const r = q.getBoundingClientRect(), cs = getComputedStyle(q);
+        out.chain.push([q.tagName.toLowerCase() + (q.id ? '#' + q.id : '') + '.' + [...q.classList].slice(0, 3).join('.'), Math.round(r.left), Math.round(r.width), cs.position, cs.backgroundColor, cs.transform !== 'none' ? cs.transform : '']);
+      }
+    } catch (e) { out.error = String(e); }
+    return out;
+  };
+  const EARLY_PANEL = (() => {
+    try {
+      const st = JSON.parse(localStorage.getItem(STORE_STATE) || '{}');
+      const known = loadPanelSel();
+      const here = location.pathname.replace(/\/+$/, '').split('/').slice(0, 3).join('/');
+      if (!st.autoRetract) { earlyInfo.reason = 'setting off'; return null; }
+      if (!known || !known.sel) { earlyInfo.reason = 'nothing remembered yet'; return null; }
+      if (!/^\/(map|play\/map)/.test(location.pathname) || String(known.path || '').replace(/\/+$/, '') !== here) { earlyInfo.reason = 'other page: ' + here + ' / ' + known.path; return null; }
+      earlyInfo.reason = 'active';
+      // Only the element's first class: others may not be there yet while the page loads (or come and go).
+      const first = q => q && !q.startsWith('#') && !q.includes('>') ? q.replace(/^([a-z0-9]+\.[\w-]+).*$/i, '$1') : q;
+      known.sel = first(known.sel); known.toggle = first(known.toggle);
+      const css = document.createElement('style');
+      css.id = 'gcct-early-panel';
+      const noAnim = ` ${known.sel}, ${known.sel} *, ${known.sel} ~ * { transition: none !important; animation: none !important; }`;
+      // Only the site's scale bar waits (it moves when the site folds the panel) – never our toolbar.
+      const leftCtl = ' .leaflet-control-container .leaflet-left .leaflet-control-scale { visibility: hidden !important; }';
+      let showPanel, hold = () => {};
+      if (typeof known.shift === 'number' && known.shift < 0) {
+        // We know how far the panel moves when folded: draw it folded from the very first frame, so its
+        // edge is there at once and the toolbar is placed beside it straight away. Only the site's own
+        // controls at the left (the scale bar) wait until the site has really folded it, then appear.
+        css.textContent = `${known.sel} { transform: translateX(${known.shift}px) !important; }` + noAnim + leftCtl;
+        showPanel = () => { css.textContent = noAnim + leftCtl; };
+        hold = px => { css.textContent = `${known.sel} { transform: translateX(${Math.round(px)}px) !important; }` + noAnim + leftCtl; };
+      } else {
+        // Not known yet: keep the panel and the controls hidden until it has been folded.
+        css.textContent = `${known.sel}${known.toggle ? ', ' + known.toggle : ''}, .leaflet-control-container, .gcct-dock, .gcct-coord { visibility: hidden !important; }` + noAnim;
+        showPanel = () => { css.textContent = `.leaflet-control-container, .gcct-dock, .gcct-coord { visibility: hidden !important; }` + noAnim; };
+      }
+      (document.head || document.documentElement).appendChild(css);
+      earlyInfo.css = css.textContent.slice(0, 120);
+      earlyInfo.insertedAt = Math.round(performance.now());
+      earlyInfo.bodyExisted = !!document.body;
+      // How things looked when the page had been built (before the script folds the panel).
+      document.addEventListener('DOMContentLoaded', () => {
+        try {
+          const el = document.querySelector(known.sel);
+          earlyInfo.atLoad = el ? { found: true, left: Math.round(el.getBoundingClientRect().left), transform: getComputedStyle(el).transform } : { found: false };
+        } catch (e) { earlyInfo.atLoad = String(e); }
+      });
+      const done = () => { if (!css.isConnected) return; css.remove(); earlyInfo.doneAt = Math.round(performance.now()); };
+      setTimeout(done, 12000);                                  // never hide anything for long
+      return { done, showPanel, hold, known };
+    } catch (e) { return null; }
+  })();
   const noSubmit = root => { root.querySelectorAll('button:not([type])').forEach(b => { b.type = 'button'; }); return root; };
   document.addEventListener('submit', e => {
     const src = e.submitter || document.activeElement;
@@ -2905,6 +2988,7 @@
         <label class="chk"><input type="checkbox" data-a="ftfshow" ${state.ftfShow !== false ? 'checked' : ''}> ${T('Mark caches nobody has found yet (FTF) on the map (from zoom 15)')}</label>
         <label class="chk"><input type="checkbox" data-a="coords" ${state.showCoords !== false ? 'checked' : ''}> ${T('Show the zoom and coordinates at the bottom')}</label>
         <label class="chk"><input type="checkbox" data-a="sw" ${state.showSiteSwitcher ? 'checked' : ''}> ${T('Show geocaching.com’s own map buttons too')}</label>
+        <label class="chk"><input type="checkbox" data-a="autoretract" ${state.autoRetract ? 'checked' : ''}> ${T('Fold the site’s side panel away when the map opens')}</label>
         <label class="chk"><input type="checkbox" data-a="sitemenu" ${state.siteRightClick ? 'checked' : ''}> ${T('Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours')}</label>
         <div class="btns"><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true });
       d.querySelector('[data-a=cancel]').onclick = closeDialog;
@@ -2919,6 +3003,7 @@
       d.querySelector('[data-a=dtshow]').onchange = e => { state.dtShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=ftfshow]').onchange = e => { state.ftfShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=favmin]').oninput = e => { const v = Number(e.target.value); if (isFinite(v) && v >= 0) { state.favMin = Math.round(v); favSave(); } };
+      d.querySelector('[data-a=autoretract]').onchange = e => { state.autoRetract = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sitemenu]').onchange = e => { state.siteRightClick = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sw]').onchange = e => {
         state.showSiteSwitcher = e.target.checked;
@@ -3168,6 +3253,202 @@
       if (!(el === top || el.contains(top) || (top.contains(el) && !top.contains(mapEl)))) return 0;
       return Math.max(0, Math.round(r.right - mr.left));
     }
+    // The site's own button that folds its side panel away: a small clickable thing at the panel's right
+    // edge, preferably one that says so (collapse, hide, toggle …) or shows an arrow.
+    function panelToggle(panel) {
+      if (!panel) return null;
+      const pr = panel.getBoundingClientRect();
+      const say = /collapse|hide|toggle|close|minimi|sidebar|panel|skjul|lukk|fold|expand/i;
+      // Whatever lies along the panel's right edge (a button, a link, or a strip/tab that reacts to clicks).
+      const found = new Set(), edge = [];
+      const top = Math.max(0, pr.top), bot = Math.min(window.innerHeight, pr.bottom);
+      for (let y = top + 10; y < bot; y += 16) for (let x = pr.right - 14; x <= pr.right + 14; x += 4) {
+        (document.elementsFromPoint(x, y) || []).slice(0, 6).forEach(el => {
+          for (let q = el, k = 0; q && k < 4 && q !== document.body; q = q.parentElement, k++) {
+            if (found.has(q)) break;
+            found.add(q); edge.push(q);
+          }
+        });
+      }
+      document.querySelectorAll('button, a, [role="button"], [class*="toggle" i], [class*="collapse" i]').forEach(el => { if (!found.has(el)) { found.add(el); edge.push(el); } });
+      const cands = edge.filter(el => {
+        if (ourUi(el) || el === panel || el.contains(map.getContainer()) || (el.closest && el.closest('.leaflet-pane'))) return false;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height || r.width > 80) return false;
+        if (r.height > 160 && r.width > 40) return false;                                   // a tall thin strip is fine
+        if (r.left > pr.right + 40 || r.right < pr.right - 40) return false;               // at the panel's right edge
+        if (r.bottom < pr.top || r.top > pr.bottom) return false;
+        const cs = getComputedStyle(el);
+        const clicky = /^(BUTTON|A)$/.test(el.tagName) || el.getAttribute('role') === 'button' || cs.cursor === 'pointer' || typeof el.onclick === 'function';
+        if (!clicky) return false;
+        try { if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false; } catch (e) { /* ignore */ }
+        return true;
+      }).map(el => {
+        const cls = el.className && String(el.className.baseVal ?? el.className);
+        const txt = [el.getAttribute('aria-label'), el.getAttribute('title'), cls, el.id, el.textContent].filter(Boolean).join(' ');
+        const r = el.getBoundingClientRect();
+        const says = say.test(txt), arrow = /[‹<«❮◀]|chevron|arrow|caret/i.test(txt + (el.innerHTML || '').slice(0, 300)), strip = r.width <= 40 && r.height >= 100;
+        const score = (says ? 4 : 0) + (arrow ? 2 : 0) + (strip ? 3 : 0) + (el.tagName === 'BUTTON' ? 1 : 0);
+        // Only something that looks like a fold button – never an ordinary button that happens to be there.
+        return { el, score, ok: says || arrow || strip, txt: txt.replace(/\s+/g, ' ').trim().slice(0, 80), size: [Math.round(r.width), Math.round(r.height)] };
+      }).filter(c => c.ok).sort((a, b) => b.score - a.score || a.size[0] * a.size[1] - b.size[0] * b.size[1]);
+      lastToggleTest = cands.slice(0, 6).map(c => ({ tag: c.el.tagName.toLowerCase(), score: c.score, size: c.size, text: c.txt }));
+      return cands.length ? cands[0].el : null;
+    }
+    let lastToggleTest = null;
+    window.gcctPanelTest = () => {
+      try {
+        const mr = map.getContainer().getBoundingClientRect(), p = findLeftPanel(mr);
+        panelToggle(p);
+        return { panelFound: !!p, panelWidthOverMap: panelOffsetOf(p, mr), toggleCandidates: lastToggleTest, autoRetract: !!state.autoRetract };
+      } catch (e) { return String(e); }
+    };
+    // Settings: fold the site's side panel away when the map opens – once, within the first seconds.
+    // A CSS selector that picks out just this element (an id, or its tag and classes), for the next page load.
+    function selectorOf(el) {
+      if (!el) return null;
+      if (el.id && /^[A-Za-z][\w-]*$/.test(el.id)) return '#' + el.id;
+      const cls = [...el.classList].filter(c => /^[A-Za-z_][\w-]*$/.test(c) && !/active|open|show|hover|focus|collapsed|expanded/i.test(c));
+      // A named class (the site's own, like "Sidebar") if that alone picks it out …
+      for (const c of cls.filter(c => /[A-Z]/.test(c))) {
+        const sel = el.tagName.toLowerCase() + '.' + c;
+        try { if (document.querySelectorAll(sel).length === 1) return sel; } catch (e) { /* skip */ }
+      }
+      // … otherwise its place in the page, from the nearest element with an id (utility classes such as
+      // "border" or "flex" are shared by many elements and come and go).
+      const steps = [];
+      for (let q = el; q && q !== document.body && q !== document.documentElement; q = q.parentElement) {
+        if (q.id && /^[A-Za-z][\w-]*$/.test(q.id)) { steps.unshift('#' + q.id); break; }
+        const tag = q.tagName.toLowerCase(), sib = q.parentElement ? [...q.parentElement.children].filter(x => x.tagName === q.tagName) : [q];
+        steps.unshift(sib.length > 1 ? `${tag}:nth-of-type(${sib.indexOf(q) + 1})` : tag);
+        if (steps.length > 12) return null;
+      }
+      if (!steps.length || !steps[0].startsWith('#')) steps.unshift('body');
+      const sel = steps.join(' > ');
+      try { return document.querySelectorAll(sel).length === 1 && document.querySelector(sel) === el ? sel : null; } catch (e) { return null; }
+    }
+    // Remember the panel, its button and how far its right edge moves when folded (for the next page load).
+    function rememberFold(p, b, open) {
+      // The whole panel box, not just its inside: the outermost element around it with the same right
+      // edge (that is not the page or the map), so what is moved is what you see.
+      const mapEl = map.getContainer();
+      for (let q = p.parentElement; q && q !== document.body; q = q.parentElement) {
+        const r = q.getBoundingClientRect();
+        if (q.contains(mapEl) || Math.abs(r.right - open.right) > 3 || r.width > open.width + 60) break;
+        p = q;
+      }
+      // The selectors now, while the page still looks as it does when it loads (it may change once folded).
+      const sel = selectorOf(p), toggle = selectorOf(b);
+      setTimeout(() => {
+        try {
+          const c = p.getBoundingClientRect(), shift = Math.round(c.right - open.right);
+          if (sel && toggle) savePanelSel({ v: 2, sel, toggle, path: panelPath(), shift: shift < -20 ? shift : null });
+        } catch (e) { /* ignore */ }
+      }, 600);
+    }
+    function autoRetractPanel() {
+      // Show everything once the site and the toolbar have settled after the fold.
+      const finish = () => {
+        if (!EARLY_PANEL) return;
+        setTimeout(() => {
+          if (EARLY_PANEL.restoreAnim) EARLY_PANEL.restoreAnim();
+          EARLY_PANEL.showPanel();
+          // Let the toolbar find the panel's edge and move beside it while still hidden, then show it all.
+          let n = 0;
+          const settle = () => {
+            try { const mr = map.getContainer().getBoundingClientRect(); leftPanelEl = findLeftPanel(mr) || leftPanelEl; layoutControls(); } catch (e) { /* ignore */ }
+            if (++n < 3) requestAnimationFrame(settle); else EARLY_PANEL.done();
+          };
+          requestAnimationFrame(settle);
+        }, 40);
+      };
+      if (!state.autoRetract) { finish(); return; }
+      // Hidden from the start: fold it with the button we know from last time, as soon as it is there.
+      if (EARLY_PANEL && EARLY_PANEL.known && EARLY_PANEL.known.toggle) {
+        const k = EARLY_PANEL.known;
+        let n = 0;
+        const e = setInterval(() => {
+          n++;
+          try {
+            const p = document.querySelector(k.sel), b = document.querySelector(k.toggle);
+            if (p && b) {
+              clearInterval(e);
+              earlyInfo.foldAt = Math.round(performance.now());
+              const mr = map.getContainer().getBoundingClientRect(), shift = k.shift;
+              if (typeof shift === 'number' && shift < 0) {
+                // Drawn folded by us already. Click the site's button and keep our fold until the site's own
+                // has taken over (it may come a moment later): if the site moves the panel by itself too, it
+                // would go twice as far – then ours goes at once; otherwise after a short while.
+                const r0 = p.getBoundingClientRect();
+                const openNow = r0.width > 100 && r0.right - shift > mr.left + 50;          // open under our fold
+                if (!openNow) { EARLY_PANEL.showPanel(); finish(); return; }
+                b.click();
+                // The site slides the panel with a script animation (not CSS): jump straight to its end …
+                try { const jq = window.jQuery || window.$; if (jq && jq.fn && jq.fn.finish) { jq(':animated').finish(); earlyInfo.jqFinished = true; } } catch (err) { /* no jQuery */ }
+                // … and, if it still moves, hold the panel where it ends up (our shift minus the site's own
+                // movement so far) until the site's slide is over; then let go – nothing moves on screen.
+                const t0 = performance.now(), target = r0.left;
+                let ours = shift, still = 0, last = null, over = false;
+                // Hold it still: each time the site's slide moves the panel (it changes its style), correct our
+                // fold at once – before the browser draws – so neither the panel nor the toolbar twitches.
+                const hold = () => {
+                  if (over) return;
+                  const siteLeft = p.getBoundingClientRect().left - ours;
+                  const want = target - siteLeft;
+                  if (Math.abs(want - ours) > 0.5) { ours = want; EARLY_PANEL.hold(ours); }
+                };
+                const mo = new MutationObserver(hold);
+                for (let q = p, n = 0; q && n < 4 && q !== document.body; q = q.parentElement, n++) mo.observe(q, { attributes: true, attributeFilter: ['style', 'class'] });
+                const follow = () => {
+                  hold();
+                  const siteLeft = p.getBoundingClientRect().left - ours;                    // where the site has it
+                  still = last != null && Math.abs(siteLeft - last) < 0.5 ? still + 1 : 0;
+                  last = siteLeft;
+                  const doneSliding = (still >= 3 && Math.abs(siteLeft - target) < 3) || performance.now() - t0 > 2500;
+                  if (doneSliding) {
+                    over = true; mo.disconnect();
+                    EARLY_PANEL.showPanel();
+                    earlyInfo.handoverAt = Math.round(performance.now()); earlyInfo.siteLeftAtHandover = Math.round(siteLeft);
+                    requestAnimationFrame(() => { try { earlyInfo.leftAfter = Math.round(p.getBoundingClientRect().left); } catch (err) { /* ignore */ } });
+                    finish(); return;
+                  }
+                  requestAnimationFrame(follow);
+                };
+                requestAnimationFrame(follow);
+                return;
+              }
+              EARLY_PANEL.showPanel();
+              const r = p.getBoundingClientRect();
+              if (r.width > 100 && r.right > mr.left + 50) { b.click(); rememberFold(p, b, r); }
+              finish();
+              return;
+            }
+          } catch (err) { /* try again */ }
+          if (n > 50) { clearInterval(e); EARLY_PANEL.done(); setTimeout(autoRetractPanel2, 50); }   // not found: the usual way
+        }, 50);
+        return;
+      }
+      autoRetractPanel2();
+    }
+    function autoRetractPanel2() {
+      const finish = () => { if (EARLY_PANEL) setTimeout(EARLY_PANEL.done, 450); };
+      let tries = 0;
+      const t = setInterval(() => {
+        tries++;
+        try {
+          const mr = map.getContainer().getBoundingClientRect(), p = findLeftPanel(mr);
+          if (p && panelOffsetOf(p, mr) > 0) {
+            const b = panelToggle(p);
+            if (b) {
+              const r = p.getBoundingClientRect();
+              b.click(); rememberFold(p, b, r); clearInterval(t); finish(); return;
+            }
+          }
+        } catch (e) { /* try again */ }
+        if (tries > 100) { clearInterval(t); finish(); }     // about 10 seconds
+      }, 100);
+    }
+    setTimeout(autoRetractPanel, 0);
     function panelShown(el) {
       try {
         if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
@@ -3272,7 +3553,16 @@
         const off0 = panelOffsetOf(leftPanelEl, map.getContainer().getBoundingClientRect());
         dock.parentElement.style.paddingLeft = off0 + 'px';
       }
-      if (side === 'left') dock.style.marginLeft = 10 + leftPanelOffset() + 'px'; else dock.style.marginLeft = '';
+      if (side === 'left') {
+        // Beside the side panel – and beside a folded panel's tab on the left edge (a narrow button there,
+        // like /play/map's «›»), so the toolbar can sit in the middle instead of being pushed past it.
+        let tab = 0;
+        try {
+          const mr0 = map.getContainer().getBoundingClientRect(), base = Math.max(vr.left, mr0.left + leftPanelOffset());
+          collectObstacles([dock]).forEach(o => { if (o.left <= base + 6 && o.width < 90 && o.right > base) tab = Math.max(tab, o.right - base); });
+        } catch (e) { tab = 0; }
+        dock.style.marginLeft = 10 + leftPanelOffset() + tab + 'px';
+      } else dock.style.marginLeft = '';
       // One row that doesn't fit (a narrow window, or beside an open side panel): two rows instead, for now.
       if (state.tbCols !== 2) {
         dock.classList.remove('cols2');
