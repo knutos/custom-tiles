@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.19
+// @version      1.54.26
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -474,12 +474,14 @@
   // the page – by what it looked like last time – and only shown again once it has been folded, without
   // its slide animation. So you never see it open and close.
   // What we know about the site's side panel, one record per map page (/map and /play/map).
-  const panelPath = () => location.pathname.replace(/\/+$/, '').split('/').slice(0, 3).join('/');
+  const panelPath = () => { const p = location.pathname.toLowerCase(); return p.startsWith('/play/map') ? '/play/map' : p.startsWith('/map') ? '/map' : p.replace(/\/+$/, ''); };
+  // How the fold button looks (its arrow may be text, an icon or a background image that is moved).
+  const buttonSig = b => { try { const cs = getComputedStyle(b); return [b.className, b.getAttribute('style') || '', cs.backgroundPosition, cs.backgroundImage.slice(-60), (b.innerHTML || '').replace(/\s+/g, ' ').slice(0, 300)].join('|'); } catch (e) { return ''; } };
   const loadPanelSel = () => {
     try {
       const all = JSON.parse(localStorage.getItem('gcct.panelSels') || '{}') || {};
       const r = all[panelPath()];
-      return r && r.v === 2 ? r : null;                      // older records are learnt again (once)
+      return r && r.v === 4 ? r : null;                      // older records are learnt again (once)
     } catch (e) { return null; }
   };
   const savePanelSel = rec => {
@@ -510,27 +512,33 @@
     try {
       const st = JSON.parse(localStorage.getItem(STORE_STATE) || '{}');
       const known = loadPanelSel();
-      const here = location.pathname.replace(/\/+$/, '').split('/').slice(0, 3).join('/');
       if (!st.autoRetract) { earlyInfo.reason = 'setting off'; return null; }
       if (!known || !known.sel) { earlyInfo.reason = 'nothing remembered yet'; return null; }
-      if (!/^\/(map|play\/map)/.test(location.pathname) || String(known.path || '').replace(/\/+$/, '') !== here) { earlyInfo.reason = 'other page: ' + here + ' / ' + known.path; return null; }
+      if (!/^\/(map|play\/map)/i.test(location.pathname)) { earlyInfo.reason = 'not a map page'; return null; }
       earlyInfo.reason = 'active';
       // Only the element's first class: others may not be there yet while the page loads (or come and go).
       const first = q => q && !q.startsWith('#') && !q.includes('>') ? q.replace(/^([a-z0-9]+\.[\w-]+).*$/i, '$1') : q;
       known.sel = first(known.sel); known.toggle = first(known.toggle);
       const css = document.createElement('style');
       css.id = 'gcct-early-panel';
-      const noAnim = ` ${known.sel}, ${known.sel} *, ${known.sel} ~ * { transition: none !important; animation: none !important; }`;
+      const noAnim = ` ${known.sel}, ${known.sel} *, ${known.sel} ~ *${known.toggle ? `, ${known.toggle}, ${known.toggle} *` : ''} { transition: none !important; animation: none !important; }`;
       // Only the site's scale bar waits (it moves when the site folds the panel) – never our toolbar.
       const leftCtl = ' .leaflet-control-container .leaflet-left .leaflet-control-scale { visibility: hidden !important; }';
-      let showPanel, hold = () => {};
+      let showPanel, hold = () => {}, unmirror = () => {}, remirror = () => {};
       if (typeof known.shift === 'number' && known.shift < 0) {
         // We know how far the panel moves when folded: draw it folded from the very first frame, so its
         // edge is there at once and the toolbar is placed beside it straight away. Only the site's own
         // controls at the left (the scale bar) wait until the site has really folded it, then appear.
-        css.textContent = `${known.sel} { transform: translateX(${known.shift}px) !important; }` + noAnim + leftCtl;
-        showPanel = () => { css.textContent = noAnim + leftCtl; };
-        hold = px => { css.textContent = `${known.sel} { transform: translateX(${Math.round(px)}px) !important; }` + noAnim + leftCtl; };
+        // The fold button's arrow is mirrored too (it points the other way when folded) until the site turns it.
+        let px = known.shift, mirror = !!(known.toggle && known.foldedSig), held = true;
+        const draw = () => { css.textContent = (held ? `${known.sel} { transform: translateX(${px}px) !important; }` : '')
+          // (The "scale" property, not "transform": an icon the site turns with a rotation keeps its rotation.)
+          + (mirror && known.toggle ? ` ${known.toggle}${known.arrowInside ? ' > *' : ''} { scale: -1 1 !important; }` : '') + noAnim + leftCtl; };
+        draw();
+        showPanel = () => { held = false; draw(); };
+        hold = v => { px = v; held = true; draw(); };                       // exact (sub-pixel) – no rounding jitter
+        unmirror = () => { if (mirror) { mirror = false; draw(); } };
+        remirror = on => { on = !!(on && known.foldedSig); if (on !== mirror) { mirror = on; draw(); } };
       } else {
         // Not known yet: keep the panel and the controls hidden until it has been folded.
         css.textContent = `${known.sel}${known.toggle ? ', ' + known.toggle : ''}, .leaflet-control-container, .gcct-dock, .gcct-coord { visibility: hidden !important; }` + noAnim;
@@ -549,7 +557,70 @@
       });
       const done = () => { if (!css.isConnected) return; css.remove(); earlyInfo.doneAt = Math.round(performance.now()); };
       setTimeout(done, 12000);                                  // never hide anything for long
-      return { done, showPanel, hold, known };
+      const ep = { done, showPanel, hold, unmirror, remirror, known, folding: false, folded: false, onFolded: null };
+      // Fold it for real as soon as the page has been built – usually before the browser first draws it,
+      // so the site's slide (and the button's arrow turning) happens before anything is seen.
+      // (Just after the site's own start-up code, which sets up the button on the same event.)
+      if (typeof known.shift === 'number' && known.shift < 0 && known.toggle) document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+        try {
+          const p = document.querySelector(known.sel), b = document.querySelector(known.toggle);
+          if (!p || !b) return;                                // not there yet: the script tries again later
+          const r0 = p.getBoundingClientRect();
+          if (!(r0.width > 100 && r0.right - known.shift > 50)) { ep.folded = true; showPanel(); return; }   // closed already
+          ep.folding = true;
+          earlyInfo.foldAt = Math.round(performance.now()); earlyInfo.early = true;
+          b.click();
+          const target = r0.left, t0 = performance.now();
+          let ours = known.shift, still = 0, last = null, over = false;
+          const near = t => t && t.nodeType === 1 && t !== document.body && t !== document.documentElement &&
+            (p.contains(t) || t.contains(p) || (p.parentElement && p.parentElement.contains(t)) || b.contains(t) || t.contains(b)) && !(t.closest && t.closest('.leaflet-container'));
+          const finishAll = () => { try { (document.getAnimations ? document.getAnimations() : []).forEach(a => { try { if (near(a.effect && a.effect.target) && a.playState !== 'finished') a.finish(); } catch (e) { /* ignore */ } }); } catch (e) { /* ignore */ } };
+          const keep = () => {
+            if (over) return;
+            finishAll();
+            if (known.foldedSig) remirror(buttonSig(b) !== known.foldedSig);   // the arrow may turn by a class higher up
+            const want = target - (p.getBoundingClientRect().left - ours);
+            if (Math.abs(want - ours) > 0.01) { ours = want; hold(ours); }
+          };
+          const mo = new MutationObserver(keep);
+          // When the site turns its arrow (the button's content or classes change), our mirroring goes.
+          const amo = new MutationObserver(() => remirror(buttonSig(b) !== known.foldedSig));
+          amo.observe(b, { attributes: true, childList: true, subtree: true, characterData: true });
+          // The arrow may turn by a class anywhere above the button: follow every class change until the fold is over.
+          amo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
+          remirror(buttonSig(b) !== known.foldedSig);
+          setTimeout(() => { unmirror(); amo.disconnect(); }, 4000);
+          for (let q = p, n = 0; q && n < 4 && q !== document.body; q = q.parentElement, n++) mo.observe(q, { attributes: true, attributeFilter: ['style', 'class'] });
+          keep();
+          let clicks = 1;
+          const step = () => {
+            keep();
+            const siteLeft = p.getBoundingClientRect().left - ours;
+            // The button didn't react yet (the site not ready): press it again, a few times at most.
+            if (clicks < 6 && performance.now() - t0 > 300 * clicks && Math.abs(siteLeft - (target - known.shift)) < 3) { b.click(); clicks++; earlyInfo.clicks = clicks; }
+            still = last != null && Math.abs(siteLeft - last) < 0.5 ? still + 1 : 0;
+            last = siteLeft;
+            const moved = Math.abs(siteLeft - (target - known.shift)) > 3;
+            if (!moved && performance.now() - t0 > 2000) {
+              // The site never reacted this early: stay folded on our own and let the later attempt do it.
+              over = true; mo.disconnect(); ep.folding = false; earlyInfo.earlyGaveUp = true;
+              if (ours !== known.shift) { ours = known.shift; hold(ours); }
+              if (ep.onGiveUp) ep.onGiveUp();
+              return;
+            }
+            if ((still >= 3 && Math.abs(siteLeft - target) < 3) || performance.now() - t0 > 2500) {
+              over = true; mo.disconnect(); amo.disconnect(); unmirror(); showPanel();
+              earlyInfo.handoverAt = Math.round(performance.now());
+              ep.folding = false; ep.folded = true;
+              if (ep.onFolded) ep.onFolded();
+              return;
+            }
+            requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        } catch (e) { earlyInfo.earlyError = String(e); }
+      }, 0));
+      return ep;
     } catch (e) { return null; }
   })();
   const noSubmit = root => { root.querySelectorAll('button:not([type])').forEach(b => { b.type = 'button'; }); return root; };
@@ -3341,8 +3412,10 @@
       const sel = selectorOf(p), toggle = selectorOf(b);
       setTimeout(() => {
         try {
-          const c = p.getBoundingClientRect(), shift = Math.round(c.right - open.right);
-          if (sel && toggle) savePanelSel({ v: 2, sel, toggle, path: panelPath(), shift: shift < -20 ? shift : null });
+          const c = p.getBoundingClientRect(), shift = Math.round((c.right - open.right) * 100) / 100;   // to the sub-pixel
+          // How the button looks when folded (its arrow then points the other way), to mirror it until then.
+          const foldedSig = buttonSig(b), arrowInside = !!(b.firstElementChild && /^(svg|img|span|i)$/i.test(b.firstElementChild.tagName));
+          if (sel && toggle) savePanelSel({ v: 4, sel, toggle, path: panelPath(), shift: shift < -20 ? shift : null, foldedSig, arrowInside });
         } catch (e) { /* ignore */ }
       }, 600);
     }
@@ -3364,6 +3437,9 @@
       };
       if (!state.autoRetract) { finish(); return; }
       // Hidden from the start: fold it with the button we know from last time, as soon as it is there.
+      // Folded already when the page was built (or being folded right now): only show the rest.
+      if (EARLY_PANEL && EARLY_PANEL.folded) { finish(); return; }
+      if (EARLY_PANEL && EARLY_PANEL.folding) { EARLY_PANEL.onFolded = finish; EARLY_PANEL.onGiveUp = () => setTimeout(autoRetractPanel, 0); return; }
       if (EARLY_PANEL && EARLY_PANEL.known && EARLY_PANEL.known.toggle) {
         const k = EARLY_PANEL.known;
         let n = 0;
@@ -3391,14 +3467,29 @@
                 let ours = shift, still = 0, last = null, over = false;
                 // Hold it still: each time the site's slide moves the panel (it changes its style), correct our
                 // fold at once – before the browser draws – so neither the panel nor the toolbar twitches.
+                // Any CSS or script animation on the panel, around it or on its button ends at once (the site may
+                // slide the area around the panel too, which our "no transitions" rule doesn't reach).
+                const near = t => t && t.nodeType === 1 && t !== document.body && t !== document.documentElement &&
+                  (p.contains(t) || t.contains(p) || (p.parentElement && p.parentElement.contains(t)) || b.contains(t) || t.contains(b)) && !t.closest('.leaflet-container');
+                const finishAll = () => {
+                  try { (document.getAnimations ? document.getAnimations() : []).forEach(a => { try { const t = a.effect && a.effect.target; if (near(t) && a.playState !== 'finished') { a.finish(); earlyInfo.finishedAnims = (earlyInfo.finishedAnims || 0) + 1; } } catch (err) { /* ignore */ } }); } catch (err) { /* ignore */ }
+                };
                 const hold = () => {
                   if (over) return;
+                  finishAll();
+                  if (k.foldedSig) EARLY_PANEL.remirror(buttonSig(b) !== k.foldedSig);
                   const siteLeft = p.getBoundingClientRect().left - ours;
                   const want = target - siteLeft;
-                  if (Math.abs(want - ours) > 0.5) { ours = want; EARLY_PANEL.hold(ours); }
+                  if (Math.abs(want - ours) > 0.01) { ours = want; EARLY_PANEL.hold(ours); }
                 };
                 const mo = new MutationObserver(hold);
+                const amo = new MutationObserver(() => EARLY_PANEL.remirror(buttonSig(b) !== k.foldedSig));
+                amo.observe(b, { attributes: true, childList: true, subtree: true, characterData: true });
+                amo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
+                EARLY_PANEL.remirror(buttonSig(b) !== k.foldedSig);
+                setTimeout(() => { EARLY_PANEL.unmirror(); amo.disconnect(); }, 4000);
                 for (let q = p, n = 0; q && n < 4 && q !== document.body; q = q.parentElement, n++) mo.observe(q, { attributes: true, attributeFilter: ['style', 'class'] });
+                finishAll();
                 const follow = () => {
                   hold();
                   const siteLeft = p.getBoundingClientRect().left - ours;                    // where the site has it
@@ -3406,7 +3497,7 @@
                   last = siteLeft;
                   const doneSliding = (still >= 3 && Math.abs(siteLeft - target) < 3) || performance.now() - t0 > 2500;
                   if (doneSliding) {
-                    over = true; mo.disconnect();
+                    over = true; mo.disconnect(); amo.disconnect(); EARLY_PANEL.unmirror();
                     EARLY_PANEL.showPanel();
                     earlyInfo.handoverAt = Math.round(performance.now()); earlyInfo.siteLeftAtHandover = Math.round(siteLeft);
                     requestAnimationFrame(() => { try { earlyInfo.leftAfter = Math.round(p.getBoundingClientRect().left); } catch (err) { /* ignore */ } });
