@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.43
+// @version      1.54.44
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -5343,6 +5343,8 @@
       const h = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dn / 2) ** 2;
       return 2 * R * Math.asin(Math.sqrt(h));
     };
+    let lastMapClick = -1e9;
+    map.on('click', () => { lastMapClick = performance.now(); });
     function solvedMark(ll, code, ghost, small) {
       const i = CACHE_INFO.get(code) || {}, name = i.name || '';
       if (ghost) {
@@ -5362,6 +5364,12 @@
         // The site finds the cache under the pointer from its last mouse move, which the mark held back:
         // tell it where the pointer is just before the click passes on to the map.
         g.on('mousedown click', e => { try { map.fire('mousemove', { latlng: e.latlng || ll, layerPoint: e.layerPoint, containerPoint: e.containerPoint, originalEvent: e.originalEvent }); } catch (err) { /* ignore */ } });
+        // Older Leaflet (/map) stops a marker's click from reaching the map, so the site's popup wouldn't open:
+        // pass the click on ourselves when the map didn't get it.
+        g.on('click', e => {
+          const ev = { latlng: e.latlng || ll, layerPoint: e.layerPoint, containerPoint: e.containerPoint, originalEvent: e.originalEvent };
+          setTimeout(() => { if (performance.now() - lastMapClick > 80) { try { map.fire('click', ev); } catch (err) { /* ignore */ } } }, 0);
+        });
         return g;
       }
       // A round blue badge with a question mark (solved puzzle), and a small green tick for "found".
