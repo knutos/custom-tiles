@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.44
+// @version      1.54.47
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -214,6 +214,7 @@
     "Geocaches on the map": "Geocacher på kartet",
     "Cache list and route": "Cacheliste og rute",
     "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
+    "Show a small type icon on solved caches you haven’t found (from zoom 14)": "Vis et lite typeikon på løste cacher du ikke har funnet (fra zoom 14)",
     "Route window": "Rutevindu",
     "Zoom to it on the map": "Zoom til den på kartet",
     "Open the cache page in a new tab": "Åpne cachesiden i en ny fane",
@@ -3146,6 +3147,7 @@
           <label class="chk fmin">${T('From')} <input type="number" data-a="favmin" min="0" step="1" value="${state.favMin ?? 10}"> ${T('favourite points')}</label></div>
         <label class="chk"><input type="checkbox" data-a="dtshow" ${state.dtShow !== false ? 'checked' : ''}> ${T('Show difficulty/terrain (D/T) below caches on the map (from zoom 15)')}</label>
         <label class="chk"><input type="checkbox" data-a="ftfshow" ${state.ftfShow !== false ? 'checked' : ''}> ${T('Mark caches nobody has found yet (FTF) on the map (from zoom 15)')}</label>
+        <label class="chk"><input type="checkbox" data-a="typebadge" ${state.typeBadge !== false ? 'checked' : ''}> ${T('Show a small type icon on solved caches you haven’t found (from zoom 14)')}</label>
         <label class="chk"><input type="checkbox" data-a="coords" ${state.showCoords !== false ? 'checked' : ''}> ${T('Show the zoom and coordinates at the bottom')}</label>
         <label class="chk"><input type="checkbox" data-a="sw" ${state.showSiteSwitcher ? 'checked' : ''}> ${T('Show geocaching.com’s own map buttons too')}</label>
         <label class="chk"><input type="checkbox" data-a="autoretract" ${state.autoRetract ? 'checked' : ''}> ${T('Fold the site’s side panel away when the map opens')}</label>
@@ -3162,6 +3164,7 @@
       d.querySelector('[data-a=favshow]').onchange = e => { state.favShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=dtshow]').onchange = e => { state.dtShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
       d.querySelector('[data-a=ftfshow]').onchange = e => { state.ftfShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
+      d.querySelector('[data-a=typebadge]').onchange = e => { state.typeBadge = e.target.checked; save(STORE_STATE, state); if (window.__gcctAutoRefresh) window.__gcctAutoRefresh(); };
       d.querySelector('[data-a=favmin]').oninput = e => { const v = Number(e.target.value); if (isFinite(v) && v >= 0) { state.favMin = Math.round(v); favSave(); } };
       d.querySelector('[data-a=autoretract]').onchange = e => { state.autoRetract = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sitemenu]').onchange = e => { state.siteRightClick = e.target.checked; save(STORE_STATE, state); };
@@ -4118,6 +4121,11 @@
       .gcct-ftflbl{pointer-events:none!important}
       .gcct-ftflbl span{display:inline-block;transform:translateY(-50%);background:#d1242f;color:#fff;border:1.5px solid #fff;border-radius:999px;
         padding:0 6px;font:600 10px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+      .gcct-typelbl{pointer-events:none!important;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #fff,0 1px 2px rgba(0,0,0,.45)}
+      .gcct-typelbl img{display:block;width:13px;height:13px;border-radius:50%;object-fit:contain}
+      .gcct-typelbl b{display:flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;color:#fff;
+        font:700 8px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+      .gcct-nocache .gcct-typelbl{visibility:hidden!important}
       .gcct-dtlbl{pointer-events:none!important}
       .gcct-dtlbl span{display:inline-block;transform:translateX(-50%);color:#1f2328;white-space:nowrap;
         font:600 11px/14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -5343,6 +5351,46 @@
       const h = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dn / 2) ** 2;
       return 2 * R * Math.asin(Math.sqrt(h));
     };
+    // Mini type icons: the site's own icons when we can see where it keeps them (/play/map), else a coloured dot.
+    const TYPE_ICON = { 2: ['traditional', '#02874d', 'T'], 3: ['multi', '#e98300', 'M'], 8: ['mystery', '#2c4d9a', '?'], 5: ['letterbox', '#002f6c', 'L'],
+      1858: ['wherigo', '#3d9ad8', 'W'], 137: ['earthcache', '#1a5f8c', 'E'], 4: ['virtual', '#009bbb', 'V'], 11: ['webcam', '#009bbb', 'C'],
+      6: ['event', '#ce4d10', 'E'], 13: ['cito', '#4a7c22', 'E'], 453: ['mega', '#ce4d10', 'E'], 7005: ['giga', '#ce4d10', 'E'], 12: ['locationless', '#6b6b6b', 'R'] };
+    let siteIconDir;
+    function siteIconBase() {
+      if (siteIconDir) return siteIconDir;
+      const im = document.querySelector('img[src$="/traditional.svg"], img[src$="/mystery.svg"], img[src$="/multi.svg"], img[src$="/solved.svg"], img[src$="/smiley.svg"]');
+      if (im) siteIconDir = im.src.replace(/[^/]+$/, '');
+      return siteIconDir || null;
+    }
+    // Solved caches you haven't found (and don't own) whose icon the site draws at the corrected position.
+    window.__gcctAutoRefresh = () => { try { refreshAuto(true); } catch (e) { /* ignore */ } };
+    function typeBadges(grid, view, sf) {
+      const out = [];
+      if (load(STORE_STATE, {}).typeBadge === false) return out;
+      try {
+        const gridPos = grid ? cachePositions(grid) : null, shown = !grid ? siteShownCodes() : null;
+        CACHE_INFO.forEach((i, code) => {
+          if (!i.solved || !i.corrected || i.found === true || i.owned === true || i.type == null) return;
+          if (window.__gcctLikelyOwn && window.__gcctLikelyOwn(code)) return;
+          const ll = L.latLng(i.corrected.lat, i.corrected.lng);
+          if (!view.contains(ll) || filteredOut(code, sf, i.posted)) return;
+          if (gridPos) { const g = gridPos.get(code); if (!g || distM(g, ll) > 40) return; }
+          else if (!shown || !shown.has(code)) return;
+          out.push({ code, ll, type: i.type, img: 1 });
+        });
+      } catch (e) { /* ignore */ }
+      return out;
+    }
+    function typeBadge(ll, type) {
+      // The site's type icon, as in the cache list (a coloured dot if it can't be loaded).
+      const t = TYPE_ICON[Number(type)] || [null, '#6b6b6b', ''];
+      const dot = `<b style="background:${t[1]}"></b>`;
+      const html = `<img src="/images/wpttypes/${encodeURIComponent(type)}.gif" alt="" onerror="this.outerHTML=this.dataset.fb" data-fb="${esc(dot)}">`;
+      const m = L.marker(ll, { interactive: false, clickable: false, keyboard: false, ...labelPane(),
+        icon: L.divIcon({ className: 'gcct-typelbl', html, iconSize: [13, 13], iconAnchor: [-3, -3] }) });
+      m.__gcct = true;
+      return m;
+    }
     let lastMapClick = -1e9;
     map.on('click', () => { lastMapClick = performance.now(); });
     function solvedMark(ll, code, ghost, small) {
@@ -5682,6 +5730,9 @@
         const nameOf = c => (CACHE_INFO.get(c) || {}).name || '', foundOf = c => (CACHE_INFO.get(c) || {}).found === true;
         syncMarks([
           ...solvedMarks.filter(m => !(m.ghost && smallMarks)).map(m => [`s|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${!!m.ghost}|${foundOf(m.code)}|${nameOf(m.code)}|${smallMarks}`, () => solvedMark(m.ll, m.code, m.ghost, smallMarks)]),
+          // A small type icon at the bottom right of the site's "solved" icon (not found, not your own):
+          // that icon says nothing about the type.
+          ...(smallMarks ? [] : typeBadges(grid, view, sf)).map(m => [`t|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.type}|${m.img}`, () => typeBadge(m.ll, m.type)]),
           ...lastStages.map(m => [`w|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.kind}|${m.name}|${nameOf(m.code)}`, () => stageMark(m)]),
         ]);
         lastSolved = solvedMarks;
