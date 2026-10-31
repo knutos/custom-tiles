@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.53
+// @version      1.55.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -214,6 +214,43 @@
     "Geocaches on the map": "Geocacher på kartet",
     "Cache list and route": "Cacheliste og rute",
     "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
+    "Layout": "Utseende",
+    "On the map": "På kartet",
+    "Behaviour": "Oppførsel",
+    "What is drawn on the map – 161 m circles, marks, favourite points, D/T, FTF and type icons – is chosen with {icon} Show on map in the toolbar.": "Hva som tegnes på kartet – 161 m-sirkler, merker, favorittpoeng, D/T, FTF og typeikoner – velges med {icon} Vis på kartet i verktøylinjen.",
+    "Show on map: 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons": "Vis på kartet: 161 m-sirkler, merker ved løste cacher, favorittpoeng, D/T, FTF og typeikoner",
+    "Show on map": "Vis på kartet",
+    "161 m circles": "161 m-sirkler",
+    "Traditional caches, solved caches and physical stages": "Tradisjonelle cacher, løste cacher og fysiske steg",
+    "Marks at solved caches": "Merker ved løste cacher",
+    "Smiley when found, blue ? when the icon is elsewhere": "Smilefjes når funnet, blått ? når ikonet er et annet sted",
+    "Difficulty/terrain (D/T)": "Vanskelighet/terreng (D/T)",
+    "FTF – not found yet": "FTF – ikke funnet ennå",
+    "Type icon on solved caches": "Typeikon på løste cacher",
+    "The site’s “solved” icon doesn’t show the type": "Nettstedets «løst»-ikon viser ikke typen",
+    "Zoom in to {z} to see it": "Zoom inn til {z} for å se det",
+    "From zoom {z}": "Fra zoom {z}",
+    "points": "poeng",
+    "Hide all geocaches with the eye button in the toolbar.": "Skjul alle geocacher med øyeknappen i verktøylinjen.",
+    "Help: what the buttons do, right-click and long-press, keys": "Hjelp: hva knappene gjør, høyreklikk og langt trykk, taster",
+    "Help": "Hjelp",
+    "The toolbar": "Verktøylinjen",
+    "<b>Map layers</b> – background maps and overlays; add your own.": "<b>Kartlag</b> – bakgrunnskart og overlegg; legg til dine egne.",
+    "<b>Search</b> places, addresses, coordinates and GC codes ( / ). <b>Home</b>, <b>my location</b> and <b>fullscreen</b> follow.": "<b>Søk</b> etter steder, adresser, koordinater og GC-koder ( / ). Deretter <b>hjem</b>, <b>min posisjon</b> og <b>fullskjerm</b>.",
+    "<b>Measure</b> – click points (a click on a cache snaps to it), double-click for a new line, Esc to stop.": "<b>Mål</b> – klikk punkter (klikk på en cache festes til den), dobbeltklikk for ny linje, Esc for å stoppe.",
+    "<b>Route</b> – geocaches and pins in order, downloaded as GPX for your GPS.": "<b>Rute</b> – geocacher og merkenåler i rekkefølge, lastet ned som GPX til GPS'en.",
+    "<b>Geocaches on the map</b> – a list that follows the map (only on /map; /play/map has its own).": "<b>Geocacher på kartet</b> – en liste som følger kartet (bare på /map; /play/map har sin egen).",
+    "<b>Show on map</b> – 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons, each with the zoom it shows from.": "<b>Vis på kartet</b> – 161 m-sirkler, merker ved løste cacher, favorittpoeng, D/T, FTF og typeikoner, hver med zoomnivået den vises fra.",
+    "<b>Hide all geocaches</b> to see the map underneath.": "<b>Skjul alle geocacher</b> for å se kartet under.",
+    "<b>Clear</b> measurements, single circles and pins.": "<b>Fjern</b> målinger, enkeltsirkler og merkenåler.",
+    "<b>Settings</b> – toolbar position, language and how the script behaves.": "<b>Innstillinger</b> – verktøylinjens plassering, språk og hvordan skriptet oppfører seg.",
+    "A green edge shows what is on or open. A faded button is on, but shows only when you zoom in.": "En grønn kant viser hva som er på eller åpent. En blek knapp er på, men vises først når du zoomer inn.",
+    "<b>Right-click</b> – or <b>press and hold</b> on a touch screen – for coordinates in every format, a pin, a single 161 m circle, projection, measuring and Street View. Near a cache it snaps to the cache’s exact coordinates.": "<b>Høyreklikk</b> – eller <b>trykk og hold</b> på en berøringsskjerm – for koordinater i alle formater, merkenål, én 161 m-sirkel, projisering, måling og Street View. Nær en cache festes det til cachens nøyaktige koordinater.",
+    "Drag dialogs by their title bar; the layer panel, search and settings open where you left them.": "Dra dialogene etter tittellinjen; kartlagpanelet, søket og innstillingene åpnes der du la dem.",
+    "Keys: <b>/</b> search, <b>+</b> <b>−</b> zoom, <b>Esc</b> stops measuring and closes dialogs.": "Taster: <b>/</b> søk, <b>+</b> <b>−</b> zoom, <b>Esc</b> stopper måling og lukker dialoger.",
+    "On <b>/play/map</b> the site only searches when you press <i>Search this area</i>; the extras follow its icons.": "På <b>/play/map</b> søker nettstedet bare når du trykker <i>Søk i dette området</i>; tilleggene følger ikonene.",
+    "On <b>/map</b> the geocaches load as you pan; the cache list follows the map.": "På <b>/map</b> lastes geocachene mens du flytter kartet; cachelista følger kartet.",
+    "Open the user guide (PDF)": "Åpne brukerveiledningen (PDF)",
     "Show a small type icon on solved caches (from zoom 14)": "Vis et lite typeikon på løste cacher (fra zoom 14)",
     "Route window": "Rutevindu",
     "Zoom to it on the map": "Zoom til den på kartet",
@@ -454,6 +491,9 @@
     ring: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
     solved: '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M8.2 14a4.4 4.4 0 0 0 7.6 0"/>',
+    tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z"/><circle cx="8" cy="8" r="1.6"/>',
+    sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.7c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor" stroke="none"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4"/>',
@@ -3138,17 +3178,15 @@
         .map(([v, l]) => `<option value="${v}" ${side === v ? 'selected' : ''}>${T(l)}${v === 'right' ? dflt : ''}</option>`).join('');
       const lineOpts = [[1, 'One line'], [2, 'Two lines']].map(([v, l]) => `<option value="${v}" ${lines === v ? 'selected' : ''}>${T(l)}${v === 1 ? dflt : ''}</option>`).join('');
       const d = openDialog(T('Settings'), `
+        <h4 class="sec">${T('Layout')}</h4>
         <div class="row2"><label class="f"><span class="l">${T('Toolbar')}</span><select data-a="tbside">${sideOpts}</select></label>
         <label class="f"><span class="l">${T('Buttons in')}</span><select data-a="tbcols">${lineOpts}</select></label></div>
         <label class="f"><span class="l">${T(PLAY_MAP ? 'Route window' : 'Cache list and route')}</span><select data-a="clside"><option value="right" ${state.clSide !== 'left' ? 'selected' : ''}>${T('Right')}${dflt}</option><option value="left" ${state.clSide === 'left' ? 'selected' : ''}>${T('Left')}</option></select></label>
         <label class="f"><span class="l">${T('Language')}</span><select data-a="lang"><option value="en" ${LANG === 'en' ? 'selected' : ''}>English</option><option value="no" ${LANG === 'no' ? 'selected' : ''}>Norsk</option></select></label>
-        <div class="favset"><b>${T('Favourite points')}</b>
-          <label class="chk"><input type="checkbox" data-a="favshow" ${state.favShow !== false ? 'checked' : ''}> ${T('Show ♥ and the number by caches on the map (from zoom 15)').replace('♥', '<span class="gcct-fav">♥</span>')}</label>
-          <label class="chk fmin">${T('From')} <input type="number" data-a="favmin" min="0" step="1" value="${state.favMin ?? 10}"> ${T('favourite points')}</label></div>
-        <label class="chk"><input type="checkbox" data-a="dtshow" ${state.dtShow !== false ? 'checked' : ''}> ${T('Show difficulty/terrain (D/T) below caches on the map (from zoom 15)')}</label>
-        <label class="chk"><input type="checkbox" data-a="ftfshow" ${state.ftfShow !== false ? 'checked' : ''}> ${T('Mark caches nobody has found yet (FTF) on the map (from zoom 15)')}</label>
-        <label class="chk"><input type="checkbox" data-a="typebadge" ${state.typeBadge === true ? 'checked' : ''}> ${T('Show a small type icon on solved caches (from zoom 14)')}</label>
         <label class="chk"><input type="checkbox" data-a="coords" ${state.showCoords !== false ? 'checked' : ''}> ${T('Show the zoom and coordinates at the bottom')}</label>
+        <h4 class="sec">${T('On the map')}</h4>
+        <p class="hint">${T('What is drawn on the map – 161 m circles, marks, favourite points, D/T, FTF and type icons – is chosen with {icon} Show on map in the toolbar.').replace('{icon}', icon('sliders', 15))}</p>
+        <h4 class="sec">${T('Behaviour')}</h4>
         <label class="chk"><input type="checkbox" data-a="sw" ${state.showSiteSwitcher ? 'checked' : ''}> ${T('Show geocaching.com’s own map buttons too')}</label>
         <label class="chk"><input type="checkbox" data-a="autoretract" ${state.autoRetract ? 'checked' : ''}> ${T('Fold the site’s side panel away when the map opens')}</label>
         <label class="chk"><input type="checkbox" data-a="sitemenu" ${state.siteRightClick ? 'checked' : ''}> ${T('Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours')}</label>
@@ -3160,12 +3198,6 @@
       d.querySelector('[data-a=tbcols]').onchange = e => { state.tbCols = +e.target.value; save(STORE_STATE, state); applyToolbarLayout(); syncLinesSelect(); };
       syncLinesSelect();
       d.querySelector('[data-a=coords]').onchange = e => setCoordsVisible(e.target.checked);
-      const favSave = () => { save(STORE_STATE, state); if (window.__gcctRefreshFav) window.__gcctRefreshFav(); };
-      d.querySelector('[data-a=favshow]').onchange = e => { state.favShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
-      d.querySelector('[data-a=dtshow]').onchange = e => { state.dtShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
-      d.querySelector('[data-a=ftfshow]').onchange = e => { state.ftfShow = e.target.checked; favSave(); if (window.__gcctFavBtnSync) window.__gcctFavBtnSync(); };
-      d.querySelector('[data-a=typebadge]').onchange = e => { state.typeBadge = e.target.checked; save(STORE_STATE, state); if (window.__gcctAutoRefresh) window.__gcctAutoRefresh(); };
-      d.querySelector('[data-a=favmin]').oninput = e => { const v = Number(e.target.value); if (isFinite(v) && v >= 0) { state.favMin = Math.round(v); favSave(); } };
       d.querySelector('[data-a=autoretract]').onchange = e => { state.autoRetract = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sitemenu]').onchange = e => { state.siteRightClick = e.target.checked; save(STORE_STATE, state); };
       d.querySelector('[data-a=sw]').onchange = e => {
@@ -3215,7 +3247,10 @@
         if (cb) cb.checked = !!on;
         if (window.__gcctRefreshFav) window.__gcctRefreshFav();
       },
-      // The toolbar's heart button: the same setting as the checkbox in Settings.
+      typeBadgeOn: () => state.typeBadge === true,
+      setTypeBadge: on => { state.typeBadge = !!on; save(STORE_STATE, state); if (window.__gcctAutoRefresh) window.__gcctAutoRefresh(); },
+      setFavMin: n => { state.favMin = Math.max(0, Math.round(n)); save(STORE_STATE, state); if (window.__gcctRefreshFav) window.__gcctRefreshFav(); },
+      // The "Show on map" panel: the same settings as before.
       setFavShow: on => {
         state.favShow = !!on;
         save(STORE_STATE, state);
@@ -4081,6 +4116,39 @@
       .leaflet-container .gcct-dock .gcct-bar a.active:not(.danger){color:var(--tb-ink,#007d46)!important}   /* on: the toolbar's green */
       .gcct-bar a.active.danger{background:var(--danger-bg);color:var(--danger);box-shadow:inset 3px 0 0 var(--danger)}
       .gcct-bar a.sep{border-top:6px solid var(--soft)}
+      .gcct-bar a.dim{opacity:.55}
+      .gcct-bar a.open{background:color-mix(in srgb,var(--tb-ink,#007d46) 18%,#fff)}
+      .leaflet-container{-webkit-touch-callout:none}
+      gcct-showpanel.gcct-showp{position:fixed;z-index:10002;display:block;width:310px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;
+        background:#fff;color:#1f2328;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.06);padding:6px 0 4px;
+        font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;animation:gcct-in .12s ease-out;box-sizing:border-box}
+      .gcct-showp .hd{cursor:move;touch-action:none;display:flex;align-items:center;justify-content:space-between;padding:6px 14px 8px;border-bottom:1px solid #eaeef2}
+      .gcct-showp .hd b{font-size:15px}
+      .gcct-showp .hd .x{cursor:pointer;color:#59636e;display:flex}
+      .gcct-showp .row{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;cursor:pointer;border-left:3px solid transparent}
+      .gcct-showp .row:hover{background:#f6f8fa}
+      .gcct-showp .row.on{border-left-color:#007d46}
+      .gcct-showp .row.on.red{border-left-color:#d0021b}
+      .gcct-showp .row .i{color:#59636e;display:flex;padding-top:1px}
+      .gcct-showp .row.on .i{color:#007d46}
+      .gcct-showp .row.on.red .i{color:#d0021b}
+      .gcct-showp .row .t{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+      .gcct-showp .row .n{font-weight:600}
+      .gcct-showp .row .s,.gcct-showp .row .z{font-size:12px;color:#59636e}
+      .gcct-showp .row.wait .z{color:#9a6700;font-weight:600}
+      .gcct-showp .row .fmin{font-size:12.5px;color:#59636e;margin-top:3px}
+      .gcct-showp .row .fmin input{width:52px;padding:2px 5px;margin:0 3px;border:1px solid #d1d9e0;border-radius:6px;font:inherit;color:#1f2328}
+      .gcct-showp input.sw{appearance:none;-webkit-appearance:none;flex:none;width:34px;height:20px;border-radius:10px;background:#d1d9e0;position:relative;cursor:pointer;margin:1px 0 0;transition:background .12s}
+      .gcct-showp input.sw::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .12s}
+      .gcct-showp input.sw:checked{background:#007d46}
+      .gcct-showp .row.red input.sw:checked{background:#d0021b}
+      .gcct-showp input.sw:checked::after{left:16px}
+      .gcct-showp .ft{margin:6px 14px 6px;font-size:12px;color:#59636e}
+      .gcct-dlg table.help{border-collapse:collapse;width:100%}
+      .gcct-dlg table.help td{padding:5px 6px;vertical-align:top;font-size:13.5px}
+      .gcct-dlg table.help td:first-child{width:22px;color:var(--tb-ink,#007d46);padding-left:0}
+      .gcct-dlg ul.help{margin:0;padding-left:18px;font-size:13.5px}
+      .gcct-dlg ul.help li{margin:4px 0}
       .gcct-bar a.disabled{color:#b6bcc3;cursor:default;background:#fff}
       .gcct-bar svg{display:block;pointer-events:none}
       .gcct-toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);z-index:2147483001;max-width:min(520px,90vw);
@@ -4710,7 +4778,12 @@
       e.stopPropagation();
       try {
         const ll = map.mouseEventToLatLng(e);
-        if (mode === 'measure') addMeasurePoint(ll);
+        if (mode === 'measure') {
+          // Clicking a geocache measures from/to its exact coordinates (as the right-click does).
+          let c = null;
+          try { c = nearestCache(ll); } catch (err) { c = null; }
+          addMeasurePoint(c && c.ll ? L.latLng(c.ll.lat, c.ll.lng) : ll);
+        }
         else if (mode === 'circle' && !removeCircleAt(ll)) circle161(ll);
       } catch (err) { console.error('[gcct] tool click failed', err); }
     }, true);
@@ -5369,7 +5442,7 @@
     window.__gcctAutoRefresh = () => { try { refreshAuto(true); } catch (e) { /* ignore */ } };
     function typeBadges(grid, view, sf, marks) {
       const out = [], st = load(STORE_STATE, {});
-      if (st.typeBadge !== true) return out;
+      if (st.typeBadge !== true || map.getZoom() < FAV_MIN_ZOOM) return out;
       try {
         const gridPos = grid ? cachePositions(grid) : null, shown = !grid ? siteShownCodes() : null;
         CACHE_INFO.forEach((i, code) => {
@@ -5614,7 +5687,7 @@
     };
     function refreshAuto(force) {
       try {
-        if (!(autoOn || marksOn) || map.getZoom() < MARK_MIN_ZOOM) {
+        if (!(autoOn || marksOn || (api.typeBadgeOn && api.typeBadgeOn())) || map.getZoom() < MARK_MIN_ZOOM) {
           autoLayer.clearLayers(); syncMarks([]); autoSig = '';
           if (lastSolved.length) { lastSolved = []; if (window.__gcctFavKick) window.__gcctFavKick(); }
           return;
@@ -5746,19 +5819,177 @@
         if (window.__gcctFavKick) window.__gcctFavKick();          // hearts and D/T at the marks
       } catch (e) { console.error('[gcct] auto circles failed', e); }
     }
+    // --- Show on map: one panel for everything drawn on top of the caches ------------------------------
+    let showBtn = null, showPanel = null;
+    const showItems = () => {
+      const fav = api.favSettings ? api.favSettings() : { show: false, min: 10 };
+      return [
+        { k: 'circles', ic: 'circles', name: T('161 m circles'), sub: T('Traditional caches, solved caches and physical stages'), z: AUTO_MIN_ZOOM, on: autoOn, set: v => setAuto(v), red: true },
+        { k: 'marks', ic: 'solved', name: T('Marks at solved caches'), sub: T('Smiley when found, blue ? when the icon is elsewhere'), z: MARK_MIN_ZOOM, on: marksOn, set: v => setMarks(v) },
+        { k: 'fav', ic: 'heart', name: T('Favourite points'), sub: null, z: FAV_MIN_ZOOM, on: !!fav.show, set: v => { if (api.setFavShow) api.setFavShow(v); }, min: fav.min },
+        { k: 'dt', ic: 'dt', name: T('Difficulty/terrain (D/T)'), sub: null, z: FAV_MIN_ZOOM, on: !!(api.dtSettings && api.dtSettings().show), set: v => { if (api.setDtShow) api.setDtShow(v); } },
+        { k: 'ftf', ic: 'flag', name: T('FTF – not found yet'), sub: null, z: FAV_MIN_ZOOM, on: !!(api.ftfSettings && api.ftfSettings().show), set: v => { if (api.setFtfShow) api.setFtfShow(v); } },
+        { k: 'type', ic: 'tag', name: T('Type icon on solved caches'), sub: T('The site’s “solved” icon doesn’t show the type'), z: FAV_MIN_ZOOM, on: !!(api.typeBadgeOn && api.typeBadgeOn()), set: v => { if (api.setTypeBadge) api.setTypeBadge(v); } },
+      ];
+    };
+    // Green edge when anything is on; faded when none of it can show at this zoom.
+    function syncShowBtn() {
+      if (!showBtn) return;
+      const items = showItems().filter(x => x.on), z = map.getZoom();
+      showBtn.classList.toggle('active', items.length > 0);
+      showBtn.classList.toggle('dim', items.length > 0 && !items.some(x => z >= x.z));
+      if (showPanel && showPanel.isConnected) renderShowPanel();
+    }
+    window.__gcctFavBtnSync = syncShowBtn;
+    map.on('zoomend', syncShowBtn);
+    function renderShowPanel() {
+      const z = map.getZoom();
+      showPanel.innerHTML = `<div class="hd"><b>${esc(T('Show on map'))}</b><span class="x" title="${esc(T('Close (Esc)'))}">${icon('x', 16)}</span></div>` +
+        showItems().map(x => {
+          const wait = x.on && z < x.z;
+          return `<label class="row${x.on ? ' on' : ''}${wait ? ' wait' : ''}${x.red ? ' red' : ''}" data-k="${x.k}"><span class="i">${icon(x.ic, 18)}</span>
+            <span class="t"><span class="n">${esc(x.name)}</span>${x.sub ? `<span class="s">${esc(x.sub)}</span>` : ''}
+            <span class="z">${wait ? esc(T('Zoom in to {z} to see it', { z: x.z })) : esc(T('From zoom {z}', { z: x.z }))}</span>
+            ${x.k === 'fav' ? `<span class="fmin">${esc(T('From'))} <input type="number" min="0" step="1" value="${x.min ?? 10}"> ${esc(T('points'))}</span>` : ''}</span>
+            <input type="checkbox" class="sw" ${x.on ? 'checked' : ''}></label>`;
+        }).join('') + `<p class="ft">${esc(T('Hide all geocaches with the eye button in the toolbar.'))}</p>`;
+      showPanel.querySelector('.x').onclick = closeShowPanel;
+      // Drag it by its title bar; the place is remembered (like the dialogs).
+      const hd = showPanel.querySelector('.hd');
+      hd.title = T('Drag to move');
+      hd.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || e.target.closest('.x')) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = showPanel.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
+        const mv = ev => {
+          if (ev.buttons === 0) return up();
+          const vw = document.documentElement.clientWidth;
+          showPanel.style.left = Math.max(0, Math.min(vw - 80, ev.clientX - ox)) + 'px';
+          showPanel.style.top = Math.max(0, Math.min(innerHeight - 50, ev.clientY - oy)) + 'px';
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', mv, true);
+          ['pointerup', 'pointercancel'].forEach(t => window.removeEventListener(t, up, true));
+          const q = showPanel.getBoundingClientRect(), all = load('gcct.dlgPos', {});
+          all.show = { left: Math.round(q.left), top: Math.round(q.top) };
+          save('gcct.dlgPos', all);
+        };
+        window.addEventListener('pointermove', mv, true);
+        ['pointerup', 'pointercancel'].forEach(t => window.addEventListener(t, up, true));
+      });
+      showPanel.querySelectorAll('.row').forEach(r => {
+        const it = showItems().find(x => x.k === r.dataset.k);
+        r.querySelector('input.sw').onchange = e => { it.set(e.target.checked); syncShowBtn(); };
+        const mi = r.querySelector('.fmin input');
+        if (mi) {
+          ['click', 'mousedown', 'pointerdown'].forEach(ev => mi.addEventListener(ev, e => e.stopPropagation()));
+          mi.oninput = () => { const v = Number(mi.value); if (isFinite(v) && v >= 0 && api.setFavMin) api.setFavMin(v); };
+        }
+      });
+    }
+    function placeShowPanel() {
+      const r = showBtn.getBoundingClientRect(), w = showPanel.offsetWidth || 300, h = showPanel.offsetHeight || 400;
+      const vw = document.documentElement.clientWidth, vh = innerHeight;
+      // Where you last dragged it (kept inside the window), if you have.
+      const sv = load('gcct.dlgPos', {}).show;
+      if (sv && isFinite(sv.left) && isFinite(sv.top)) {
+        showPanel.style.left = Math.max(0, Math.min(vw - 120, sv.left)) + 'px';
+        showPanel.style.top = Math.max(0, Math.min(vh - 60, sv.top)) + 'px';
+        return;
+      }
+      let left, top;
+      if (r.left + r.width / 2 > vw / 2) left = r.left - w - 8; else left = r.right + 8;
+      top = r.top;
+      if (r.width > r.height * 1.5 || r.top < 60 || r.bottom > vh - 60) {     // a toolbar along the top or bottom edge
+        left = Math.min(vw - w - 8, Math.max(8, r.left + r.width / 2 - w / 2));
+        top = r.top < vh / 2 ? r.bottom + 8 : r.top - h - 8;
+      }
+      showPanel.style.left = Math.max(8, Math.min(vw - w - 8, left)) + 'px';
+      showPanel.style.top = Math.max(8, Math.min(vh - h - 8, top)) + 'px';
+    }
+    function closeShowPanel() { if (showPanel) { showPanel.remove(); showPanel = null; } if (showBtn) showBtn.classList.remove('open'); }
+    function toggleShowPanel() {
+      if (showPanel) { closeShowPanel(); return; }
+      showPanel = document.createElement('gcct-showpanel');
+      showPanel.className = 'gcct-showp';
+      L.DomEvent.disableClickPropagation(showPanel);
+      L.DomEvent.disableScrollPropagation(showPanel);
+      showPanel.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') closeShowPanel(); });
+      (document.fullscreenElement || document.body).appendChild(showPanel);
+      renderShowPanel();
+      placeShowPanel();
+      showBtn.classList.add('open');
+    }
+    document.addEventListener('pointerdown', e => {
+      if (showPanel && !showPanel.contains(e.target) && !(showBtn && showBtn.contains(e.target))) closeShowPanel();
+    }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && showPanel) closeShowPanel(); });
+
+    // --- Help: a one-page overview --------------------------------------------------------------------
+    function openHelp() {
+      const no = LANG === 'no', base = 'https://knutos.github.io/custom-tiles/docs/';
+      const guide = base + (no ? 'Geocaching-Map-Custom-Tile-Layers-Brukerveiledning.pdf' : 'Geocaching-Map-Custom-Tile-Layers-Guide.pdf');
+      const r = (ic, t) => `<tr><td>${icon(ic, 18)}</td><td>${t}</td></tr>`;
+      const d = api.openDialog(T('Help'), `
+        <h4 class="sec">${T('The toolbar')}</h4>
+        <table class="help">
+          ${r('layers', T('<b>Map layers</b> – background maps and overlays; add your own.'))}
+          ${r('search', T('<b>Search</b> places, addresses, coordinates and GC codes ( / ). <b>Home</b>, <b>my location</b> and <b>fullscreen</b> follow.'))}
+          ${r('ruler', T('<b>Measure</b> – click points (a click on a cache snaps to it), double-click for a new line, Esc to stop.'))}
+          ${r('route', T('<b>Route</b> – geocaches and pins in order, downloaded as GPX for your GPS.'))}
+          ${PLAY_MAP ? '' : r('list', T('<b>Geocaches on the map</b> – a list that follows the map (only on /map; /play/map has its own).'))}
+          ${r('sliders', T('<b>Show on map</b> – 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons, each with the zoom it shows from.'))}
+          ${r('eyeoff', T('<b>Hide all geocaches</b> to see the map underneath.'))}
+          ${r('eraser', T('<b>Clear</b> measurements, single circles and pins.'))}
+          ${r('gear', T('<b>Settings</b> – toolbar position, language and how the script behaves.'))}
+        </table>
+        <p class="hint">${T('A green edge shows what is on or open. A faded button is on, but shows only when you zoom in.')}</p>
+        <h4 class="sec">${T('On the map')}</h4>
+        <ul class="help">
+          <li>${T('<b>Right-click</b> – or <b>press and hold</b> on a touch screen – for coordinates in every format, a pin, a single 161 m circle, projection, measuring and Street View. Near a cache it snaps to the cache’s exact coordinates.')}</li>
+          <li>${T('Drag dialogs by their title bar; the layer panel, search and settings open where you left them.')}</li>
+          <li>${T('Keys: <b>/</b> search, <b>+</b> <b>−</b> zoom, <b>Esc</b> stops measuring and closes dialogs.')}</li>
+          <li>${PLAY_MAP ? T('On <b>/play/map</b> the site only searches when you press <i>Search this area</i>; the extras follow its icons.') : T('On <b>/map</b> the geocaches load as you pan; the cache list follows the map.')}</li>
+        </ul>
+        <div class="btns"><a href="${esc(guide)}" target="_blank" rel="noopener">${T('Open the user guide (PDF)')}</a><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true, key: 'help' });
+      d.querySelector('[data-a=cancel]').onclick = () => api.closeDialog && api.closeDialog();
+    }
+
+    // --- Touch: press and hold opens the same popup as a right-click -----------------------------------
+    (() => {
+      const el = map.getContainer();
+      let t = null, at = null, fired = 0;
+      const cancel = () => { clearTimeout(t); t = null; };
+      el.addEventListener('pointerdown', e => {
+        if (e.pointerType !== 'touch' || !e.isPrimary) { cancel(); return; }
+        if (e.target.closest && e.target.closest('.leaflet-control-container, .leaflet-popup, .gcct-dock, .gcct-coord, .gcct-dlg')) return;
+        at = { x: e.clientX, y: e.clientY };
+        cancel();
+        t = setTimeout(() => {
+          t = null;
+          if (siteMenu()) return;
+          fired = Date.now();
+          try { openCoordPopup(map.mouseEventToLatLng({ clientX: at.x, clientY: at.y })); } catch (err) { console.error('[gcct] long-press failed', err); }
+        }, 550);
+      }, true);
+      el.addEventListener('pointermove', e => { if (t && at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > 10) cancel(); }, true);
+      ['pointerup', 'pointercancel'].forEach(ev => el.addEventListener(ev, cancel, true));
+      el.addEventListener('touchstart', e => { if (e.touches.length > 1) cancel(); }, { capture: true, passive: true });
+      // The tap that ends a long press must not also count as a click (a cache popup, a measuring point).
+      el.addEventListener('click', e => { if (Date.now() - fired < 700) { e.stopPropagation(); e.preventDefault(); } }, true);
+    })();
+
     function setAuto(on) {
       autoOn = on;
       save('gcct.autoCircles', on);
-      if (autoBtn) autoBtn.classList.toggle('active', on);
-      if (on && map.getZoom() < AUTO_MIN_ZOOM) toast(T('161 m circles are shown from zoom level {z}. Zoom in to see them.', { z: AUTO_MIN_ZOOM }));
+      syncShowBtn();
       restartAuto();
     }
     // Marks at solved caches and stages on their own (they are always shown with the circles).
     function setMarks(on) {
       marksOn = on;
       save('gcct.marks', on);
-      if (marksBtn) marksBtn.classList.toggle('active', on);
-      if (on && !autoOn && map.getZoom() < MARK_MIN_ZOOM) toast(T('Marks are shown from zoom level {z}. Zoom in to see them.', { z: MARK_MIN_ZOOM }));
+      syncShowBtn();
       restartAuto();
     }
     function restartAuto() {
@@ -5798,8 +6029,13 @@
         };
         zoomInBtn = add(null, 'plus', 'Zoom in  ( + )', () => map.zoomIn());
         zoomOutBtn = add(null, 'minus', 'Zoom out  ( − )', () => map.zoomOut());
+        // Grouped: find your way · tools · what is shown on the map · clear, settings and help.
         add(null, 'search', 'Search place, address or coordinates  ( / )', openSearch).classList.add('sep');
-        add('measure', 'ruler', 'Measure distance & bearing (click points, double-click for new line, Esc to stop)', () => setMode('measure'));
+        homeBtn = add(null, 'home', () => { const h = load('gcct.home', null); return h ? T('Go home: {name}  (right-click the button to change)', { name: h.name }) : T('Set your home address'); }, goHome);
+        homeBtn.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openSearch({ home: true }); });
+        locBtn = add(null, 'locate', () => T(locShown.length ? 'Hide my location' : 'Show my location'), locate);
+        fsBtn = add(null, 'expand', () => T(document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'), fullscreen);
+        add('measure', 'ruler', 'Measure distance & bearing (click points, double-click for new line, Esc to stop)', () => setMode('measure')).classList.add('sep');
         const routeBtn = add(null, 'route', 'Route: pick geocaches and pins, and export them as a GPX route', openRoute);
         // The new map (/play/map) has its own list of caches, so the cache list is only on the old one.
         const listBtn = !PLAY_MAP ? add(null, 'list', 'Geocaches on the map: a list that follows the map – click one to zoom to it', openCacheList) : null;
@@ -5809,28 +6045,8 @@
           if (routeBtn && routeBtn.classList.contains('active') !== rt) routeBtn.classList.toggle('active', rt);
           if (listBtn && listBtn.classList.contains('active') !== cl) listBtn.classList.toggle('active', cl);
         }, 250);
-        autoBtn = add(null, 'circles', () => T('161 m circles around traditional caches, physical stages and caches with solved coordinates (from zoom {z}). Right-click the map for a single circle anywhere.', { z: AUTO_MIN_ZOOM }), () => setAuto(!autoOn));
-        autoBtn.classList.add('danger');
-        marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off)', { z: MARK_MIN_ZOOM }), () => setMarks(!marksOn));
-        marksBtn.classList.toggle('active', marksOn);
-        const favOn = () => !!(api.favSettings && api.favSettings().show);
-        const favBtn = add(null, 'heart', () => T('Favourite points on the map (from zoom {z}, on/off). The lowest number is set in Settings.', { z: FAV_MIN_ZOOM }), () => {
-          const on = !favOn();
-          if (api.setFavShow) api.setFavShow(on);
-          favBtn.classList.toggle('active', on);
-          if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('Favourite points are shown from zoom level {z}. Zoom in to see them.', { z: FAV_MIN_ZOOM }));
-        });
-        favBtn.classList.toggle('active', favOn());
-        const dtOn = () => !!(api.dtSettings && api.dtSettings().show);
-        const dtBtn = add(null, 'dt', () => T('Difficulty/terrain (D/T) below the caches on the map (from zoom {z}, on/off)', { z: FAV_MIN_ZOOM }), () => {
-          const on = !dtOn();
-          if (api.setDtShow) api.setDtShow(on);
-          dtBtn.classList.toggle('active', on);
-          if (on && map.getZoom() < FAV_MIN_ZOOM) toast(T('D/T is shown from zoom level {z}. Zoom in to see it.', { z: FAV_MIN_ZOOM }));
-        });
-        dtBtn.classList.toggle('active', dtOn());
-        // (FTF marks are turned on and off in Settings only.)
-        window.__gcctFavBtnSync = () => { favBtn.classList.toggle('active', favOn()); dtBtn.classList.toggle('active', dtOn()); };
+        showBtn = add(null, 'sliders', () => T('Show on map: 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons'), toggleShowPanel);
+        showBtn.classList.add('sep');
         const hidOn = () => !!(cacheHider && cacheHider.on());
         const hideBtn = add(null, 'eyeoff', () => T(hidOn() ? 'Show the geocaches again' : 'Hide all geocaches'), () => {
           if (cacheHider) cacheHider.set(!hidOn());
@@ -5840,13 +6056,9 @@
           hideBtn.setAttribute('aria-label', hideBtn.title);
           if (window.__gcctClRefresh) window.__gcctClRefresh();     // the cache list empties and fills with it
         });
-        locBtn = add(null, 'locate', () => T(locShown.length ? 'Hide my location' : 'Show my location'), locate);
-        locBtn.classList.add('sep');
-        homeBtn = add(null, 'home', () => { const h = load('gcct.home', null); return h ? T('Go home: {name}  (right-click the button to change)', { name: h.name }) : T('Set your home address'); }, goHome);
-        homeBtn.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openSearch({ home: true }); });
-        fsBtn = add(null, 'expand', () => T(document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'), fullscreen);
         add(null, 'eraser', 'Clear all drawings', () => { tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); pinRecs = []; savePins(); }).classList.add('sep');
-        add(null, 'gear', 'Settings', () => api.openSettings && api.openSettings()).classList.add('sep');
+        add(null, 'gear', 'Settings', () => api.openSettings && api.openSettings());
+        add(null, 'help', 'Help: what the buttons do, right-click and long-press, keys', openHelp);
         return bar;
       },
     });
