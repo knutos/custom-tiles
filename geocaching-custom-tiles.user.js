@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.54.50
+// @version      1.54.53
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -258,7 +258,7 @@
     "Hide all geocaches": "Skjul alle geocacher",
     "Favourite points on the map (from zoom {z}, on/off). The lowest number is set in Settings.": "Favorittpoeng på kartet (fra zoom {z}, av/på). Laveste antall velges i Innstillinger.",
     "Favourite points are shown from zoom level {z}. Zoom in to see them.": "Favorittpoeng vises fra zoomnivå {z}. Zoom inn for å se dem.",
-    "Marks at solved caches (from zoom {z}, on/off). Always shown with the 161 m circles.": "Merker ved løste cacher (fra zoom {z}, av/på). Vises alltid sammen med 161 m-sirklene.",
+    "Marks at solved caches (from zoom {z}, on/off)": "Merker ved løste cacher (fra zoom {z}, av/på)",
     "Marks are shown from zoom level {z}. Zoom in to see them.": "Merkene vises fra zoomnivå {z}. Zoom inn for å se dem.",
     "Show the geocaches again": "Vis geocachene igjen",
     "Physical stage": "Fysisk steg",
@@ -453,7 +453,7 @@
     compass: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9Z"/>',
     ring: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
-    solved: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.7c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor" stroke="none"/>',
+    solved: '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M8.2 14a4.4 4.4 0 0 0 7.6 0"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4"/>',
@@ -4142,6 +4142,9 @@
       .gcct-solved svg{display:block;pointer-events:none}
       .gcct-solved.sm .ic{width:18px;height:18px;border-width:1.5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
       .gcct-solved.sm .fb{font-size:11px}
+      .gcct-solved.fdm .ic{width:24px;height:24px}
+      .gcct-solved.fdm.sm .ic{width:20px;height:20px}
+      .gcct-solved .fb.fd{background:#ffd23f;border-radius:50%;box-shadow:inset 0 0 0 1.2px #8a6a00}
       .gcct-solved.dot .ic{width:11px;height:11px;border-width:1.5px;box-shadow:0 1px 2px rgba(0,0,0,.35)}
       .gcct-label{background:rgba(255,255,255,.96);border:1px solid ${ACCENT};border-radius:6px;box-shadow:0 1px 3px rgba(16,24,40,.15);
         padding:2px 8px;font:600 12.5px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;white-space:nowrap;color:#1f2328;width:auto!important;height:auto!important}
@@ -5366,13 +5369,7 @@
     window.__gcctAutoRefresh = () => { try { refreshAuto(true); } catch (e) { /* ignore */ } };
     function typeBadges(grid, view, sf, marks) {
       const out = [], st = load(STORE_STATE, {});
-      // Our own marks at solved caches you have found: the badge at the bottom right, like on the site's icons
-      // (the green tick is at the bottom left).
       if (st.typeBadge !== true) return out;
-      (marks || []).forEach(m => {
-        const i = CACHE_INFO.get(m.code);
-        if (!m.ghost && i && i.type != null && i.found === true && view.contains(m.ll)) out.push({ code: m.code, ll: m.ll, type: i.type });
-      });
       try {
         const gridPos = grid ? cachePositions(grid) : null, shown = !grid ? siteShownCodes() : null;
         CACHE_INFO.forEach((i, code) => {
@@ -5428,11 +5425,15 @@
       }
       // A round blue badge with a question mark (solved puzzle), and a small green tick for "found".
       // Zoomed out (12–13): the size of the site's icons there, without the tick; below 12 just a blue dot.
-      const html = small === 'dot' ? '<span class="ic"><span class="fb"></span></span>'
-        : `<span class="ic"><span class="fb">?</span></span>${i.found === true && !small ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
-      const sz = small === 'dot' ? 13 : small ? 20 : 24;
+      // Found: a yellow smiley like the site's own "found" icon (with the green tick); otherwise the blue "?".
+      const found = i.found === true;
+      const face = '<svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="8.6" cy="9.6" r="1.6" fill="#4a3500"/><circle cx="15.4" cy="9.6" r="1.6" fill="#4a3500"/><path d="M7 13.6c1.2 2.9 3 4.2 5 4.2s3.8-1.3 5-4.2" fill="none" stroke="#4a3500" stroke-width="1.9" stroke-linecap="round"/></svg>';
+      const html = small === 'dot' ? `<span class="ic"><span class="fb${found ? ' fd' : ''}"></span></span>`
+        : `<span class="ic"><span class="fb${found ? ' fd' : ''}">${found ? face : '?'}</span></span>${found && !small ? `<span class="tick">${icon('check', 8)}</span>` : ''}`;
+      // The smiley the size of the site's own "found" icons (a little larger than the blue marks).
+      const sz = small === 'dot' ? 13 : found ? (small ? 22 : 26) : small ? 20 : 24;
       const m = L.marker(ll, {
-        icon: L.divIcon({ className: 'gcct-solved' + (small === 'dot' ? ' dot' : small ? ' sm' : ''), html, iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] }),
+        icon: L.divIcon({ className: 'gcct-solved' + (found && small !== 'dot' ? ' fdm' : '') + (small === 'dot' ? ' dot' : small ? ' sm' : ''), html, iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2] }),
         title: `${code}${name ? ' · ' + name : ''} – ${T('Final location')}`, keyboard: false, riseOnHover: true,
       });
       m.__gcct = true;
@@ -5735,13 +5736,13 @@
         if (circlesNow) pos.forEach(ll => autoLayer.addLayer(geoCircle(ll, 161, AUTO_STYLE)));
         const nameOf = c => (CACHE_INFO.get(c) || {}).name || '', foundOf = c => (CACHE_INFO.get(c) || {}).found === true;
         syncMarks([
-          ...solvedMarks.filter(m => !(m.ghost && smallMarks)).map(m => [`s|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${!!m.ghost}|${foundOf(m.code)}|${nameOf(m.code)}|${smallMarks}`, () => solvedMark(m.ll, m.code, m.ghost, smallMarks)]),
+          ...(marksOn ? solvedMarks : []).filter(m => !(m.ghost && smallMarks)).map(m => [`s|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${!!m.ghost}|${foundOf(m.code)}|${nameOf(m.code)}|${smallMarks}`, () => solvedMark(m.ll, m.code, m.ghost, smallMarks)]),
           // A small type icon at the bottom right of the site's "solved" icon (not found, not your own):
           // that icon says nothing about the type.
           ...(smallMarks ? [] : typeBadges(grid, view, sf, solvedMarks)).map(m => [`t|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.type}|${m.left ? 'l' : 'r'}`, () => typeBadge(m.ll, m.type, m.left)]),
           ...lastStages.map(m => [`w|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.kind}|${m.name}|${nameOf(m.code)}`, () => stageMark(m)]),
         ]);
-        lastSolved = solvedMarks;
+        lastSolved = marksOn ? solvedMarks : [];      // the marks button alone decides whether they show
         if (window.__gcctFavKick) window.__gcctFavKick();          // hearts and D/T at the marks
       } catch (e) { console.error('[gcct] auto circles failed', e); }
     }
@@ -5799,12 +5800,18 @@
         zoomOutBtn = add(null, 'minus', 'Zoom out  ( − )', () => map.zoomOut());
         add(null, 'search', 'Search place, address or coordinates  ( / )', openSearch).classList.add('sep');
         add('measure', 'ruler', 'Measure distance & bearing (click points, double-click for new line, Esc to stop)', () => setMode('measure'));
-        add(null, 'route', 'Route: pick geocaches and pins, and export them as a GPX route', openRoute);
+        const routeBtn = add(null, 'route', 'Route: pick geocaches and pins, and export them as a GPX route', openRoute);
         // The new map (/play/map) has its own list of caches, so the cache list is only on the old one.
-        if (!PLAY_MAP) add(null, 'list', 'Geocaches on the map: a list that follows the map – click one to zoom to it', openCacheList);
+        const listBtn = !PLAY_MAP ? add(null, 'list', 'Geocaches on the map: a list that follows the map – click one to zoom to it', openCacheList) : null;
+        // The green edge on Route and the cache list while their window is open.
+        setInterval(() => {
+          const rt = !!document.querySelector('.gcct-dlg.gcct-route:not(.gcct-cachelist)'), cl = !!document.querySelector('.gcct-dlg.gcct-cachelist');
+          if (routeBtn && routeBtn.classList.contains('active') !== rt) routeBtn.classList.toggle('active', rt);
+          if (listBtn && listBtn.classList.contains('active') !== cl) listBtn.classList.toggle('active', cl);
+        }, 250);
         autoBtn = add(null, 'circles', () => T('161 m circles around traditional caches, physical stages and caches with solved coordinates (from zoom {z}). Right-click the map for a single circle anywhere.', { z: AUTO_MIN_ZOOM }), () => setAuto(!autoOn));
         autoBtn.classList.add('danger');
-        marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off). Always shown with the 161 m circles.', { z: MARK_MIN_ZOOM }), () => setMarks(!marksOn));
+        marksBtn = add(null, 'solved', () => T('Marks at solved caches (from zoom {z}, on/off)', { z: MARK_MIN_ZOOM }), () => setMarks(!marksOn));
         marksBtn.classList.toggle('active', marksOn);
         const favOn = () => !!(api.favSettings && api.favSettings().show);
         const favBtn = add(null, 'heart', () => T('Favourite points on the map (from zoom {z}, on/off). The lowest number is set in Settings.', { z: FAV_MIN_ZOOM }), () => {
