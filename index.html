@@ -192,12 +192,6 @@
   .news .heart { color: #d1242f; }
   .news li li b { color: var(--ink); font-weight: 600; }
 
-  /* Install counts */
-  .stats { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 14px 0 0;
-    font-size: 14px; color: var(--ink-soft); }
-  .stats > span { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; }
-  .stats b { font: 600 15px "IBM Plex Mono", monospace; color: var(--forest); }
-  .stats a { color: var(--ink-soft); font-size: 13px; }
 
   .ftf-badge { display: inline-block; background: #d1242f; color: #fff; border: 1.5px solid #fff; border-radius: 6px;
     padding: 0 4px; font: 800 10px/14px "IBM Plex Sans", system-ui, sans-serif; letter-spacing: .02em; box-shadow: 0 1px 2px rgba(0,0,0,.35); }
@@ -252,11 +246,6 @@
     </div>
     <!-- EDIT: version number -->
     <p class="meta" data-no="v1.55.2 · MIT-lisens · Virker på &lt;code&gt;/map&lt;/code&gt; og &lt;code&gt;/play/map&lt;/code&gt;">v1.55.2 · MIT License · Works on <code>/map</code> and <code>/play/map</code></p>
-    <p class="stats" id="stats" hidden>
-      <span><b id="st-total"></b> <span data-no="installasjoner totalt">total installs</span></span>
-      <span><b id="st-daily"></b> <span data-no="daglige installasjoner">daily installs</span></span>
-      <a href="https://greasyfork.org/scripts/600873-geocaching-map-custom-tile-layers/stats" data-no="på Greasy Fork">on Greasy Fork</a>
-    </p>
   </div>
 </header>
 
@@ -544,20 +533,6 @@
   set(lang, false);
   document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => set(b.dataset.lang, true)));
 })();
-</script>
-<script>
-// Install counts from Greasy Fork, saved in stats.json every 6 hours by a GitHub Action.
-fetch('stats.json?t=' + Date.now()).then(r => r.ok ? r.json() : null).then(st => {
-  if (!st || !isFinite(st.total)) return;
-  const fmt = n => Number(n).toLocaleString(document.documentElement.lang === 'nb' ? 'nb-NO' : 'en-US');
-  const show = () => {
-    document.getElementById('st-total').textContent = fmt(st.total);
-    document.getElementById('st-daily').textContent = fmt(st.daily ?? 0);
-  };
-  show();
-  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setTimeout(show, 0)));
-  document.getElementById('stats').hidden = false;
-}).catch(() => { /* no counts yet */ });
 </script>
 </body>
 </html>
