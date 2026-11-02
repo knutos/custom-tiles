@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.2
+// @version      1.55.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -244,7 +244,7 @@
     "<b>Hide all geocaches</b> to see the map underneath.": "<b>Skjul alle geocacher</b> for å se kartet under.",
     "<b>Clear</b> measurements, single circles and pins.": "<b>Fjern</b> målinger, enkeltsirkler og merkenåler.",
     "<b>Settings</b> – toolbar position, language and how the script behaves.": "<b>Innstillinger</b> – verktøylinjens plassering, språk og hvordan skriptet oppfører seg.",
-    "A green edge shows what is on or open. A faded button is on, but shows only when you zoom in.": "En grønn kant viser hva som er på eller åpent. En blek knapp er på, men vises først når du zoomer inn.",
+    "A green edge shows what is on or open.": "En grønn kant viser hva som er på eller åpent.",
     "<b>Right-click</b> – or <b>press and hold</b> on a touch screen – for coordinates in every format, a pin, a single 161 m circle, projection, measuring and Street View. Near a cache it snaps to the cache’s exact coordinates.": "<b>Høyreklikk</b> – eller <b>trykk og hold</b> på en berøringsskjerm – for koordinater i alle formater, merkenål, én 161 m-sirkel, projisering, måling og Street View. Nær en cache festes det til cachens nøyaktige koordinater.",
     "Drag dialogs by their title bar; the layer panel, search and settings open where you left them.": "Dra dialogene etter tittellinjen; kartlagpanelet, søket og innstillingene åpnes der du la dem.",
     "Keys: <b>/</b> search, <b>+</b> <b>−</b> zoom, <b>Esc</b> stops measuring and closes dialogs.": "Taster: <b>/</b> søk, <b>+</b> <b>−</b> zoom, <b>Esc</b> stopper måling og lukker dialoger.",
@@ -5467,6 +5467,20 @@
       m.__gcct = true;
       return m;
     }
+    // gcctClickDebug() in the console, then click a cache: what lies under the pointer (tags and classes only).
+    window.gcctClickDebug = () => {
+      const h = e => {
+        document.removeEventListener('pointerdown', h, true);
+        const list = document.elementsFromPoint(e.clientX, e.clientY).slice(0, 8).map(el => {
+          const cls = String(el.className && el.className.baseVal != null ? el.className.baseVal : el.className || '').split(/\s+/).filter(Boolean).slice(0, 4).join('.');
+          const cs = getComputedStyle(el);
+          return `${el.tagName.toLowerCase()}${cls ? '.' + cls : ''} pe=${cs.pointerEvents} z=${cs.zIndex}`;
+        });
+        console.log('[gcct] under the pointer:\n' + list.join('\n'));
+      };
+      document.addEventListener('pointerdown', h, true);
+      return 'Now click the cache icon once.';
+    };
     let lastMapClick = -1e9;
     map.on('click', () => { lastMapClick = performance.now(); });
     function solvedMark(ll, code, ghost, small) {
@@ -5488,10 +5502,23 @@
         // The site finds the cache under the pointer from its last mouse move, which the mark held back:
         // tell it where the pointer is just before the click passes on to the map.
         g.on('mousedown click', e => { try { map.fire('mousemove', { latlng: e.latlng || ll, layerPoint: e.layerPoint, containerPoint: e.containerPoint, originalEvent: e.originalEvent }); } catch (err) { /* ignore */ } });
-        // Older Leaflet (/map) stops a marker's click from reaching the map, so the site's popup wouldn't open:
-        // pass the click on ourselves when the map didn't get it.
+        // The click belongs to the site's icon underneath. On /play/map that icon is a marker of its own: hand
+        // the click to it. On /map (older Leaflet) the click is stopped before the map gets it, so the site's
+        // popup wouldn't open: pass it on to the map ourselves when the map didn't get it.
         g.on('click', e => {
-          const ev = { latlng: e.latlng || ll, layerPoint: e.layerPoint, containerPoint: e.containerPoint, originalEvent: e.originalEvent };
+          const oe = e.originalEvent, el = g.getElement ? g.getElement() : g._icon;
+          if (PLAY_MAP && oe && el) {
+            let under = null;
+            const pe = el.style.pointerEvents;
+            try { el.style.pointerEvents = 'none'; under = document.elementFromPoint(oe.clientX, oe.clientY); } finally { el.style.pointerEvents = pe; }
+            const icon = under && under.closest && under.closest('.leaflet-marker-icon');
+            if (icon && icon !== el && !/gcct/.test(icon.className)) {
+              const o = { bubbles: true, cancelable: true, clientX: oe.clientX, clientY: oe.clientY, button: 0, view: window };
+              try { icon.dispatchEvent(new MouseEvent('mousedown', o)); icon.dispatchEvent(new MouseEvent('mouseup', o)); icon.dispatchEvent(new MouseEvent('click', o)); } catch (err) { /* ignore */ }
+              return;
+            }
+          }
+          const ev = { latlng: e.latlng || ll, layerPoint: e.layerPoint, containerPoint: e.containerPoint, originalEvent: oe };
           setTimeout(() => { if (performance.now() - lastMapClick > 80) { try { map.fire('click', ev); } catch (err) { /* ignore */ } } }, 0);
         });
         return g;
@@ -5832,12 +5859,11 @@
         { k: 'type', ic: 'tag', name: T('Type icon on solved caches'), sub: T('The site’s “solved” icon doesn’t show the type'), z: FAV_MIN_ZOOM, on: !!(api.typeBadgeOn && api.typeBadgeOn()), set: v => { if (api.setTypeBadge) api.setTypeBadge(v); } },
       ];
     };
-    // Green edge when anything is on; faded when none of it can show at this zoom.
+    // Green edge while the panel is open (like Route and the cache list) – favourite points, D/T and FTF
+    // are on by default, so "anything on" would be green all the time.
     function syncShowBtn() {
       if (!showBtn) return;
-      const items = showItems().filter(x => x.on), z = map.getZoom();
-      showBtn.classList.toggle('active', items.length > 0);
-      showBtn.classList.toggle('dim', items.length > 0 && !items.some(x => z >= x.z));
+      showBtn.classList.toggle('active', !!(showPanel && showPanel.isConnected));
       if (showPanel && showPanel.isConnected) renderShowPanel();
     }
     window.__gcctFavBtnSync = syncShowBtn;
@@ -5907,7 +5933,7 @@
       showPanel.style.left = Math.max(8, Math.min(vw - w - 8, left)) + 'px';
       showPanel.style.top = Math.max(8, Math.min(vh - h - 8, top)) + 'px';
     }
-    function closeShowPanel() { if (showPanel) { showPanel.remove(); showPanel = null; } if (showBtn) showBtn.classList.remove('open'); }
+    function closeShowPanel() { if (showPanel) { showPanel.remove(); showPanel = null; } if (showBtn) showBtn.classList.remove('open', 'active'); }
     function toggleShowPanel() {
       if (showPanel) { closeShowPanel(); return; }
       showPanel = document.createElement('gcct-showpanel');
@@ -5918,7 +5944,7 @@
       (document.fullscreenElement || document.body).appendChild(showPanel);
       renderShowPanel();
       placeShowPanel();
-      showBtn.classList.add('open');
+      showBtn.classList.add('open', 'active');
     }
     document.addEventListener('pointerdown', e => {
       if (showPanel && !showPanel.contains(e.target) && !(showBtn && showBtn.contains(e.target))) closeShowPanel();
@@ -5943,7 +5969,7 @@
           ${r('eraser', T('<b>Clear</b> measurements, single circles and pins.'))}
           ${r('gear', T('<b>Settings</b> – toolbar position, language and how the script behaves.'))}
         </table>
-        <p class="hint">${T('A green edge shows what is on or open. A faded button is on, but shows only when you zoom in.')}</p>
+        <p class="hint">${T('A green edge shows what is on or open.')}</p>
         <h4 class="sec">${T('On the map')}</h4>
         <ul class="help">
           <li>${T('<b>Right-click</b> – or <b>press and hold</b> on a touch screen – for coordinates in every format, a pin, a single 161 m circle, projection, measuring and Street View. Near a cache it snaps to the cache’s exact coordinates.')}</li>
