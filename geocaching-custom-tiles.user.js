@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.4
+// @version      1.55.6
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -215,6 +215,8 @@
     "Cache list and route": "Cacheliste og rute",
     "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
     "Layout": "Utseende",
+    "Previous view ({n} back)": "Forrige utsnitt ({n} tilbake)",
+    "<b>Previous view</b> – back to where you were, up to 10 steps.": "<b>Forrige utsnitt</b> – tilbake dit du var, opptil 10 steg.",
     "On the map": "På kartet",
     "Behaviour": "Oppførsel",
     "What is drawn on the map – 161 m circles, marks, favourite points, D/T, FTF and type icons – is chosen with {icon} Show on map in the toolbar.": "Hva som tegnes på kartet – 161 m-sirkler, merker, favorittpoeng, D/T, FTF og typeikoner – velges med {icon} Vis på kartet i verktøylinjen.",
@@ -492,6 +494,7 @@
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
     solved: '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M8.2 14a4.4 4.4 0 0 0 7.6 0"/>',
     tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z"/><circle cx="8" cy="8" r="1.6"/>',
+    back: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
     help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.7c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor" stroke="none"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
@@ -5846,6 +5849,43 @@
         if (window.__gcctFavKick) window.__gcctFavKick();          // hearts and D/T at the marks
       } catch (e) { console.error('[gcct] auto circles failed', e); }
     }
+    // --- Previous view: the last 10 places you were on the map --------------------------------------
+    let backBtn = null, viewHist = [], viewCur = null, viewTarget = null, viewT = null;
+    const VIEW_MAX = 10;
+    function syncBackBtn() {
+      if (!backBtn) return;
+      backBtn.classList.toggle('disabled', !viewHist.length);
+      backBtn.title = T('Previous view ({n} back)', { n: viewHist.length });
+      backBtn.setAttribute('aria-label', backBtn.title);
+    }
+    const viewNow = () => ({ c: map.getCenter(), z: map.getZoom() });
+    const sameView = (a, b) => {
+      if (!a || !b || a.z !== b.z) return false;
+      try { const p = map.latLngToContainerPoint(a.c), q = map.latLngToContainerPoint(b.c); return Math.hypot(p.x - q.x, p.y - q.y) < 40; } catch (e) { return false; }
+    };
+    function noteView() {
+      let v;
+      try { v = viewNow(); } catch (e) { return; }
+      if (viewTarget && sameView(viewTarget, v)) { viewTarget = null; viewCur = v; syncBackBtn(); return; }   // our own jump back
+      viewTarget = null;
+      if (viewCur && !sameView(viewCur, v)) {
+        viewHist.push(viewCur);
+        if (viewHist.length > VIEW_MAX) viewHist.shift();
+      }
+      viewCur = v;
+      syncBackBtn();
+    }
+    // A view counts as soon as the map stops (every zoom step and every pan is a step back).
+    map.on('moveend', () => { clearTimeout(viewT); viewT = setTimeout(noteView, 150); });
+    if (map._loaded) setTimeout(noteView, 0); else map.whenReady(() => setTimeout(noteView, 0));
+    function goBackView() {
+      if (!viewHist.length) return;
+      const v = viewHist.pop();
+      viewCur = v; viewTarget = v;
+      if (!sameView(v, viewNow())) map.setView(v.c, v.z, { animate: false });
+      syncBackBtn();
+    }
+
     // --- Show on map: one panel for everything drawn on top of the caches ------------------------------
     let showBtn = null, showPanel = null;
     const showItems = () => {
@@ -5960,6 +6000,7 @@
         <h4 class="sec">${T('The toolbar')}</h4>
         <table class="help">
           ${r('layers', T('<b>Map layers</b> – background maps and overlays; add your own.'))}
+          ${r('back', T('<b>Previous view</b> – back to where you were, up to 10 steps.'))}
           ${r('search', T('<b>Search</b> places, addresses, coordinates and GC codes ( / ). <b>Home</b>, <b>my location</b> and <b>fullscreen</b> follow.'))}
           ${r('ruler', T('<b>Measure</b> – click points (a click on a cache snaps to it), double-click for a new line, Esc to stop.'))}
           ${r('route', T('<b>Route</b> – geocaches and pins in order, downloaded as GPX for your GPS.'))}
@@ -6055,6 +6096,8 @@
         };
         zoomInBtn = add(null, 'plus', 'Zoom in  ( + )', () => map.zoomIn());
         zoomOutBtn = add(null, 'minus', 'Zoom out  ( − )', () => map.zoomOut());
+        backBtn = add(null, 'back', () => T('Previous view ({n} back)', { n: viewHist.length }), goBackView);
+        syncBackBtn();
         // Grouped: find your way · tools · what is shown on the map · clear, settings and help.
         add(null, 'search', 'Search place, address or coordinates  ( / )', openSearch).classList.add('sep');
         homeBtn = add(null, 'home', () => { const h = load('gcct.home', null); return h ? T('Go home: {name}  (right-click the button to change)', { name: h.name }) : T('Set your home address'); }, goHome);
