@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.32
+// @version      1.55.33
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4440,8 +4440,9 @@
       .gcct-route .bd{display:flex;flex-direction:column;overflow:hidden}
       .gcct-route .bd > *{flex:none}
       .gcct-route .rt-list{flex:1 1 0;min-height:84px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc);margin-bottom:10px}
-      .gcct-route .rt-pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
-      .gcct-route .rt-pv .rt-tbl{flex:1 1 auto;min-height:90px}
+      .gcct-route .rt-pv{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}
+      .gcct-route .rt-pv > *{flex:none}
+      .gcct-route .rt-pv .rt-tbl{max-height:none;overflow-x:auto;overflow-y:visible}
       .gcct-route .bd > .btns{position:static;margin-top:12px}
       @media (max-height:720px){ .gcct-route > .bd > .hint{display:none} .gcct-route .rt-h{margin-top:0} }
       @media (max-width:540px){ .gcct-route th,.gcct-route td{padding:4px!important} .gcct-route th{white-space:normal!important} .gcct-route td.rt-go{overflow-wrap:anywhere} .gcct-route td.mono{font-size:10.5px!important} .gcct-route .rt-desc{font-size:10.5px} }
