@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.36
+// @version      1.55.37
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -6097,6 +6097,12 @@
           if (done.has(code) || !i.solved || !i.corrected || !(seenThisVisit.has(code) || i.fromPage || i.fromStore)) return;
           // Filtered out in the site's sidebar (type, my finds, my hides …): no circle or mark either.
           if (filteredOut(code, sf, i.posted) || hiddenBySite(code, i.found === true ? i.posted : i.corrected)) return;
+          // /play/map: where the site's icon for this cache would be in view but the site hasn't drawn it (its
+          // search hasn't covered this area yet), no circle or mark either – they come with the site's icons.
+          if (PLAY_MAP) {
+            const ss = siteShownCodes(), spot = i.found === true ? i.posted : i.corrected;
+            if (ss && !ss.has(code) && spot && bounds0.contains(L.latLng(spot.lat, spot.lng))) return;
+          }
           const sp = L.latLng(i.corrected.lat, i.corrected.lng);
           if (!near(sp)) return;
           pos.push(sp);
