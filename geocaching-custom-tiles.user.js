@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.24
+// @version      1.55.28
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -2011,6 +2011,15 @@
     }
 
     cacheHider = { on: () => cachesHidden, set: v => { cachesHidden = !!v; applyCacheHide(); } };
+    // The containers of the site's cache tiles (/map): our route line goes in just below them.
+    window.__gcctCacheTileEls = () => {
+      try {
+        const site = [];
+        map.eachLayer(l => { if (isTile(l) && !ours.has(l)) site.push(l); });
+        const bases = siteBases(site);
+        return site.filter(l => !bases.has(l)).map(l => (l.getContainer && l.getContainer()) || l._container).filter(Boolean);
+      } catch (e) { return []; }
+    };
 
     let arrangeTimer = null;
     map.on('layeradd', e => {
@@ -6672,13 +6681,84 @@
     const routeStops = () => routeLoop && route.length > 1 ? route.concat([route[0]]) : route;
     const routeLayer = L.layerGroup().addTo(map);
     routeLayer.__gcct = true;
+    // The route line is drawn below the cache icons: on /map the icons are tiles, so the line goes into the
+    // tile pane just below the site's cache tiles; on /play/map the icons are markers, above it anyway.
+    let routeRenderer = null;
+    function routeLineOpts() {
+      const o = { color: '#8250df', weight: 3, opacity: 0.85, dashArray: '6 6', interactive: false };
+      if (PLAY_MAP || !L.svg) return o;
+      try { if (!routeRenderer) routeRenderer = L.svg({ pane: 'tilePane', padding: 0.5 }); o.renderer = routeRenderer; } catch (e) { /* default renderer */ }
+      return o;
+    }
+    function tuckRouteLine() {
+      try {
+        const svg = routeRenderer && routeRenderer._container, els = window.__gcctCacheTileEls ? window.__gcctCacheTileEls() : [];
+        if (!svg || !els.length) return;
+        const first = els.reduce((a, b) => ((+getComputedStyle(a).zIndex || 0) <= (+getComputedStyle(b).zIndex || 0) ? a : b));
+        svg.style.zIndex = getComputedStyle(first).zIndex === 'auto' ? '' : getComputedStyle(first).zIndex;
+        svg.style.position = 'absolute';
+        if (first.parentElement && svg.nextSibling !== first) first.parentElement.insertBefore(svg, first);
+      } catch (e) { /* keep it where it is */ }
+    }
+    ['zoomend', 'moveend', 'layeradd'].forEach(ev => map.on(ev, () => { if (routeRenderer) setTimeout(tuckRouteLine, 0); }));
+    map.on('zoomend', () => { if (route.length) try { drawRoute(); } catch (e) { /* ignore */ } });
     function drawRoute() {
       routeLayer.clearLayers();
       if (!route.length) return;
       const lls = routeStops().map(r => L.latLng(r.lat, r.lng));
-      if (lls.length > 1) routeLayer.addLayer(L.polyline(lls, { color: '#8250df', weight: 3, opacity: 0.85, dashArray: '6 6', interactive: false }));
+      if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
+      // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
+      // the cache's ♥ (above), D/T (below) and FTF badge (right) as far as they are shown, the icons of
+      // caches nearby and the route's lines. Tried on rings around the stop, nearest first.
+      const pt = ll => { try { return map.latLngToLayerPoint(ll); } catch (e) { return null; } };
+      const z = map.getZoom(), labelsOn = z >= FAV_MIN_ZOOM;
+      const favS = api.favSettings ? api.favSettings() : { show: false, min: 10 }, dtS = api.dtSettings ? api.dtSettings() : { show: false };
+      const ftfS = api.ftfSettings ? api.ftfSettings() : { show: false };
+      const pts = lls.map(pt), segs = [];
+      for (let k = 1; k < pts.length; k++) if (pts[k - 1] && pts[k]) segs.push([pts[k - 1], pts[k]]);
+      const segDist = (p, a, b) => { const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy, t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / l2)) : 0; return Math.hypot(p.x - a.x - t * vx, p.y - a.y - t * vy); };
+      const rectDist = (p, r) => Math.hypot(Math.max(r[0] - p.x, 0, p.x - r[2]), Math.max(r[1] - p.y, 0, p.y - r[3]));
+      const NUM = 9, ICON = 13;
+      // The icons (and their labels) of all known caches near a point, in layer pixels.
+      const spotsNear = c => {
+        const out = [];
+        CACHE_INFO.forEach((i2, code) => {
+          [i2.posted, i2.solved ? i2.corrected : null].forEach(q => {
+            if (!q) return;
+            const p = pt(L.latLng(q.lat, q.lng));
+            if (p && Math.abs(p.x - c.x) < 80 && Math.abs(p.y - c.y) < 80) out.push({ p, i: i2, code });
+          });
+        });
+        return out;
+      };
+      const labelRects = (p, i2) => {
+        const rs = [];
+        if (!labelsOn || !i2) return rs;
+        if (favS.show && i2.fav != null && i2.fav >= (favS.min ?? 10)) { const w = 14 + 7 * String(i2.fav).length; rs.push([p.x - w / 2, p.y - 31, p.x + w / 2, p.y - 13]); }
+        if (dtS.show && i2.diff != null && i2.terr != null) { const w = 7 * `${i2.diff}/${i2.terr}`.length + 4; rs.push([p.x - w / 2, p.y + 12, p.x + w / 2, p.y + 28]); }
+        if (ftfS.show && i2.neverFound === true && i2.found !== true) rs.push([p.x + 4, p.y - 8, p.x + 36, p.y + 8]);
+        return rs;
+      };
       route.forEach((r, i) => {
-        const m = L.marker(lls[i], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'gcct-rtnum', html: `<span>${i + 1}</span>`, iconSize: [18, 18], iconAnchor: [9, 26] }) });
+        const here = pts[i];
+        let dx = -21, dy = -10;
+        if (here) {
+          const circles = [], rects = [];
+          spotsNear(here).forEach(o => { circles.push([o.p, ICON]); rects.push(...labelRects(o.p, o.i)); });
+          circles.push([here, ICON]);                                   // the stop itself (a pin, an address)
+          const free = c => circles.every(([p, rad]) => Math.hypot(c.x - p.x, c.y - p.y) >= rad + NUM + 1)
+            && rects.every(rc => rectDist(c, rc) >= NUM + 1) && segs.every(([a, b]) => segDist(c, a, b) >= NUM + 3);
+          let found = null;
+          for (let rad = ICON + NUM + 1; rad <= 60 && !found; rad += 1) {
+            for (let k = 0; k < 24 && !found; k++) {
+              const ang = (-135 + k * 15) * Math.PI / 180, c = { x: here.x + rad * Math.cos(ang), y: here.y + rad * Math.sin(ang) };
+              if (free(c)) found = c;
+            }
+          }
+          if (found) { dx = Math.round(found.x - here.x); dy = Math.round(found.y - here.y); }
+        }
+        const m = L.marker(lls[i], { interactive: false, keyboard: false, ...(typeof labelPane === 'function' ? labelPane() : {}),
+          icon: L.divIcon({ className: 'gcct-rtnum', html: `<span>${i + 1}</span>`, iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) });
         m.__gcct = true;
         routeLayer.addLayer(m);
       });
