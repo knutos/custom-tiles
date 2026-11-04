@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.11
+// @version      1.55.14
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3237,6 +3237,7 @@
     function applyCoordsVisible() {
       const ce = toolsUi && toolsUi.coordEl;
       if (ce) ce.style.display = state.showCoords === false ? 'none' : '';
+      if (window.__gcctCrossSync) window.__gcctCrossSync();
     }
 
     const toolsUi = addTools(L, { openDialog, closeDialog, fillHeight, placeSide, mapObstacles, openSettings, setCoordsVisible, siteRightClick: () => !!state.siteRightClick,
@@ -4046,13 +4047,19 @@
   const fmtDD = (lat, lon) => `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
   function fmtUTM(lat, lon, zone) {
     const u = toUTM(lat, lon, zone);
-    return `${u.zone}${u.band} ${Math.round(u.e)}E ${Math.round(u.n)}N`;
+    return `${u.zone}${u.band} ${Math.round(u.e)} ${Math.round(u.n)}`;      // e.g. 31U 705083 5644673
   }
+  // A fixed UTM zone (32, 33, 35 as on Norwegian maps) only where it gives a sensible value – within one zone
+  // width of its own (Norway's UTM 33 reaches about that far). Elsewhere the point's own zone is used.
+  const zoneFits = (lon, zone) => Math.abs(lon - (zone * 6 - 183)) <= 9;
+  const fixedUTM = zone => (a, b) => (zoneFits(b, zone) ? fmtUTM(a, b, zone) : fmtUTM(a, b));
   const FORMATS = [
     ['DMM', fmtDMM], ['DD', fmtDD], ['DMS', fmtDMS],
-    ['UTM', (a, b) => fmtUTM(a, b)], ['UTM 32', (a, b) => fmtUTM(a, b, 32)], ['UTM 33', (a, b) => fmtUTM(a, b, 33)],
-    ['UTM 35', (a, b) => fmtUTM(a, b, 35)],
+    ['UTM', (a, b) => fmtUTM(a, b)], ['UTM 32', fixedUTM(32), 32], ['UTM 33', fixedUTM(33), 33],
+    ['UTM 35', fixedUTM(35), 35],
   ];
+  // The format's name as shown: a fixed zone that doesn't fit here is shown as plain UTM.
+  const fmtName = (i, ll) => (FORMATS[i][2] && !zoneFits(ll.lng, FORMATS[i][2]) ? 'UTM' : FORMATS[i][0]);
 
   // Accepts DD, DMM, DMS (with or without N/S/E/W) or UTM "32V 576000 6672000".
   function parseCoord(str) {
@@ -4388,6 +4395,7 @@
       const now = FORMATS[idx][1](ll.lat, ll.lng);
       for (let i = 1; i <= FORMATS.length; i++) {
         const j = (idx + i) % FORMATS.length;
+        if (FORMATS[j][2] && !zoneFits(ll.lng, FORMATS[j][2])) continue;     // a fixed zone that doesn't fit here
         if (FORMATS[j][1](ll.lat, ll.lng) !== now) return j;
       }
       return idx;
@@ -4431,7 +4439,7 @@
     });
     const coordCtl = new Coord().addTo(map);
     function updCoord() {
-      const [name, fn] = FORMATS[fmtIdx];
+      const [, fn] = FORMATS[fmtIdx], name = fmtName(fmtIdx, lastLL);
       coordCtl.getContainer().querySelector('.ctext').textContent = `${name}: ${fn(lastLL.lat, lastLL.lng)}`;
     }
     function updZoom() {
@@ -4455,7 +4463,10 @@
         crossEl.innerHTML = '<svg viewBox="0 0 40 40" width="40" height="40"><path d="M20 2v14M20 24v14M2 20h14M24 20h14" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M20 2v14M20 24v14M2 20h14M24 20h14" stroke="#d0021b" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="20" r="1.8" fill="#d0021b" stroke="#fff" stroke-width="1"/></svg>';
         map.getContainer().appendChild(crossEl);
       }
-      if (crossEl) crossEl.style.display = crossOn ? '' : 'none';
+      // Shown only while the coordinate box is: closing the box hides the cross, reopening it brings it back.
+      let boxShown = true;
+      try { boxShown = coordCtl.getContainer().style.display !== 'none'; } catch (e) { /* not there yet */ }
+      if (crossEl) crossEl.style.display = crossOn && boxShown ? '' : 'none';
       try {
         const cc = coordCtl.getContainer(), xb = cc.querySelector('.xh'), xc = cc.querySelector('.xc');
         if (xb) xb.classList.toggle('on', crossOn);
@@ -4466,11 +4477,13 @@
     }
     function setCross(on) { crossOn = !!on; save('gcct.cross', crossOn); applyCross(); }
     applyCross();
-    map.on('mousemove', e => { if (crossOn) return; lastLL = e.latlng; lastPt = e.containerPoint || null; updCoord(); });
+    window.__gcctCrossSync = () => { try { applyCross(); } catch (e) { /* ignore */ } };
+    const crossShown = () => crossOn && !!crossEl && crossEl.style.display !== 'none';
+    map.on('mousemove', e => { if (crossShown()) return; lastLL = e.latlng; lastPt = e.containerPoint || null; updCoord(); });
     map.on('mouseout', () => { lastPt = null; });
     map.on('zoomend', () => { const zi = coordCtl.getContainer().querySelector('.zin'); if (zi && document.activeElement === zi) zi.blur(); });
     const followView = () => {
-      try { lastLL = lastPt && !crossOn ? map.containerPointToLatLng(lastPt) : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
+      try { lastLL = lastPt && !crossShown() ? map.containerPointToLatLng(lastPt) : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
       try { updZoom(); } catch (e) { /* not ready */ }
     };
     ['zoom', 'move', 'zoomend', 'moveend'].forEach(ev => map.on(ev, followView));
@@ -4620,7 +4633,7 @@
       // Room for the longest format at this point (monospace, so 1ch per character).
       const widest = Math.max(...FORMATS.map(([, fn]) => fn(ll.lat, ll.lng).length));
       const show = () => {
-        const [name, fn] = FORMATS[popIdx];
+        const [, fn] = FORMATS[popIdx], name = fmtName(popIdx, ll);
         line.innerHTML = `<b>${name}</b><code style="min-width:${widest}ch">${fn(ll.lat, ll.lng)}</code>`;
       };
       line.onclick = e => {
