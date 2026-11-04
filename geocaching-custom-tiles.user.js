@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.21
+// @version      1.55.24
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -561,11 +561,46 @@
     } catch (e) { out.error = String(e); }
     return out;
   };
+  // Switching between /map and /play/map: the map you come from leaves its view and whether its side panel
+  // was folded; the map you go to (within 5 minutes) opens with the same view and the panel the same way.
+  const HANDOFF_KEY = 'gcct.handoff';
+  const HANDOFF = (() => {
+    try {
+      const h = JSON.parse(localStorage.getItem(HANDOFF_KEY) || 'null'), here = panelPath();
+      if (!h || (here !== '/map' && here !== '/play/map') || h.from === here || Date.now() - (h.t || 0) > 5 * 60e3) return null;
+      return h;
+    } catch (e) { return null; }
+  })();
+  // The view goes into the address before the site reads it, so the map opens there at once
+  // (/play/map: ?lat=&lng=&zoom=, /map: #?ll=lat,lng&z=zoom). The script also sets it again once the map is up.
+  try {
+    if (HANDOFF && HANDOFF.view && isFinite(HANDOFF.view.lat) && isFinite(HANDOFF.view.lng)) {
+      const v = HANDOFF.view, u = new URL(location.href);
+      if (panelPath() === '/play/map') {
+        u.searchParams.set('lat', v.lat); u.searchParams.set('lng', v.lng); u.searchParams.set('zoom', v.z);
+      } else u.hash = `?ll=${v.lat},${v.lng}&z=${Math.round(v.z)}`;
+      history.replaceState(history.state, '', u.toString());
+    }
+  } catch (e) { /* leave the address alone */ }
+  // Until the map stands at the carried-over view, its map layers are kept invisible (the controls show),
+  // so the site's own first view – often zoomed far out – is never seen.
+  let handoffVeil = null;
+  try {
+    if (HANDOFF && HANDOFF.view) {
+      handoffVeil = document.createElement('style');
+      handoffVeil.textContent = '.leaflet-map-pane { visibility: hidden !important; }';
+      (document.head || document.documentElement).appendChild(handoffVeil);
+      setTimeout(() => { if (handoffVeil) { handoffVeil.remove(); handoffVeil = null; } }, 4000);    // never longer
+    }
+  } catch (e) { handoffVeil = null; }
+  const liftHandoffVeil = () => { if (handoffVeil) { handoffVeil.remove(); handoffVeil = null; } };
+  window.gcctHandoff = () => { const o = { arrivedWith: HANDOFF, nowStored: JSON.parse(localStorage.getItem(HANDOFF_KEY) || 'null') }; console.log(JSON.stringify(o, null, 1)); return o; };
+  const foldWanted = st => (HANDOFF && typeof HANDOFF.folded === 'boolean' ? HANDOFF.folded : !!(st && st.autoRetract));
   const EARLY_PANEL = (() => {
     try {
       const st = JSON.parse(localStorage.getItem(STORE_STATE) || '{}');
       const known = loadPanelSel();
-      if (!st.autoRetract) { earlyInfo.reason = 'setting off'; return null; }
+      if (!foldWanted(st)) { earlyInfo.reason = HANDOFF ? 'open on the other map' : 'setting off'; return null; }
       if (!known || !known.sel) { earlyInfo.reason = 'nothing remembered yet'; return null; }
       if (!/^\/(map|play\/map)/i.test(location.pathname)) { earlyInfo.reason = 'not a map page'; return null; }
       earlyInfo.reason = 'active';
@@ -3593,7 +3628,7 @@
           requestAnimationFrame(settle);
         }, 40);
       };
-      if (!state.autoRetract) { finish(); return; }
+      if (!foldWanted(state)) { finish(); if (HANDOFF && HANDOFF.folded === false) openPanelIfFolded(); return; }
       // Hidden from the start: fold it with the button we know from last time, as soon as it is there.
       // Folded already when the page was built (or being folded right now): only show the rest.
       if (EARLY_PANEL && EARLY_PANEL.folded) { finish(); return; }
@@ -3678,6 +3713,67 @@
         return;
       }
       autoRetractPanel2();
+    }
+    // The other map had its side panel open: open it here too if the site starts with it folded.
+    function openPanelIfFolded() {
+      let tries = 0;
+      const t = setInterval(() => {
+        tries++;
+        try {
+          const mr = map.getContainer().getBoundingClientRect(), k = loadPanelSel();
+          const p = (k && k.sel && document.querySelector(k.sel)) || findLeftPanel(mr);
+          const b = (k && k.toggle && document.querySelector(k.toggle)) || (p && panelToggle(p));
+          if (p && b) {
+            clearInterval(t);
+            const r = p.getBoundingClientRect();
+            if (!(r.width > 100 && r.right > mr.left + 100)) b.click();
+            return;
+          }
+        } catch (e) { /* try again */ }
+        if (tries > 60) clearInterval(t);
+      }, 100);
+    }
+    // Leave the view and the panel's state for the other map.
+    function writeHandoff(withPanel) {
+      try {
+        const c = map.getCenter(), z = map.getZoom(), prev = JSON.parse(localStorage.getItem(HANDOFF_KEY) || 'null') || {};
+        const rec = { from: panelPath(), t: Date.now(), view: { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6), z } };
+        if (withPanel) {
+          const mr = map.getContainer().getBoundingClientRect(), k = loadPanelSel();
+          const kp = k && k.sel && document.querySelector(k.sel), fp = findLeftPanel(mr);
+          // Open = more than 100 px of it over the map (a folded panel can leave its tab showing).
+          const open = (kp && (r => r.width > 100 && r.right > mr.left + 100)(kp.getBoundingClientRect())) || (fp && panelOffsetOf(fp, mr) > 100);
+          rec.folded = !open;
+        } else if (prev.from === rec.from && typeof prev.folded === 'boolean') rec.folded = prev.folded;
+        localStorage.setItem(HANDOFF_KEY, JSON.stringify(rec));
+      } catch (e) { /* ignore */ }
+    }
+    map.on('moveend', () => writeHandoff(false));
+    window.addEventListener('pagehide', () => writeHandoff(true));
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeHandoff(true); });
+    // Open with the view of the map you came from; the site may set its own view a moment later, so
+    // check again while you haven't touched the map yet.
+    if (HANDOFF && HANDOFF.view && isFinite(HANDOFF.view.lat) && isFinite(HANDOFF.view.lng)) {
+      const v = HANDOFF.view, z = PLAY_MAP ? v.z : Math.round(v.z);
+      let touched = false, steady = 0;
+      ['pointerdown', 'wheel', 'keydown'].forEach(ev => map.getContainer().addEventListener(ev, () => { touched = true; liftHandoffVeil(); }, { once: true, capture: true }));
+      const there = () => {
+        const c = map.getCenter(), p = map.latLngToContainerPoint(c), q = map.latLngToContainerPoint(L.latLng(v.lat, v.lng));
+        return map.getZoom() === z && Math.hypot(p.x - q.x, p.y - q.y) <= 2;
+      };
+      const go = () => {
+        if (touched) return;
+        try { if (!there()) { steady = 0; map.setView([v.lat, v.lng], z, { animate: false }); } } catch (e) { /* not ready */ }
+      };
+      go(); [300, 1000, 2500].forEach(t => setTimeout(go, t));
+      // Show the map once it has stood at the view for a moment (the site may move it once more on its own).
+      const check = setInterval(() => {
+        try {
+          if (touched) { clearInterval(check); return; }
+          if (there()) { if (++steady >= 3) { clearInterval(check); liftHandoffVeil(); } } else { steady = 0; go(); }
+        } catch (e) { /* not ready */ }
+      }, 120);
+      setTimeout(() => { clearInterval(check); liftHandoffVeil(); }, 4000);
     }
     function autoRetractPanel2() {
       const finish = () => { if (EARLY_PANEL) setTimeout(EARLY_PANEL.done, 450); };
