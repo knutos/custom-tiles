@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.18
+// @version      1.55.21
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -3841,9 +3841,18 @@
         const off = panelOffsetOf(leftPanelEl, map.getContainer().getBoundingClientRect());
         const blocks = obs.filter(o => o.top < r.bottom + gap && o.bottom > r.top - gap).map(o => [o.left - gap, o.right + gap]);
         const min = Math.max(vr.left, map.getContainer().getBoundingClientRect().left + off) + 10, max = vr.right - 10 - r.width;
-        const left = best(min + (max - min) / 2, min, max, r.width, blocks);
-        if (left == null) return false;
-        if (Math.round(left - r.left)) dock.style.translate = `${Math.round(left - r.left)}px 0`;
+        // Always centred in the visible map: a site button in the way (like "Search this area") makes the
+        // toolbar move just below it (at the top) or above it (at the bottom), not sideways.
+        const left = max < min ? min : min + (max - min) / 2;
+        let dy = 0;
+        for (let k = 0; k < 4; k++) {
+          const top = r.top + dy, bottom = r.bottom + dy;
+          const hits = obs.filter(o => o.left < left + r.width + gap && o.right > left - gap && o.top < bottom + gap && o.bottom > top - gap);
+          if (!hits.length) break;
+          dy = side === 'bottom' ? dy + Math.min(...hits.map(o => o.top - gap - bottom)) : dy + Math.max(...hits.map(o => o.bottom + gap - top));
+        }
+        void blocks;
+        if (Math.round(left - r.left) || Math.round(dy)) dock.style.translate = `${Math.round(left - r.left)}px ${Math.round(dy)}px`;
       }
       return true;
     }
@@ -3900,7 +3909,8 @@
       if (state.tbSide === 'bottom') {
         const mr = map.getContainer().getBoundingClientRect(), b = dock.getBoundingClientRect();
         const w = ce.getBoundingClientRect().width;
-        up = b.width > 0 && b.right > mr.right - 10 - w - 8;      // where the readout sits in its own corner
+        if (toolsUi.coordLeft) up = b.width > 0 && b.left < mr.left + 10 + panelOffsetOf(leftPanelEl, mr) + w + 8;
+        else up = b.width > 0 && b.right > mr.right - 10 - w - 8;      // where the readout sits in its own corner
       }
       const want = up ? cornerEl('topleft') : coordHome;
       if (want && ce.parentElement !== want) {
@@ -3920,7 +3930,7 @@
         if (!placeDock()) layoutGroup([dock], state.tbSide !== 'bottom', tbOnLeft());
         syncLinesSelect();
         lastDockSig = dockSig();
-        if (!(toolsUi && toolsUi.coordEl && toolsUi.coordEl.parentElement === cornerEl('topleft'))) layoutGroup([toolsUi && toolsUi.coordEl], false);
+        if (!(toolsUi && toolsUi.coordEl && toolsUi.coordEl.parentElement === cornerEl('topleft'))) layoutGroup([toolsUi && toolsUi.coordEl], false, toolsUi && toolsUi.coordLeft);
         fixCoordOverlap();
       } catch (e) { console.error('[gcct] layout failed', e); }
     }
@@ -3929,6 +3939,7 @@
     // On the left side the toolbar is glued to the site's side panel: its edge is read every frame
     // (cheap), and the panel itself is looked up again twice a second or when it goes away.
     glueFrame = 0;
+    let lastCoordOff = -1;
     // On the left and right the toolbar is centred vertically (like top/bottom are centred sideways),
     // but never higher than the site's own buttons allow.
     // Placed again whenever the visible map, the toolbar's size or the side panel changes.
@@ -3941,6 +3952,21 @@
     (function glue() {
       requestAnimationFrame(glue);
       try { if (dockSig() !== lastDockSig && !dock.classList.contains('dragging')) layoutControls(); } catch (e) { /* ignore */ }
+      // A coordinate readout at the bottom left (/play/map) follows the side panel every frame too.
+      try {
+        const ce = toolsUi && toolsUi.coordLeft && toolsUi.coordEl;
+        if (ce && ce.parentElement !== cornerEl('topleft') && !tbOnLeft() && !tbCentred()) {
+          const mr = map.getContainer().getBoundingClientRect();
+          glueFrame++;
+          const gone = !leftPanelEl || !leftPanelEl.isConnected || panelOffsetOf(leftPanelEl, mr) === 0;
+          if (glueFrame % 30 === 0 || (gone && glueFrame % 6 === 0)) {
+            const found = findLeftPanel(mr);
+            if (found || !leftPanelEl || !leftPanelEl.isConnected) leftPanelEl = found;
+          }
+          const off = panelOffsetOf(leftPanelEl, mr);
+          if (off !== lastCoordOff) { lastCoordOff = off; layoutGroup([ce], false, true); fixCoordOverlap(); }
+        }
+      } catch (e) { /* ignore */ }
       if (!tbOnLeft() && !tbCentred()) { lastPanelOff = -1; return; }
       try {
         const mr = map.getContainer().getBoundingClientRect();
@@ -4419,8 +4445,10 @@
       }
       return idx;
     }
+    const COORD_LEFT = PLAY_MAP;
     const Coord = L.Control.extend({
-      options: { position: 'bottomright' },
+      // Bottom left on /play/map, bottom right on /map.
+      options: { position: COORD_LEFT ? 'bottomleft' : 'bottomright' },
       onAdd() {
         const d = L.DomUtil.create('div', 'gcct-coord leaflet-control');
         // The zoom level above the coordinates – type a number (or use the arrows) to zoom.
@@ -7207,6 +7235,6 @@ ${pts}
     drawRoute();
     // Pins remembered from earlier in this browser session.
     try { pinRecs.slice().forEach(r => { if (isFinite(r.lat) && isFinite(r.lng)) namedPin(null, null, r); }); } catch (e) { /* ignore */ }
-    return { barEl: barCtl.getContainer(), coordEl: coordCtl.getContainer(), relabel };
+    return { barEl: barCtl.getContainer(), coordEl: coordCtl.getContainer(), coordLeft: COORD_LEFT, relabel };
   }
 })();
