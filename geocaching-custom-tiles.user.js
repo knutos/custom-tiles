@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.33
+// @version      1.55.34
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -206,7 +206,7 @@
     "Geocaches and pins nearest the middle of the map. Click one to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en for å legge den til i ruten.",
     "No stops yet.": "Ingen stopp ennå.",
     "Sort by nearest": "Sorter etter nærmeste",
-    "Clear route": "Tøm ruten",
+    "Clear route": "Glem ruten",
     "{n} stops · {d}": "{n} stopp · {d}",
     "Solved": "Løst",
     "Found": "Funnet",
