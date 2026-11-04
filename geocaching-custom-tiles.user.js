@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.28
+// @version      1.55.32
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -215,6 +215,13 @@
     "Cache list and route": "Cacheliste og rute",
     "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
     "Layout": "Utseende",
+    "Elevation profile": "Høydeprofil",
+    "Fetching heights …": "Henter høyder …",
+    "No heights found for this route.": "Fant ingen høyder for denne ruten.",
+    "lowest": "lavest",
+    "highest": "høyest",
+    "Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.": "Langs de rette linjene mellom stoppene; høyder fra Kartverket (Norge) eller Open-Meteo.",
+    "Home": "Hjem",
     "Hide the site’s icon at the posted coordinates": "Skjul nettstedets ikon ved oppgitte koordinater",
     "Solved caches you have found: only the smiley at the solved spot is left (with the marks on)": "Løste cacher du har funnet: bare smilefjeset ved den løste plassen blir igjen (når merkene er på)",
     "Crosshair": "Trådkors",
@@ -4341,6 +4348,7 @@
         background:var(--hover);color:var(--muted)}
       .gcct-results em.tag-place{background:#dafbe1;color:#116329}
       .gcct-results em.tag-addr{background:#ddf4ff;color:#0550ae}
+      .gcct-results em.tag-home{background:#fff8c5;color:#7d4e00}
       .gcct-results em.tag-abroad{background:#fbefff;color:#6639ba}
       .gcct-results em.tag-gc{background:#fff1e5;color:#953800}
       .gcct-results .gm.err{color:#a40e26}
@@ -4462,6 +4470,7 @@
       .gcct-route .rt-m{font-size:12px;color:var(--muted)}
       .gcct-route em.tag{font-style:normal;font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;margin-left:4px}
       .gcct-route em.tag-place{background:#dafbe1;color:#116329}
+      .gcct-route em.tag-home{background:#fff8c5;color:#7d4e00}
       .gcct-route em.tag-addr{background:#ddf4ff;color:#0550ae}
       .gcct-route em.tag-abroad{background:#fbefff;color:#6639ba}
       .gcct-route .rt-full{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:13px;white-space:nowrap;cursor:pointer}
@@ -4495,6 +4504,19 @@
       .gcct-route .rt-ic-dot::before{content:"";display:block;width:10px;height:10px;margin:4px;border-radius:50%;background:#8c959f}
       .gcct-route .rt-go:hover b{text-decoration:underline}
       .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
+      .gcct-route .rt-prof{margin:0 0 10px}
+      .gcct-route .rt-prof button{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-prof button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
+      .gcct-route .rt-prof-svg{display:block;max-width:100%;margin:8px 0 4px;border:1px solid var(--line);border-radius:var(--rc);background:#fff;cursor:crosshair}
+      .gcct-route .rt-prof-svg .ar{fill:#8250df;fill-opacity:.14}
+      .gcct-route .rt-prof-svg .ln{fill:none;stroke:#8250df;stroke-width:1.6;vector-effect:non-scaling-stroke}
+      .gcct-route .rt-prof-svg .st{stroke:#8250df;stroke-opacity:.35;stroke-dasharray:2 2;vector-effect:non-scaling-stroke}
+      .gcct-route .rt-prof-svg .cur{stroke:#1f2328;stroke-width:1;vector-effect:non-scaling-stroke}
+      .gcct-route .rt-prof-svg text{font:9px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#59636e}
+      .gcct-route .rt-prof-svg .sn{text-anchor:middle;fill:#6639ba;font-weight:700}
+      .gcct-route .rt-prof-svg .ax{text-anchor:end}
+      .gcct-route .rt-prof-sum{font-size:12.5px;color:var(--ink)}
+      .gcct-route .rt-prof-at{font-size:12.5px;color:#6639ba;font-weight:600;min-height:1.3em}
       .gcct-route .rt-tbl{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
       .gcct-route table{border-collapse:collapse;width:100%;font-size:12.5px}
       .gcct-route th{position:sticky;top:0;background:var(--soft);text-align:left;font-weight:600;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -6506,7 +6528,7 @@
       };
       const q = d.querySelector('.gcct-q'), out = d.querySelector('.gcct-results');
       const SOURCES = [['place', searchNorwayPlaces, 2, 'Kartverket'], ['addr', searchNorwayAddresses, 2, 'Kartverket'], ['abroad', searchAbroad, 3, 'Photon']];
-      const TAG = { gc: () => T('Geocache'), coord: () => T('Coordinates'), place: () => T('Place'), addr: () => T('Address'), abroad: () => T('Abroad') };
+      const TAG = { home: () => T('Home'), gc: () => T('Geocache'), coord: () => T('Coordinates'), place: () => T('Place'), addr: () => T('Address'), abroad: () => T('Abroad') };
       let res = {}, pending = 0, failed = [], items = [], sel = -1, seq = 0, ctrl = null, timer = null, picked = null;
 
       // Rank all hits together, best match first, whatever service they came from:
@@ -6541,7 +6563,7 @@
       }
       function draw() {
         // One ranked list mixing coordinates, places in Norway, addresses and places abroad.
-        items = rank(['gc', 'coord', 'place', 'addr', 'abroad'].flatMap(k => res[k] || []), q.value);
+        items = (res.home || []).concat(rank(['gc', 'coord', 'place', 'addr', 'abroad'].flatMap(k => res[k] || []), q.value));
         let html = items.map((r, i) => `<div class="gr" data-i="${i}"><b>${esc(r.name)}</b>
           <span><em class="tag tag-${r.kind}">${esc(TAG[r.kind]())}</em>${esc(r.sub || '')}</span></div>`).join('');
         const text = q.value.trim();
@@ -6566,6 +6588,11 @@
         ctrl = new AbortController();
         const my = ++seq, signal = ctrl.signal;
         res = {}; failed = []; pending = 0; sel = 0; picked = null;
+        // Your home address: when you start typing "hjem" or "home", or part of its name.
+        const home = !homeMode && load('gcct.home', null), tl = text.toLowerCase();
+        if (home && isFinite(home.lat) && isFinite(home.lng) && tl.length >= 2
+          && ('hjem'.startsWith(tl) || 'home'.startsWith(tl) || (tl.length >= 3 && String(home.name || '').toLowerCase().includes(tl))))
+          res.home = [{ kind: 'home', name: home.name || T('Home'), sub: fmtDMM(home.lat, home.lng), lat: home.lat, lng: home.lng, zoom: 16 }];
         const ll = text && parseCoord(text);
         if (ll) res.coord = [{ kind: 'coord', name: fmtDMM(ll[0], ll[1]), sub: `${fmtDD(ll[0], ll[1])} · UTM ${fmtUTM(ll[0], ll[1])}`, lat: ll[0], lng: ll[1], zoom: 16 }];
         const gc = !homeMode && /^GC[0-9A-Z]{1,7}$/i.test(text.replace(/\s+/g, '')) ? text.replace(/\s+/g, '') : null;
@@ -6588,6 +6615,7 @@
         if (!r) return;
         api.closeDialog();
         if (homeMode) { setHome({ lat: r.lat, lng: r.lng, name: r.name + (r.sub && r.kind === 'addr' ? ', ' + r.sub.split(' · ')[0] : '') }); goHome(); return; }
+        if (r.kind === 'home') { goHome(); return; }
         const ll = L.latLng(r.lat, r.lng);
         if (r.bounds && r.bounds.length === 4 && r.bounds.every(isFinite) && r.bounds[0] !== r.bounds[1]) {
           map.fitBounds([[r.bounds[0], r.bounds[2]], [r.bounds[1], r.bounds[3]]], { maxZoom: 17 });
@@ -7249,7 +7277,7 @@ ${pts}
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
+      const tag = c => c.kind === 'place' && c.pkind === 'home' ? `<em class="tag tag-home">${esc(T('Home'))}</em>` : c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
         c.kind === 'cache' && c.code && window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
@@ -7308,6 +7336,11 @@ ${pts}
           else if (st === 'none') extra = `<div class="gm">${esc(T('{code} not found.', { code: gc }))}</div>`;
           else { extra = `<div class="gm">${esc(T('Looking up {code} …', { code: gc }))}</div>`; lookUp(gc); }
         }
+        // Your home address, like in Find a place: "hjem", "home" or part of its name.
+        const home = load('gcct.home', null);
+        if (home && isFinite(home.lat) && isFinite(home.lng) && text.length >= 2 && !gc
+          && ('hjem'.startsWith(text) || 'home'.startsWith(text) || (text.length >= 3 && String(home.name || '').toLowerCase().includes(text))))
+          pre.unshift({ key: 'g:' + (+home.lat).toFixed(5) + ',' + (+home.lng).toFixed(5), kind: 'place', pkind: 'home', name: home.name || T('Home'), sub: '', lat: +home.lat, lng: +home.lng });
         c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
         c.sort((a, b) => a.d - b.d);
         pre.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
@@ -7348,6 +7381,96 @@ ${pts}
       }
       // Preview: the whole route on the map, and a table of exactly what goes into the GPX file.
       const pv = d.querySelector('.rt-pv'), editEls = [q, d.querySelector('.hint'), list, d.querySelector('.rt-h'), ol, d.querySelector('.rt-edit-btns')];
+      // --- Elevation profile along the route (straight lines between the stops) ---------------------
+      // Heights from Kartverket (Norway, from the national elevation model); elsewhere from Open-Meteo
+      // (Copernicus 90 m). Climb and descent count only changes of at least 2 m, so noise doesn't add up.
+      let profOpen = false, profCache = { sig: '', data: null, busy: false }, profMark = null;
+      async function heightsOf(pts) {
+        const z = new Array(pts.length).fill(null);
+        // Kartverket only for points in and around Norway (elsewhere it answers 0, not "no data").
+        const inNorway = p => p.lat > 57.5 && p.lat < 71.5 && p.lng > 4 && p.lng < 31.5;
+        const nor = pts.map((p, i) => (inNorway(p) ? i : -1)).filter(i => i >= 0);
+        for (let a = 0; a < nor.length; a += 50) {
+          const ids = nor.slice(a, a + 50), part = ids.map(i => [+pts[i].lng.toFixed(6), +pts[i].lat.toFixed(6)]);
+          try {
+            const j = await getJSON(`${GN}/hoydedata/v1/punkt?koordsys=4258&geojson=false&punkter=${encodeURIComponent(JSON.stringify(part))}`);
+            (j.punkter || []).forEach((p, k) => { if (p && isFinite(p.z) && p.z > -500 && (p.datakilde || p.z !== 0)) z[ids[k]] = +p.z; });
+          } catch (e) { /* not answering: Open-Meteo below */ }
+        }
+        const miss = z.map((v, i) => (v == null ? i : -1)).filter(i => i >= 0);
+        for (let a = 0; a < miss.length; a += 100) {
+          const ids = miss.slice(a, a + 100);
+          try {
+            const j = await getJSON(`https://api.open-meteo.com/v1/elevation?latitude=${ids.map(i => pts[i].lat.toFixed(5)).join(',')}&longitude=${ids.map(i => pts[i].lng.toFixed(5)).join(',')}`);
+            (j.elevation || []).forEach((v, k) => { if (isFinite(v)) z[ids[k]] = +v; });
+          } catch (e) { /* no heights there */ }
+        }
+        return z;
+      }
+      function profileSamples() {
+        const stops = routeStops(), legs = [];
+        let tot = 0;
+        for (let i = 1; i < stops.length; i++) { const dd = distM(L.latLng(stops[i - 1].lat, stops[i - 1].lng), L.latLng(stops[i].lat, stops[i].lng)); legs.push(dd); tot += dd; }
+        const n = Math.max(30, Math.min(200, Math.round(tot / 20)));
+        const pts = [], at = [], stopAt = [0];
+        let acc = 0;
+        legs.forEach((len, i) => {
+          const a = stops[i], b = stops[i + 1], k = Math.max(2, Math.round(n * len / (tot || 1)));
+          for (let j = i ? 1 : 0; j <= k; j++) { const t = j / k; pts.push(L.latLng(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)); at.push(acc + len * t); }
+          acc += len; stopAt.push(acc);
+        });
+        return { pts, at, stopAt, tot };
+      }
+      function showProfile() {
+        const body = pv.querySelector('.rt-prof-body'), pb = pv.querySelector('[data-a=prof]');
+        if (!body) return;
+        if (pb) pb.classList.toggle('on', profOpen);
+        if (!profOpen) { body.innerHTML = ''; clearProfMark(); return; }
+        const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
+        if (profCache.sig === sig && profCache.data) { drawProfile(body, profCache.data); return; }
+        body.innerHTML = `<div class="gm">${esc(T('Fetching heights …'))}</div>`;
+        if (profCache.busy === sig) return;
+        profCache.busy = sig;
+        const smp = profileSamples();
+        heightsOf(smp.pts).then(z => {
+          profCache = { sig, data: Object.assign(smp, { z }), busy: false };
+          if (profOpen && pv.isConnected) showProfile();
+        });
+      }
+      function clearProfMark() { if (profMark) { routeLayer.removeLayer(profMark); profMark = null; } }
+      function drawProfile(body, P) {
+        const ok = P.z.map((v, i) => [v, i]).filter(([v]) => v != null);
+        if (ok.length < 2) { body.innerHTML = `<div class="gm">${esc(T('No heights found for this route.'))}</div>`; return; }
+        // Fill single gaps from the neighbours, so the line is unbroken.
+        const z = P.z.map((v, i) => v != null ? v : (ok.reduce((b, [w, j]) => (Math.abs(j - i) < Math.abs(b[1] - i) ? [w, j] : b), ok[0]))[0]);
+        let up = 0, down = 0, ref = z[0];
+        z.forEach(v => { if (v - ref >= 2) { up += v - ref; ref = v; } else if (ref - v >= 2) { down += ref - v; ref = v; } });
+        const lo = Math.min(...z), hi = Math.max(...z), span = Math.max(10, hi - lo);
+        const W = Math.max(240, Math.round(body.clientWidth || 320)), H = 120, pl = 34, pr = 8, pt = 8, pbm = 16;
+        const X = d0 => pl + (W - pl - pr) * d0 / (P.tot || 1), Y = v => pt + (H - pt - pbm) * (1 - (v - (lo - span * 0.08)) / (span * 1.16));
+        const line = z.map((v, i) => `${i ? 'L' : 'M'}${X(P.at[i]).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+        const area = `${line}L${X(P.tot).toFixed(1)},${H - pbm}L${X(0).toFixed(1)},${H - pbm}Z`;
+        const stopsSvg = P.stopAt.map((d0, i) => `<line x1="${X(d0).toFixed(1)}" x2="${X(d0).toFixed(1)}" y1="${pt}" y2="${H - pbm}" class="st"/><text x="${X(d0).toFixed(1)}" y="${H - 4}" class="sn">${i < route.length ? i + 1 : 1}</text>`).join('');
+        body.innerHTML = `<svg class="rt-prof-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+            <path d="${area}" class="ar"/><path d="${line}" class="ln"/>${stopsSvg}
+            <text x="${pl - 4}" y="${Y(hi) + 4}" class="ax">${Math.round(hi)}</text><text x="${pl - 4}" y="${Y(lo) + 4}" class="ax">${Math.round(lo)}</text>
+            <line class="cur" x1="0" x2="0" y1="${pt}" y2="${H - pbm}" style="display:none"/></svg>
+          <div class="rt-prof-sum">↑ ${Math.round(up)} m · ↓ ${Math.round(down)} m · ${esc(T('lowest'))} ${Math.round(lo)} m · ${esc(T('highest'))} ${Math.round(hi)} m · ${esc(fmtDist(P.tot))}</div><div class="rt-prof-at">&nbsp;</div>
+          <p class="hint rt-note">${esc(T('Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
+        const svg = body.querySelector('svg'), cur = svg.querySelector('.cur'), atEl = body.querySelector('.rt-prof-at');
+        svg.addEventListener('mousemove', e => {
+          const r = svg.getBoundingClientRect(), d0 = Math.max(0, Math.min(P.tot, (((e.clientX - r.left) / r.width) * W - pl) / (W - pl - pr) * P.tot));
+          let k = 0; while (k < P.at.length - 1 && P.at[k + 1] < d0) k++;
+          const x = X(P.at[k]);
+          cur.setAttribute('x1', x); cur.setAttribute('x2', x); cur.style.display = '';
+          atEl.textContent = `${fmtDist(P.at[k])}: ${Math.round(z[k])} m`;
+          clearProfMark();
+          profMark = L.circleMarker(P.pts[k], { radius: 6, color: '#fff', weight: 2, fillColor: '#8250df', fillOpacity: 1, interactive: false, ...(typeof labelPane === 'function' ? labelPane() : {}) });
+          profMark.__gcct = true;
+          routeLayer.addLayer(profMark);
+        });
+        svg.addEventListener('mouseleave', () => { cur.style.display = 'none'; atEl.innerHTML = '&nbsp;'; clearProfMark(); });
+      }
       function preview(on, refit = true) {
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
@@ -7360,14 +7483,18 @@ ${pts}
           return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
             <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i, pts))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
-        pv.innerHTML = `<p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
+        pv.innerHTML = `<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
+          <p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
           <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
+        const pb = pv.querySelector('[data-a=prof]');
+        if (pb) pb.onclick = () => { profOpen = !profOpen; showProfile(); };
+        if (profOpen) showProfile();
         if (refit) fitRoute(d);
       }
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
-      d.querySelector('[data-a=back]').onclick = () => preview(false);
+      d.querySelector('[data-a=back]').onclick = () => { clearProfMark(); preview(false); };
       function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
       routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
       d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
