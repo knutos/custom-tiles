@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.34
+// @version      1.55.35
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7509,7 +7509,7 @@ ${pts}
         }
         route = out; changed();
       };
-      d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); };
+      d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); if (api.closeDialog) api.closeDialog(); };
       const loopBox = d.querySelector('[data-a=loop]');
       loopBox.checked = routeLoop;
       loopBox.onchange = () => { setRouteLoop(loopBox.checked); changed(); };
