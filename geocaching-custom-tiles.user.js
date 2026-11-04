@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.16
+// @version      1.55.18
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -215,6 +215,8 @@
     "Cache list and route": "Cacheliste og rute",
     "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
     "Layout": "Utseende",
+    "Hide the site’s icon at the posted coordinates": "Skjul nettstedets ikon ved oppgitte koordinater",
+    "Solved caches you have found: only the smiley at the solved spot is left (with the marks on)": "Løste cacher du har funnet: bare smilefjeset ved den løste plassen blir igjen (når merkene er på)",
     "Crosshair": "Trådkors",
     "Copy the coordinates": "Kopier koordinatene",
     "Copy the coordinates under the cross": "Kopier koordinatene under krysset",
@@ -1264,6 +1266,16 @@
       return fire.apply(this, arguments);
     };
     if (L.Control && L.Control.Layers) L.Control.Layers.addInitHook(function () { siteCtls.push(this); });
+    // A site icon the script hides (see "Hide the site's icon at the posted coordinates") is hidden the
+    // moment it is made, before it is ever drawn – not a moment later.
+    if (L.Marker && L.Marker.prototype._initIcon) {
+      const initIcon = L.Marker.prototype._initIcon;
+      L.Marker.prototype._initIcon = function () {
+        const r = initIcon.apply(this, arguments);
+        try { if (!this.__gcct && window.__gcctIconGate) window.__gcctIconGate(this); } catch (e) { /* never break the site */ }
+        return r;
+      };
+    }
   }
 
   // Catch Leaflet the moment the page defines window.L, before the site can create its map.
@@ -4968,6 +4980,8 @@
         const want = new Map(), wantDt = new Map(), wantFtf = new Map();
         const consider = (i, code, atMark) => {
           if (!i) return;
+          // The site's icon at the posted spot is hidden: its labels go with the smiley at the solved spot instead.
+          if (!atMark && hidePostedOn && marksOn && i.solved && i.corrected && i.found === true && i.owned !== true) return;
           const q = atMark || ((i.solved && i.corrected && i.found !== true) ? i.corrected : (i.posted || iconAt.get(code)));
           if (!q) return;
           const ll = L.latLng(q.lat, q.lng);
@@ -5217,6 +5231,54 @@
       siteShownCache = set; siteShownAt = Date.now();
       return set;
     }
+    // /play/map, Show on map (off by default): hide the site's icon at the posted coordinates of solved caches
+    // you have found – our smiley at the solved spot is then the only one. Only while the marks are shown.
+    var hidePostedOn = PLAY_MAP && !!load('gcct.hidePosted', false);
+    const hiddenIcons = new Set();
+    function syncPostedIcons() {
+      if (!PLAY_MAP) return;
+      const want = new Set();
+      if (hidePostedOn && marksOn && map.getZoom() >= MARK_MIN_ZOOM) {
+        try {
+          markerCaches().forEach(c => {
+            const el = c.layer && (c.layer.getElement ? c.layer.getElement() : c.layer._icon);
+            if (el && postedSpotAt(c.ll)) want.add(el);
+          });
+        } catch (e) { /* ignore */ }
+      }
+      hiddenIcons.forEach(el => { if (!want.has(el)) { el.style.removeProperty('display'); hiddenIcons.delete(el); } });
+      want.forEach(el => { if (!hiddenIcons.has(el)) { el.style.setProperty('display', 'none', 'important'); hiddenIcons.add(el); } });
+    }
+    // The posted spots of found solved caches, in a coarse grid (about 11 m cells) for a quick look-up.
+    let spotGrid = null, spotStamp = '';
+    const spotKey = (la, ln) => Math.round(la * 1e4) + ':' + Math.round(ln * 1e4);
+    function postedSpotAt(ll) {
+      const stamp = CACHE_INFO.size + '|' + (window.__gcctInfoGen || 0);
+      if (!spotGrid || stamp !== spotStamp || Date.now() - (spotGrid.t || 0) > 2000) {
+        spotGrid = new Map(); spotGrid.t = Date.now(); spotStamp = stamp;
+        CACHE_INFO.forEach(i => {
+          if (i.solved && i.corrected && i.posted && i.found === true && i.owned !== true && distM(i.posted, i.corrected) > 10) {
+            const k = spotKey(i.posted.lat, i.posted.lng);
+            (spotGrid.get(k) || spotGrid.set(k, []).get(k)).push(i.posted);
+          }
+        });
+      }
+      const la = Math.round(ll.lat * 1e4), ln = Math.round(ll.lng * 1e4);
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+        const list = spotGrid.get((la + a) + ':' + (ln + b));
+        if (list && list.some(q => distM(q, ll) < 8)) return true;
+      }
+      return false;
+    }
+    if (PLAY_MAP) window.__gcctIconGate = m => {
+      if (!hidePostedOn || !marksOn || map.getZoom() < MARK_MIN_ZOOM || !m.getLatLng) return;
+      const el = m._icon;
+      if (el && postedSpotAt(m.getLatLng())) {
+        el.style.setProperty('display', 'none', 'important'); hiddenIcons.add(el);
+        if (m._shadow) m._shadow.style.setProperty('display', 'none', 'important');
+      }
+    };
+    function setHidePosted(on) { hidePostedOn = !!on; save('gcct.hidePosted', hidePostedOn); syncPostedIcons(); if (window.__gcctFavKick) window.__gcctFavKick(); }
     function markerCaches() {
       const out = [], seen = new Set();
       const visit = l => {
@@ -5228,7 +5290,7 @@
           if (ll) {
             const code = markerCode(l);
             if (code) markerHints(l, code);
-            out.push({ ll: L.latLng(ll.lat, ll.lng), code, name: (l.options && l.options.title) || '' });
+            out.push({ ll: L.latLng(ll.lat, ll.lng), code, name: (l.options && l.options.title) || '', layer: l });
           }
           return;
         }
@@ -5761,7 +5823,7 @@
         const l = e && e.layer;
         if (!l || l.__gcct || !(l instanceof L.Marker || (L.LayerGroup && l instanceof L.LayerGroup))) return;
         clearTimeout(iconT);
-        iconT = setTimeout(() => { siteShownCache = null; try { refreshAuto(true); } catch (err) { /* ignore */ } if (window.__gcctFavKick) window.__gcctFavKick(); }, 150);
+        iconT = setTimeout(() => { siteShownCache = null; try { refreshAuto(true); } catch (err) { /* ignore */ } try { syncPostedIcons(); } catch (err) { /* ignore */ } if (window.__gcctFavKick) window.__gcctFavKick(); }, 150);
       };
       map.on('layeradd', iconsChanged);
       map.on('layerremove', iconsChanged);
@@ -5787,7 +5849,7 @@
     function refreshAuto(force) {
       try {
         if (!(autoOn || marksOn || (api.typeBadgeOn && api.typeBadgeOn())) || map.getZoom() < MARK_MIN_ZOOM) {
-          autoLayer.clearLayers(); syncMarks([]); autoSig = '';
+          autoLayer.clearLayers(); syncMarks([]); autoSig = ''; syncPostedIcons();
           if (lastSolved.length) { lastSolved = []; if (window.__gcctFavKick) window.__gcctFavKick(); }
           return;
         }
@@ -5915,6 +5977,7 @@
           ...lastStages.map(m => [`w|${m.code}|${m.ll.lat.toFixed(6)},${m.ll.lng.toFixed(6)}|${m.kind}|${m.name}|${nameOf(m.code)}`, () => stageMark(m)]),
         ]);
         lastSolved = marksOn ? solvedMarks : [];      // the marks button alone decides whether they show
+        syncPostedIcons();
         if (window.__gcctFavKick) window.__gcctFavKick();          // hearts and D/T at the marks
       } catch (e) { console.error('[gcct] auto circles failed', e); }
     }
@@ -5965,6 +6028,7 @@
         { k: 'fav', ic: 'heart', name: T('Favourite points'), sub: null, z: FAV_MIN_ZOOM, on: !!fav.show, set: v => { if (api.setFavShow) api.setFavShow(v); }, min: fav.min },
         { k: 'dt', ic: 'dt', name: T('Difficulty/terrain (D/T)'), sub: null, z: FAV_MIN_ZOOM, on: !!(api.dtSettings && api.dtSettings().show), set: v => { if (api.setDtShow) api.setDtShow(v); } },
         { k: 'ftf', ic: 'flag', name: T('FTF – not found yet'), sub: null, z: FAV_MIN_ZOOM, on: !!(api.ftfSettings && api.ftfSettings().show), set: v => { if (api.setFtfShow) api.setFtfShow(v); } },
+        ...(PLAY_MAP ? [{ k: 'hideposted', ic: 'eyeoff', name: T('Hide the site’s icon at the posted coordinates'), sub: T('Solved caches you have found: only the smiley at the solved spot is left (with the marks on)'), z: null, on: hidePostedOn, set: v => setHidePosted(v) }] : []),
         { k: 'type', ic: 'tag', name: T('Type icon on solved caches'), sub: T('The site’s “solved” icon doesn’t show the type'), z: FAV_MIN_ZOOM, on: !!(api.typeBadgeOn && api.typeBadgeOn()), set: v => { if (api.setTypeBadge) api.setTypeBadge(v); } },
       ];
     };
