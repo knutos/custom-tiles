@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.15
+// @version      1.55.16
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -1555,6 +1555,14 @@
   function init() {
     const L = window.L;
     const state = Object.assign({ base: null, overlays: [], opacity: {}, showSiteSwitcher: false, removed: [], tbSide: 'right', tbCols: 1 }, load(STORE_STATE, {}));
+    // The toolbar's edge and rows are remembered for /map and /play/map separately.
+    const TB_PAGE = PLAY_MAP ? '/play/map' : '/map';
+    const tbMine = state.tbPage && state.tbPage[TB_PAGE];
+    if (tbMine) { if (tbMine.side) state.tbSide = tbMine.side; if (tbMine.cols) state.tbCols = tbMine.cols; }
+    const saveToolbar = () => {
+      state.tbPage = Object.assign({}, (load(STORE_STATE, {}) || {}).tbPage, state.tbPage, { [TB_PAGE]: { side: state.tbSide, cols: state.tbCols } });
+      save(STORE_STATE, state);
+    };
     // One slider per group, acting on what is selected: dimming of the background map, opacity of the overlays.
     if (typeof state.dimBase !== 'number') state.dimBase = (state.base && state.opacity && state.opacity[state.base]) ?? 1;
     const MIN_DIM = 0.5;                                // background maps are dimmed at most 50 %
@@ -3202,10 +3210,10 @@
         <label class="chk"><input type="checkbox" data-a="sitemenu" ${state.siteRightClick ? 'checked' : ''}> ${T('Right-click on /play/map opens the site’s own menu (log, add to list, GPX) instead of ours')}</label>
         <div class="btns"><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true, key: 'settings' });
       d.querySelector('[data-a=cancel]').onclick = closeDialog;
-      d.querySelector('[data-a=tbside]').onchange = e => { state.tbSide = e.target.value; save(STORE_STATE, state); applyToolbarLayout(); };
+      d.querySelector('[data-a=tbside]').onchange = e => { state.tbSide = e.target.value; saveToolbar(); applyToolbarLayout(); };
       const cls = d.querySelector('[data-a=clside]');
       if (cls) cls.onchange = e => { state.clSide = e.target.value; save(STORE_STATE, state); };   // an open list moves at once
-      d.querySelector('[data-a=tbcols]').onchange = e => { state.tbCols = +e.target.value; save(STORE_STATE, state); applyToolbarLayout(); syncLinesSelect(); };
+      d.querySelector('[data-a=tbcols]').onchange = e => { state.tbCols = +e.target.value; saveToolbar(); applyToolbarLayout(); syncLinesSelect(); };
       syncLinesSelect();
       d.querySelector('[data-a=coords]').onchange = e => setCoordsVisible(e.target.checked);
       d.querySelector('[data-a=autoretract]').onchange = e => { state.autoRetract = e.target.checked; save(STORE_STATE, state); };
@@ -3398,7 +3406,7 @@
         dock.style.transform = '';
         if (target !== state.tbSide) {
           state.tbSide = target;
-          save(STORE_STATE, state);
+          saveToolbar();
           applyToolbarLayout();
           const sel = document.querySelector('.gcct-dlg select[data-a=tbside]');
           if (sel) sel.value = target;
