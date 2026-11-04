@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.6
+// @version      1.55.11
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -215,6 +215,12 @@
     "Cache list and route": "Cacheliste og rute",
     "Fold the site’s side panel away when the map opens": "Fell sammen nettstedets sidepanel når kartet åpnes",
     "Layout": "Utseende",
+    "Crosshair": "Trådkors",
+    "Copy the coordinates": "Kopier koordinatene",
+    "Copy the coordinates under the cross": "Kopier koordinatene under krysset",
+    "Copy the coordinates – turn on the crosshair first": "Kopier koordinatene – slå på trådkorset først",
+    "Crosshair on/off – the coordinates are those under the cross": "Trådkors av/på – koordinatene er punktet under krysset",
+    "A cross in the middle of the map; the coordinates at the bottom are those under it": "Et kryss midt på kartet; koordinatene nederst er punktet under det",
     "Previous view ({n} back)": "Forrige utsnitt ({n} tilbake)",
     "<b>Previous view</b> – back to where you were, up to 10 steps.": "<b>Forrige utsnitt</b> – tilbake dit du var, opptil 10 steg.",
     "On the map": "På kartet",
@@ -494,6 +500,7 @@
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
     solved: '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M8.2 14a4.4 4.4 0 0 0 7.6 0"/>',
     tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z"/><circle cx="8" cy="8" r="1.6"/>',
+    cross: '<path d="M12 3v6M12 15v6M3 12h6M15 12h6"/>',
     back: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
     help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.7c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor" stroke="none"/>',
@@ -4102,6 +4109,13 @@
       .gcct-coord .zlab{display:flex;align-items:center;gap:6px;flex:1;margin:0;cursor:default}
       .gcct-coord .cx{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px -6px 0 4px;border-radius:5px;color:var(--muted);cursor:pointer}
       .gcct-coord .cx:hover{background:var(--hover);color:var(--ink)}
+      .gcct-coord .xh{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px 0 0 0;border-radius:5px;color:var(--muted);cursor:pointer}
+      .gcct-coord .xh:hover{background:var(--hover);color:var(--ink)}
+      .gcct-coord .xh.on{color:#d0021b;background:#fde8ea}
+      .gcct-coord .xc{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px 0 0 0;border-radius:5px;color:var(--muted);cursor:pointer}
+      .gcct-coord .xc:hover{background:var(--hover);color:var(--ink)}
+      .gcct-coord .xc.ok{color:#1f7a34;background:#dafbe1}
+      .gcct-coord .xc.off{color:#c4cad1;cursor:default;background:none}
       .gcct-bar{display:flex;flex-direction:column;background:#fff;border:0;border-radius:var(--r);overflow:hidden;
         box-shadow:var(--shadow-s);clear:both}
       .gcct-bar a{display:flex;align-items:center;justify-content:center;width:42px;height:42px;margin:0;padding:0;
@@ -4120,6 +4134,8 @@
       .gcct-bar a.active.danger{background:var(--danger-bg);color:var(--danger);box-shadow:inset 3px 0 0 var(--danger)}
       .gcct-bar a.sep{border-top:6px solid var(--soft)}
       .gcct-bar a.dim{opacity:.55}
+      .gcct-cross{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;z-index:640;pointer-events:none}
+      .gcct-cross svg{display:block}
       .gcct-bar a.open{background:color-mix(in srgb,var(--tb-ink,#007d46) 18%,#fff)}
       .leaflet-container{-webkit-touch-callout:none}
       gcct-showpanel.gcct-showp{position:fixed;z-index:10002;display:block;width:310px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;
@@ -4382,7 +4398,19 @@
         const d = L.DomUtil.create('div', 'gcct-coord leaflet-control');
         // The zoom level above the coordinates – type a number (or use the arrows) to zoom.
         d.innerHTML = `<div class="zrow"><label class="zlab"><span class="zl">${T('Zoom')}</span><input class="zin" type="number" step="1" inputmode="numeric"></label>`
+ + `<span class="xh" role="button" title="${esc(T('Crosshair on/off – the coordinates are those under the cross'))}">${icon('cross', 13)}</span>`
+          + `<span class="xc" role="button" title="${esc(T('Copy the coordinates'))}">${icon('copy', 13)}</span>`
           + `<span class="cx" role="button" title="${esc(T('Hide the zoom and coordinates (show them again in Settings)'))}">${icon('x', 13)}</span></div><div class="ctext"></div>`;
+        d.querySelector('.xh').onclick = e => { e.stopPropagation(); setCross(!crossOn); };
+        // Copies the coordinates as shown (in the chosen format, without the format's name).
+        d.querySelector('.xc').onclick = e => {
+          e.stopPropagation();
+          if (!crossOn) return;                                   // only with the crosshair on
+          const b = e.currentTarget, [, fn] = FORMATS[fmtIdx], text = fn(lastLL.lat, lastLL.lng);
+          const done = () => { b.classList.add('ok'); b.innerHTML = icon('check', 13); setTimeout(() => { b.classList.remove('ok'); b.innerHTML = icon('copy', 13); }, 1000); };
+          const fallback = () => { const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ } t.remove(); };
+          try { navigator.clipboard.writeText(text).then(done, fallback); } catch (err) { fallback(); }
+        };
         d.querySelector('.cx').onclick = e => { e.stopPropagation(); if (api.setCoordsVisible) api.setCoordsVisible(false); };
         L.DomEvent.disableClickPropagation(d);
         L.DomEvent.disableScrollPropagation(d);
@@ -4417,11 +4445,32 @@
     // The coordinates are those under the mouse; when the map moves or zooms by itself (from a list, a
     // search, the buttons) they follow: the point now under the mouse, or the middle when the mouse is elsewhere.
     let lastPt = null;
-    map.on('mousemove', e => { lastLL = e.latlng; lastPt = e.containerPoint || null; updCoord(); });
+    // Crosshair (the small button in the coordinate box, off by default): a cross in the middle of the map, and the coordinates are
+    // then those under the cross – move the map to read them, also on a touch screen.
+    let crossOn = !!load('gcct.cross', false), crossEl = null;
+    function applyCross() {
+      if (crossOn && !crossEl) {
+        crossEl = document.createElement('div');
+        crossEl.className = 'gcct-cross';
+        crossEl.innerHTML = '<svg viewBox="0 0 40 40" width="40" height="40"><path d="M20 2v14M20 24v14M2 20h14M24 20h14" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M20 2v14M20 24v14M2 20h14M24 20h14" stroke="#d0021b" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="20" r="1.8" fill="#d0021b" stroke="#fff" stroke-width="1"/></svg>';
+        map.getContainer().appendChild(crossEl);
+      }
+      if (crossEl) crossEl.style.display = crossOn ? '' : 'none';
+      try {
+        const cc = coordCtl.getContainer(), xb = cc.querySelector('.xh'), xc = cc.querySelector('.xc');
+        if (xb) xb.classList.toggle('on', crossOn);
+        if (xc) { xc.classList.toggle('off', !crossOn); xc.title = T(crossOn ? 'Copy the coordinates under the cross' : 'Copy the coordinates – turn on the crosshair first'); }
+      } catch (e) { /* not there yet */ }
+      if (typeof syncShowBtn === 'function') try { syncShowBtn(); } catch (e) { /* not ready */ }
+      if (crossOn) { lastPt = null; try { lastLL = map.getCenter(); updCoord(); } catch (e) { /* not ready */ } }
+    }
+    function setCross(on) { crossOn = !!on; save('gcct.cross', crossOn); applyCross(); }
+    applyCross();
+    map.on('mousemove', e => { if (crossOn) return; lastLL = e.latlng; lastPt = e.containerPoint || null; updCoord(); });
     map.on('mouseout', () => { lastPt = null; });
     map.on('zoomend', () => { const zi = coordCtl.getContainer().querySelector('.zin'); if (zi && document.activeElement === zi) zi.blur(); });
     const followView = () => {
-      try { lastLL = lastPt ? map.containerPointToLatLng(lastPt) : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
+      try { lastLL = lastPt && !crossOn ? map.containerPointToLatLng(lastPt) : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
       try { updZoom(); } catch (e) { /* not ready */ }
     };
     ['zoom', 'move', 'zoomend', 'moveend'].forEach(ev => map.on(ev, followView));
@@ -5912,10 +5961,10 @@
       const z = map.getZoom();
       showPanel.innerHTML = `<div class="hd"><b>${esc(T('Show on map'))}</b><span class="x" title="${esc(T('Close (Esc)'))}">${icon('x', 16)}</span></div>` +
         showItems().map(x => {
-          const wait = x.on && z < x.z;
+          const wait = x.on && x.z != null && z < x.z;
           return `<label class="row${x.on ? ' on' : ''}${wait ? ' wait' : ''}${x.red ? ' red' : ''}" data-k="${x.k}"><span class="i">${icon(x.ic, 18)}</span>
             <span class="t"><span class="n">${esc(x.name)}</span>${x.sub ? `<span class="s">${esc(x.sub)}</span>` : ''}
-            <span class="z">${wait ? esc(T('Zoom in to {z} to see it', { z: x.z })) : esc(T('From zoom {z}', { z: x.z }))}</span>
+            ${x.z == null ? '' : `<span class="z">${wait ? esc(T('Zoom in to {z} to see it', { z: x.z })) : esc(T('From zoom {z}', { z: x.z }))}</span>`}
             ${x.k === 'fav' ? `<span class="fmin">${esc(T('From'))} <input type="number" min="0" step="1" value="${x.min ?? 10}"> ${esc(T('points'))}</span>` : ''}</span>
             <input type="checkbox" class="sw" ${x.on ? 'checked' : ''}></label>`;
         }).join('') + `<p class="ft">${esc(T('Hide all geocaches with the eye button in the toolbar.'))}</p>`;
