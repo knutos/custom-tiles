@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.35
+// @version      1.55.36
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4516,6 +4516,8 @@
       .gcct-route .rt-prof-svg text{font:9px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#59636e}
       .gcct-route .rt-prof-svg .sn{text-anchor:middle;fill:#6639ba;font-weight:700}
       .gcct-route .rt-prof-svg .ax{text-anchor:end}
+      .gcct-route .rt-climb{color:#6639ba;white-space:nowrap}
+      .gcct-route .rt-climb:empty{display:none}
       .gcct-route .rt-prof-sum{font-size:12.5px;color:var(--ink)}
       .gcct-route .rt-prof-at{font-size:12.5px;color:#6639ba;font-weight:600;min-height:1.3em}
       .gcct-route .rt-tbl{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:var(--rc)}
@@ -7413,14 +7415,49 @@ ${pts}
         let tot = 0;
         for (let i = 1; i < stops.length; i++) { const dd = distM(L.latLng(stops[i - 1].lat, stops[i - 1].lng), L.latLng(stops[i].lat, stops[i].lng)); legs.push(dd); tot += dd; }
         const n = Math.max(30, Math.min(200, Math.round(tot / 20)));
-        const pts = [], at = [], stopAt = [0];
+        const pts = [], at = [], stopAt = [0], stopIdx = [0];
         let acc = 0;
         legs.forEach((len, i) => {
           const a = stops[i], b = stops[i + 1], k = Math.max(2, Math.round(n * len / (tot || 1)));
           for (let j = i ? 1 : 0; j <= k; j++) { const t = j / k; pts.push(L.latLng(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)); at.push(acc + len * t); }
-          acc += len; stopAt.push(acc);
+          acc += len; stopAt.push(acc); stopIdx.push(pts.length - 1);
         });
-        return { pts, at, stopAt, tot };
+        return { pts, at, stopAt, stopIdx, tot };
+      }
+      // Heights for the route, fetched once per route (the profile and the legs' climb share them).
+      function routeHeights(cb) {
+        const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
+        if (profCache.sig === sig && profCache.data) { cb(profCache.data); return; }
+        (profCache.waiters ||= []).push(cb);
+        if (profCache.busy === sig) return;
+        profCache.busy = sig;
+        const smp = profileSamples();
+        heightsOf(smp.pts).then(z => {
+          const ws = profCache.waiters || [];
+          profCache = { sig, data: Object.assign(smp, { z }), busy: false, waiters: [] };
+          ws.forEach(f => { try { f(profCache.data); } catch (e) { /* ignore */ } });
+        });
+      }
+      // Climb and descent of one stretch of samples (changes under 2 m don't count).
+      function climbOf(z, a, b) {
+        let up = 0, down = 0, ref = null;
+        for (let i = a; i <= b; i++) { const v = z[i]; if (v == null) continue; if (ref == null) { ref = v; continue; } if (v - ref >= 2) { up += v - ref; ref = v; } else if (ref - v >= 2) { down += ref - v; ref = v; } }
+        return ref == null ? null : { up, down };
+      }
+      // Each leg in the preview table gets its climb and descent, as soon as the heights have come.
+      function showLegClimbs() {
+        routeHeights(P => {
+          if (!pv.isConnected || pv.style.display === 'none') return;
+          let tu = 0, td = 0, any = false;
+          pv.querySelectorAll('.rt-climb').forEach(el => {
+            const i = +el.dataset.leg, c = climbOf(P.z, P.stopIdx[i - 1], P.stopIdx[i]);
+            if (!c) { el.textContent = ''; return; }
+            any = true; tu += c.up; td += c.down;
+            el.textContent = `↑ ${Math.round(c.up)} m ↓ ${Math.round(c.down)} m`;
+          });
+          const tot = pv.querySelector('.rt-climb-tot');
+          if (tot) tot.textContent = any ? ` · ↑ ${Math.round(tu)} m ↓ ${Math.round(td)} m` : '';
+        });
       }
       function showProfile() {
         const body = pv.querySelector('.rt-prof-body'), pb = pv.querySelector('[data-a=prof]');
@@ -7430,13 +7467,7 @@ ${pts}
         const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
         if (profCache.sig === sig && profCache.data) { drawProfile(body, profCache.data); return; }
         body.innerHTML = `<div class="gm">${esc(T('Fetching heights …'))}</div>`;
-        if (profCache.busy === sig) return;
-        profCache.busy = sig;
-        const smp = profileSamples();
-        heightsOf(smp.pts).then(z => {
-          profCache = { sig, data: Object.assign(smp, { z }), busy: false };
-          if (profOpen && pv.isConnected) showProfile();
-        });
+        routeHeights(() => { if (profOpen && pv.isConnected) showProfile(); });
       }
       function clearProfMark() { if (profMark) { routeLayer.removeLayer(profMark); profMark = null; } }
       function drawProfile(body, P) {
@@ -7482,16 +7513,17 @@ ${pts}
           const leg = i ? distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
           tot += leg;
           return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
-            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i, pts))}<div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i, pts))}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
         pv.innerHTML = `<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
           <p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''}<span class="rt-climb-tot"></span> · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         const pb = pv.querySelector('[data-a=prof]');
         if (pb) pb.onclick = () => { profOpen = !profOpen; showProfile(); };
         if (profOpen) showProfile();
+        if (route.length > 1) showLegClimbs();
         if (refit) fitRoute(d);
       }
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
