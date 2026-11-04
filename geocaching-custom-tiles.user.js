@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.14
+// @version      1.55.15
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4055,8 +4055,7 @@
   const fixedUTM = zone => (a, b) => (zoneFits(b, zone) ? fmtUTM(a, b, zone) : fmtUTM(a, b));
   const FORMATS = [
     ['DMM', fmtDMM], ['DD', fmtDD], ['DMS', fmtDMS],
-    ['UTM', (a, b) => fmtUTM(a, b)], ['UTM 32', fixedUTM(32), 32], ['UTM 33', fixedUTM(33), 33],
-    ['UTM 35', fixedUTM(35), 35],
+    ['UTM', (a, b) => fmtUTM(a, b)],          // the point's own (local) zone only
   ];
   // The format's name as shown: a fixed zone that doesn't fit here is shown as plain UTM.
   const fmtName = (i, ll) => (FORMATS[i][2] && !zoneFits(ll.lng, FORMATS[i][2]) ? 'UTM' : FORMATS[i][0]);
@@ -4387,7 +4386,7 @@
     });
 
     // --- Cursor coordinate readout -----------------------------------------
-    let fmtIdx = load('gcct.fmt', 0) % FORMATS.length;
+    let fmtIdx = Math.min(load('gcct.fmt', 0) | 0, FORMATS.length - 1);   // a former fixed-zone UTM choice becomes UTM
     let lastLL = map.getCenter();
     // Next format, skipping one that would show the same text at this point (e.g. "UTM" and "UTM 32"
     // when the automatic zone is 32), so every click visibly changes the coordinates.
