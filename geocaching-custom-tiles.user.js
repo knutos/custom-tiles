@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.37
+// @version      1.55.38
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7444,11 +7444,23 @@ ${pts}
           ws.forEach(f => { try { f(profCache.data); } catch (e) { /* ignore */ } });
         });
       }
-      // Climb and descent of one stretch of samples (changes under 2 m don't count).
+      // Climb and descent of one stretch of samples. Changes under 2 m are held back (noise), but what is left
+      // at the end is counted, so climb minus descent is exactly the height difference between the ends –
+      // and a round trip comes out even.
       function climbOf(z, a, b) {
         let up = 0, down = 0, ref = null;
         for (let i = a; i <= b; i++) { const v = z[i]; if (v == null) continue; if (ref == null) { ref = v; continue; } if (v - ref >= 2) { up += v - ref; ref = v; } else if (ref - v >= 2) { down += ref - v; ref = v; } }
-        return ref == null ? null : { up, down };
+        if (ref == null) return null;
+        let first = null, last = null;
+        for (let i = a; i <= b && first == null; i++) if (z[i] != null) first = z[i];
+        for (let i = b; i >= a && last == null; i--) if (z[i] != null) last = z[i];
+        if (last > ref) up += last - ref; else down += ref - last;
+        // Whole metres that still add up: climb minus descent is the difference of the rounded end heights,
+        // so the legs of a round trip sum to the same climb and descent.
+        const diff = Math.round(last) - Math.round(first);
+        let u = Math.round(up), dn = u - diff;
+        if (dn < 0) { dn = 0; u = diff; }
+        return { up: u, down: dn };
       }
       // Each leg in the preview table gets its climb and descent, as soon as the heights have come.
       function showLegClimbs() {
@@ -7458,8 +7470,10 @@ ${pts}
           pv.querySelectorAll('.rt-climb').forEach(el => {
             const i = +el.dataset.leg, c = climbOf(P.z, P.stopIdx[i - 1], P.stopIdx[i]);
             if (!c) { el.textContent = ''; return; }
-            any = true; tu += c.up; td += c.down;
-            el.textContent = `↑ ${Math.round(c.up)} m ↓ ${Math.round(c.down)} m`;
+            any = true;
+            const u = Math.round(c.up), dn = Math.round(c.down);
+            tu += u; td += dn;                                    // the total is the sum of what the legs show
+            el.textContent = `↑ ${u} m ↓ ${dn} m`;
           });
           const tot = pv.querySelector('.rt-climb-tot');
           if (tot) tot.textContent = any ? ` · ↑ ${Math.round(tu)} m ↓ ${Math.round(td)} m` : '';
@@ -7481,8 +7495,9 @@ ${pts}
         if (ok.length < 2) { body.innerHTML = `<div class="gm">${esc(T('No heights found for this route.'))}</div>`; return; }
         // Fill single gaps from the neighbours, so the line is unbroken.
         const z = P.z.map((v, i) => v != null ? v : (ok.reduce((b, [w, j]) => (Math.abs(j - i) < Math.abs(b[1] - i) ? [w, j] : b), ok[0]))[0]);
-        let up = 0, down = 0, ref = z[0];
-        z.forEach(v => { if (v - ref >= 2) { up += v - ref; ref = v; } else if (ref - v >= 2) { down += ref - v; ref = v; } });
+        // The same as the legs add up to, so the profile and the table agree.
+        let up = 0, down = 0;
+        for (let k = 1; k < P.stopIdx.length; k++) { const c = climbOf(z, P.stopIdx[k - 1], P.stopIdx[k]); if (c) { up += Math.round(c.up); down += Math.round(c.down); } }
         const lo = Math.min(...z), hi = Math.max(...z), span = Math.max(10, hi - lo);
         const W = Math.max(240, Math.round(body.clientWidth || 320)), H = 120, pl = 34, pr = 8, pt = 8, pbm = 16;
         const X = d0 => pl + (W - pl - pr) * d0 / (P.tot || 1), Y = v => pt + (H - pt - pbm) * (1 - (v - (lo - span * 0.08)) / (span * 1.16));
