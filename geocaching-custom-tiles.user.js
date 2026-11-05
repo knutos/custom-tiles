@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.38
+// @version      1.55.47
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -265,7 +265,7 @@
     "<b>Right-click</b> – or <b>press and hold</b> on a touch screen – for coordinates in every format, a pin, a single 161 m circle, projection, measuring and Street View. Near a cache it snaps to the cache’s exact coordinates.": "<b>Høyreklikk</b> – eller <b>trykk og hold</b> på en berøringsskjerm – for koordinater i alle formater, merkenål, én 161 m-sirkel, projisering, måling og Street View. Nær en cache festes det til cachens nøyaktige koordinater.",
     "Drag dialogs by their title bar; the layer panel, search and settings open where you left them.": "Dra dialogene etter tittellinjen; kartlagpanelet, søket og innstillingene åpnes der du la dem.",
     "Keys: <b>/</b> search, <b>+</b> <b>−</b> zoom, <b>Esc</b> stops measuring and closes dialogs.": "Taster: <b>/</b> søk, <b>+</b> <b>−</b> zoom, <b>Esc</b> stopper måling og lukker dialoger.",
-    "On <b>/play/map</b> the site only searches when you press <i>Search this area</i>; the extras follow its icons.": "På <b>/play/map</b> søker nettstedet bare når du trykker <i>Søk i dette området</i>; tilleggene følger ikonene.",
+    "On <b>/play/map</b> the site only searches when you press <i>Search this area</i> – from zoom 15 it is pressed for you when you move the map; the extras follow its icons.": "På <b>/play/map</b> søker nettstedet bare når du trykker <i>Søk i dette området</i> – fra zoom 15 trykkes den for deg når du flytter kartet; tilleggene følger ikonene.",
     "On <b>/map</b> the geocaches load as you pan; the cache list follows the map.": "På <b>/map</b> lastes geocachene mens du flytter kartet; cachelista følger kartet.",
     "Open the user guide (PDF)": "Åpne brukerveiledningen (PDF)",
     "Show a small type icon on solved caches (from zoom 14)": "Vis et lite typeikon på løste cacher (fra zoom 14)",
@@ -971,6 +971,40 @@
       harvest(json);
     } catch (e) { /* never disturb the page */ }
   }
+  // /play/map: how the site's own cache searches went. When one is turned away (429 Too Many Requests),
+  // ours pause and the site's search is pressed again for you a little later.
+  const siteSearchLog = { ok: 0, rateLimited: 0, other: 0, last: null, lastAt: null };
+  const statusSeen = new Map();       // url → time, so a request seen by both the hook and the timing list counts once
+  function noteSiteStatus(url, status) {
+    try {
+      const u = new URL(url, location.href);
+      if (!/\/search\b/i.test(u.pathname) || ownSearchUrls.has(u.pathname + u.search) || ownSearchUrls.has(url)) return;
+      const k = u.href + '|' + status, t0 = statusSeen.get(k);
+      if (t0 && Date.now() - t0 < 3000) return;
+      statusSeen.set(k, Date.now()); if (statusSeen.size > 50) statusSeen.delete(statusSeen.keys().next().value);
+      siteSearchLog.path = u.pathname;
+      siteSearchLog.last = status; siteSearchLog.lastAt = new Date().toISOString();
+      if (status === 429) { siteSearchLog.rateLimited++; searchNextAt = Math.max(searchNextAt, Date.now() + 120000); if (window.__gcctSiteRateLimited) window.__gcctSiteRateLimited(); }
+      else if (status >= 200 && status < 300) { siteSearchLog.ok++; if (window.__gcctSiteSearchOk) window.__gcctSiteSearchOk(); }
+      else siteSearchLog.other++;
+    } catch (e) { /* ignore */ }
+  }
+  // The site's requests don't always pass through our fetch hook (it may keep its own copy of fetch), so
+  // also watch the browser's list of finished requests: it carries each answer's status (Chrome, Edge).
+  if (PLAY_MAP && typeof PerformanceObserver === 'function') {
+    try {
+      new PerformanceObserver(list => list.getEntries().forEach(en => {
+        if (en.initiatorType !== 'fetch' && en.initiatorType !== 'xmlhttprequest') return;
+        if (!en.responseStatus || en.__gcctSeen) return;
+        en.__gcctSeen = true;
+        try {   // for gcctSyncDebug(): the last few request paths of the site, without query or numbers
+          const pth = new URL(en.name).pathname.replace(/GC[0-9A-Z]+/gi, 'GC…').replace(/\d{3,}|[0-9a-f-]{20,}/gi, '…');
+          if (!/account|email|token|oauth|profile|user|message/i.test(pth)) { const r = siteSearchLog.recent || (siteSearchLog.recent = []); r.push(pth + ' ' + en.responseStatus); if (r.length > 8) r.shift(); }
+        } catch (e) { /* ignore */ }
+        noteSiteStatus(en.name, en.responseStatus, 'timing');
+      })).observe({ type: 'resource', buffered: false });
+    } catch (e) { /* not supported */ }
+  }
   let siteAuth = null;            // the site's own "Bearer …" header for its web API – kept in memory only
   const sameSite = u => { try { return /(^|\.)geocaching\.com$/i.test(new URL(u, location.href).hostname); } catch (e) { return false; } };
   // fetch()
@@ -986,6 +1020,7 @@
           if (a && /^bearer /i.test(a) && url && sameSite(url)) siteAuth = a;
         } catch (e) { /* ignore */ }
         if (url && sameSite(url)) p.then(r => {
+          noteSiteStatus(url, r.status);
           if (/json/i.test(r.headers.get('content-type') || '')) r.clone().json().then(j => sniffed(url, j)).catch(() => {});
         }).catch(() => {});
       } catch (e) { /* ignore */ }
@@ -1027,7 +1062,8 @@
   // The site answers "429 Too Many Requests" when asked too often – and then its own "Search this area"
   // fails too. So: at most one request every few seconds, a long pause after a 429, and on /play/map
   // never right after the site's own search.
-  let searchNextAt = 0, searchBackoff = 0, searchPending = null, searchPendingT = null;
+  // /play/map: the site searches by itself when the map opens – ours waits, so the two don't collide.
+  let searchNextAt = PLAY_MAP ? Date.now() + 6000 : 0, searchBackoff = 0, searchPending = null, searchPendingT = null;
   const SEARCH_GAP = 5000;
   // On /play/map the site only searches when you press "Search this area": we ask once after it (and once
   // when the map opens), never on our own while you pan.
@@ -5444,6 +5480,9 @@
         seen.add(l);
         if (l instanceof L.Marker || (L.CircleMarker && l instanceof L.CircleMarker)) {
           if (typeof l.getChildCount === 'function') return;           // a cluster bubble, not a cache
+          // Only icons actually on the map: a group may hold markers that are not drawn (inside a cluster,
+          // or left over from an earlier search) – those have no icon to put a circle round.
+          if (!l._map) return;
           const ll = l.getLatLng && l.getLatLng();
           if (ll) {
             const code = markerCode(l);
@@ -5505,26 +5544,88 @@
       }
       return null;
     }
-    if (false) {        // auto-pressing "Search this area" removed in 1.54.40: too many requests for the site
-      let asTimer = null, asLast = 0;
-      window.__gcctAutoSearchTest = { clicks: 0, last: null };
-      const tryAutoSearch = () => {
+    // /play/map, from zoom 15: "Search this area" is pressed for you when the map has stopped after you
+    // move it. The site only allows a few searches a minute, so this is kept sparing:
+    //  – only when at least a third of the view is new (not covered by a search in the last 10 minutes),
+    //  – only once the map has been still for 1.5 s, and at most one press every 8 s,
+    //  – when the site answers "429" (too many searches): no presses for 30 s, then 1, 2, 4 … up to 10 min;
+    //    when the pause is over, one press brings the icons back.
+    if (PLAY_MAP) {
+      const AS_GAP = 8000, AS_IDLE = 1500, NEW_SHARE = 0.33, KEEP = 600000;
+      let asTimer = null, asLast = 0, pausedTo = 0, backoff = 0, resumeT = null, lastWasAuto = false;
+      const done = [];          // [bounds, time] of searches the site has made
+      const test = window.__gcctAutoSearchTest = { clicks: 0, skippedCovered: 0, rateLimited: 0, last: null, pausedUntil: null };
+      const moving = () => map._animatingZoom || !!(map.dragging && map.dragging._draggable && map.dragging._draggable._moving);
+      // The share of the view that no recent search covers (approximated on a 10 × 10 grid).
+      const newShare = v => {
+        const now = Date.now();
+        while (done.length && now - done[0][1] > KEEP) done.shift();
+        const s = v.getSouth(), w = v.getWest(), dy = (v.getNorth() - s) / 10, dx = (v.getEast() - w) / 10;
+        let miss = 0;
+        for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) {
+          const q = L.latLng(s + (i + 0.5) * dy, w + (j + 0.5) * dx);
+          if (!done.some(([b]) => b.contains(q))) miss++;
+        }
+        return miss / 100;
+      };
+      const noteSearched = () => { try { done.push([map.getBounds(), Date.now()]); if (done.length > 40) done.shift(); } catch (e) { /* ignore */ } };
+      const tryAutoSearch = (force) => {
         asTimer = null;
         if (load(STORE_STATE, {}).autoSearch === false) return;
-        if (map.getZoom() < AUTOSEARCH_MIN_ZOOM || map._animatingZoom || (map.dragging && map.dragging._draggable && map.dragging._draggable._moving)) return;
+        if (map.getZoom() < AUTOSEARCH_MIN_ZOOM) return;
+        if (moving()) { schedule(); return; }
         const b = searchAreaButton();
         if (!b) return;
-        if (Date.now() - asLast < 800) { asTimer = setTimeout(tryAutoSearch, 800); return; }
-        asLast = Date.now();
-        window.__gcctAutoSearchTest.clicks++; window.__gcctAutoSearchTest.last = new Date().toISOString();
-        b.click();
+        const wait = Math.max(asLast + AS_GAP, pausedTo) - Date.now();
+        if (wait > 0) { asTimer = setTimeout(() => tryAutoSearch(force), wait + 50); return; }
+        if (!force && newShare(map.getBounds()) < NEW_SHARE) { test.skippedCovered++; return; }
+        asLast = Date.now(); test.clicks++; test.last = new Date().toISOString();
+        lastWasAuto = true; b.click(); lastWasAuto = false;
+        checkOutcome();
       };
-      const schedule = () => { clearTimeout(asTimer); asTimer = setTimeout(tryAutoSearch, 600); };
+      // The site runs its search where the page can't see the answer, so judge by the result: a search that
+      // leaves the map without any cache icons (while there are caches here) was most likely turned away.
+      let outcomeT = null;
+      const iconCount = () => { try { return markerCaches().length + ((glDrawnCodes() || new Set()).size); } catch (e) { return -1; } };
+      const checkOutcome = () => {
+        clearTimeout(outcomeT);
+        outcomeT = setTimeout(() => {
+          outcomeT = null;
+          if (map.getZoom() < AUTOSEARCH_MIN_ZOOM) return;
+          const n = iconCount();
+          test.iconsAfter = n;
+          let known = 0;
+          try { const v = map.getBounds(); CACHE_INFO.forEach(i => { if (i.posted && v.contains(L.latLng(i.posted.lat, i.posted.lng))) known++; }); } catch (e) { /* ignore */ }
+          if (n === 0 && known > 0) { test.emptyAnswers = (test.emptyAnswers || 0) + 1; window.__gcctSiteRateLimited(); }
+          else if (n > 0) window.__gcctSiteSearchOk();
+        }, 6000);
+      };
+      const schedule = () => { clearTimeout(asTimer); asTimer = setTimeout(() => tryAutoSearch(false), AS_IDLE); };
       map.on('moveend', schedule);
-      map.on('zoomend', schedule);
-      // the button may show up a moment after the map stops
-      new MutationObserver(() => { if (!asTimer && map.getZoom() >= AUTOSEARCH_MIN_ZOOM && searchAreaButton()) schedule(); })
-        .observe(document.body, { childList: true, subtree: true });
+      map.on('movestart zoomstart', () => { clearTimeout(asTimer); asTimer = null; });
+      // Every search the site makes (pressed by you or by us) covers the view of that moment.
+      document.addEventListener('click', e => {
+        try {
+          const el = e.target && e.target.closest && e.target.closest('button, [role=button], a');
+          if (!el || !SEARCH_AREA_RE.test((el.textContent || '').replace(/\s+/g, ' '))) return;
+          noteSearched();
+          if (!lastWasAuto) checkOutcome();
+          if (!lastWasAuto) asLast = Math.max(asLast, Date.now() - AS_GAP / 2);   // your own press counts too
+        } catch (err) { /* ignore */ }
+      }, true);
+      window.__gcctSiteSearchOk = () => { backoff = 0; };
+      let lastLimited = 0;
+      window.__gcctSiteRateLimited = () => {
+        test.rateLimited++;
+        if (Date.now() - lastLimited < 5000) return;   // one search can be several requests
+        lastLimited = Date.now();
+        backoff = Math.min(600000, backoff ? backoff * 2 : 30000);
+        pausedTo = Date.now() + backoff; test.pausedUntil = new Date(pausedTo).toISOString();
+        done.pop();                       // that search didn't happen
+        clearTimeout(asTimer); asTimer = null;
+        clearTimeout(resumeT);
+        resumeT = setTimeout(() => { resumeT = null; tryAutoSearch(true); }, backoff + 200);
+      };
     }
     // Diagnostics: how does the site draw its cache icons right now? Only counts, layer names and property names.
     window.gcctIconDebug = () => {
@@ -5875,7 +5976,50 @@
         stale: keys.filter(k => staleGrid.has(grid._cache[k])).length, empty: keys.filter(k => !grid._cache[k]).length } : 'none',
         tileImagesInPage: document.querySelectorAll('.leaflet-tile-pane img[src*="map.png"]').length,
         circles: circleWhy.slice(0, 40) };
-      console.log('[gcct] circles', out);
+      const bySrc = {};
+      circleWhy.forEach(c => { bySrc[c.from] = (bySrc[c.from] || 0) + 1; });
+      out.bySource = bySrc;
+      // /play/map: is the site's icon nearest each circle actually visible, and if not, why not.
+      let mk = [];
+      const iconState = m => {
+        const el = m.layer && (m.layer.getElement ? m.layer.getElement() : m.layer._icon);
+        if (!el) return 'no element';
+        if (hiddenIcons.has(el)) return 'hidden by gcct';
+        if (!el.isConnected) return 'not in page';
+        const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+        if (cs.display === 'none') return 'display none';
+        if (cs.visibility === 'hidden') return 'visibility hidden';
+        if (+cs.opacity === 0) return 'opacity 0';
+        if (r.width < 2 || r.height < 2) return 'size ' + Math.round(r.width) + 'x' + Math.round(r.height);
+        const img = el.tagName === 'IMG' ? el : el.querySelector('img, svg, canvas');
+        if (!img && !(el.textContent || '').trim() && cs.backgroundImage === 'none') return 'empty (' + el.tagName.toLowerCase() + '.' + String(el.className || '').split(' ')[0] + ')';
+        return 'visible';
+      };
+      if (PLAY_MAP) {
+        try {
+          mk = markerCaches();
+          out.siteIcons = mk.length;
+          const g = glDrawnCodes(); out.mapDrawn = g ? g.size : null;
+          const st = {}; mk.forEach(m => { const s = iconState(m); st[s] = (st[s] || 0) + 1; });
+          out.siteIconStates = st;
+          out.hidePosted = hidePostedOn; out.marks = marksOn;
+          const one = mk.find(m => m.layer && (m.layer._icon || (m.layer.getElement && m.layer.getElement())));
+          if (one) { const el = one.layer._icon || one.layer.getElement(); out.sampleIcon = el.outerHTML.replace(/\s(src|href)="[^"]*"/g, ' $1="…"').slice(0, 300); }
+        } catch (e) { out.err = String(e); }
+      }
+      const nearest = c => {
+        if (!mk.length || !c.at) return '';
+        let best = null, bd = 1e9;
+        mk.forEach(m => { const d = distM(m.ll, { lat: c.at[0], lng: c.at[1] }); if (d < bd) { bd = d; best = m; } });
+        let s = best ? ' | nearest site icon ' + Math.round(bd) + ' m: ' + iconState(best) : '';
+        // Our own mark (smiley / blue "?") for this cache, if any.
+        const ours = [...liveMarks.entries()].filter(([k]) => k.split('|')[1] === c.code && k[0] === 's').map(([, l]) => l);
+        if (ours.length) s += ' | gcct mark: ' + iconState({ layer: ours[0] }) + (ours[0]._map ? '' : ' (not on map)');
+        else if (CACHE_INFO.get(c.code) && CACHE_INFO.get(c.code).solved) s += ' | gcct mark: none';
+        return s;
+      };
+      out.circlesDrawn = autoLayer.getLayers().length;
+      console.log('[gcct] circles ' + JSON.stringify(Object.assign({}, out, { circles: undefined })) + '\n' + circleWhy.slice(0, 40).map(c => c.from + ' ' + c.code + (c.found != null ? ' found=' + c.found : '') + nearest(c)).join('\n'));
       return out;
     };
     window.__gcctInfoChanged = () => { clearTimeout(window.__gcctInfoT); window.__gcctInfoT = setTimeout(() => refreshAuto(), 300); if (window.__gcctFavKick) window.__gcctFavKick(); (window.__gcctInfoHooks || []).forEach(f => { try { f(); } catch (e) { /* ignore */ } }); };
@@ -6001,7 +6145,7 @@
     }
     window.gcctSyncDebug = () => {
       const o = { siteSearchPath, siteSearch: siteSearch ? siteSearch.size : null, searches: siteSearchGen, drawnNow: drawnNow ? drawnNow.size : null, siteIcons: (() => { try { return markerCaches().length; } catch (e) { return null; } })(), siteShown: siteShownCodes() ? siteShownCodes().size : null, ourSearch: Object.assign({}, searchState), searchedArea: !!searchedArea, inSearchedArea: searchedArea ? searchedArea.contains(map.getCenter()) : null,
-        solvedMarksHeldBack: syncSkipped.length, zoom: map.getZoom() };
+        solvedMarksHeldBack: syncSkipped.length, siteSearches: Object.assign({}, siteSearchLog, { recent: (siteSearchLog.recent || []).slice() }), pressedAgain: window.__gcctAutoSearchTest, zoom: map.getZoom() };
       console.log(JSON.stringify(o, null, 1)); return o;
     };
     function refreshAuto(force) {
@@ -6019,10 +6163,11 @@
           extra = Object.keys(grid._cache).length;
         } else {
           all = markerCaches();
+          all.forEach(c => { c.src = 'site icon'; });
           // /play/map draws most caches with WebGL, not as markers: add every cache that map shows, at its
           // exact posted position, so each one can get its circle.
           const have = new Set(all.map(c => c.code).filter(Boolean));
-          glCachesInView().forEach(c => { if (!have.has(c.code)) { have.add(c.code); all.push(c); } });
+          glCachesInView().forEach(c => { if (!have.has(c.code)) { have.add(c.code); c.src = 'map drawing'; all.push(c); } });
           // And every cache the site's own search has returned for this area, at its posted coordinates
           // (the search covers what the map shows, your own caches included).
           try {
@@ -6032,7 +6177,7 @@
             CACHE_INFO.forEach((i, code) => {
               if (have.has(code) || !inSearch.has(code) || !i.posted || !vb.contains(L.latLng(i.posted.lat, i.posted.lng))) return;
               if (shownGl && !shownGl.has(code)) return;
-              have.add(code); all.push({ code, ll: L.latLng(i.posted.lat, i.posted.lng), name: i.name || '' });
+              have.add(code); all.push({ code, ll: L.latLng(i.posted.lat, i.posted.lng), name: i.name || '', src: 'site search' });
             });
           } catch (e) { /* no bounds yet */ }
         }
@@ -6063,7 +6208,7 @@
           const sp = L.latLng(p.lat, p.lng);
           if (!near(sp)) return;
           pos.push(sp);
-          circleWhy.push({ code: c.code, from: 'cache list', at: [+sp.lat.toFixed(5), +sp.lng.toFixed(5)] });
+          circleWhy.push({ code: c.code, from: c.src || 'cache list', at: [+sp.lat.toFixed(5), +sp.lng.toFixed(5)] });
           // A solved cache whose icon is elsewhere (found caches go back to the posted coordinates):
           // put a clickable mark in the middle of its circle.
           const ci = c.code && CACHE_INFO.get(c.code);
@@ -6107,7 +6252,9 @@
           if (!near(sp)) return;
           pos.push(sp);
           circleWhy.push({ code, from: 'solved, icon elsewhere', found: i.found, at: [+sp.lat.toFixed(5), +sp.lng.toFixed(5)] });
-          if ((wantsMark(i) || ownMark(i)) && inSiteSearch(code, sp)) solvedMarks.push({ ll: sp, code });
+          // The mark always comes with the circle: the site's icon is elsewhere (often outside the view, where
+          // the site doesn't show it), so waiting for it would leave the circle empty.
+          if (wantsMark(i) || ownMark(i)) solvedMarks.push({ ll: sp, code });
         });
         autoStats = { caches: all.length, inView: visible.length, circles: autoOn ? pos.length : 0, marks: solvedMarks.length + lastStages.length, unknownType: unknown };
         if (visible.length && unknown === visible.length && !typeWarned && ++noTypeTries === 6) {
@@ -6313,7 +6460,7 @@
           <li>${T('<b>Right-click</b> – or <b>press and hold</b> on a touch screen – for coordinates in every format, a pin, a single 161 m circle, projection, measuring and Street View. Near a cache it snaps to the cache’s exact coordinates.')}</li>
           <li>${T('Drag dialogs by their title bar; the layer panel, search and settings open where you left them.')}</li>
           <li>${T('Keys: <b>/</b> search, <b>+</b> <b>−</b> zoom, <b>Esc</b> stops measuring and closes dialogs.')}</li>
-          <li>${PLAY_MAP ? T('On <b>/play/map</b> the site only searches when you press <i>Search this area</i>; the extras follow its icons.') : T('On <b>/map</b> the geocaches load as you pan; the cache list follows the map.')}</li>
+          <li>${PLAY_MAP ? T('On <b>/play/map</b> the site only searches when you press <i>Search this area</i> – from zoom 15 it is pressed for you when you move the map; the extras follow its icons.') : T('On <b>/map</b> the geocaches load as you pan; the cache list follows the map.')}</li>
         </ul>
         <div class="btns"><a href="${esc(guide)}" target="_blank" rel="noopener">${T('Open the user guide (PDF)')}</a><span class="sp"></span><button class="primary" data-a="cancel">${T('Close')}</button></div>`, { small: true, key: 'help' });
       d.querySelector('[data-a=cancel]').onclick = () => api.closeDialog && api.closeDialog();
