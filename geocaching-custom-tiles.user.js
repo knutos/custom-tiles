@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.51
+// @version      1.56.0
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -223,6 +223,35 @@
     "Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.": "Langs de rette linjene mellom stoppene; høyder fra Kartverket (Norge) eller Open-Meteo.",
     "Home": "Hjem",
     "Home (on the map)": "Hjemme",
+    "The route service is busy – try again in a moment.": "Ruteberegningen er opptatt – prøv igjen om litt.",
+    "Calculated route": "Beregnet rute",
+    "Calculated route – shown on the map": "Beregnet rute – vist i kartet",
+    "Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.": "Langs den beregnede ruten; høyder fra Kartverket (Norge) eller Open-Meteo.",
+    "Along the calculated route.": "Langs den beregnede ruten.",
+    "By car": "Med bil",
+    "By bike": "Med sykkel",
+    "On foot": "Til fots",
+    "by car": "med bil",
+    "by bike": "med sykkel",
+    "on foot": "til fots",
+    "straight line": "luftlinje",
+    "A shorter order": "En kortere rekkefølge",
+    "Visiting the stops in this order saves about {t} ({b} instead of {a}):": "Besøker du stoppene i denne rekkefølgen, sparer du ca. {t} ({b} i stedet for {a}):",
+    "Change the order": "Endre rekkefølgen",
+    "Keep my order": "Behold min rekkefølge",
+    "about {t}": "ca. {t}",
+    "Accept it to measure the legs, the total and the elevation profile along it.": "Godta den for å måle etappene, totalen og høydeprofilen langs den.",
+    "Accept": "Godta",
+    "Discard": "Forkast",
+    "Discard the calculated route": "Forkast den beregnede ruten",
+    "How you travel between the geocaches": "Hvordan du kommer deg mellom cachene",
+    "Calculate route": "Beregn rute",
+    "Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.": "Langs veger og stier, og i luftlinje fra nærmeste punkt på stien til hver cache. Fra OpenStreetMap.",
+    "Along roads to the nearest point by each geocache, then on foot along paths, and in a straight line from the nearest point on the path. Short legs are walked. From OpenStreetMap.": "Langs veg til nærmeste punkt ved hver cache, så til fots på sti, og i luftlinje fra nærmeste punkt på stien. Korte etapper går du. Fra OpenStreetMap.",
+    "Could not calculate the route: {e}": "Kunne ikke beregne ruten: {e}",
+    "Checking the order of the stops …": "Sjekker rekkefølgen på stoppene …",
+    "Calculating the route …": "Beregner ruten …",
+    "Calculating the route … leg {i} of {n}": "Beregner ruten … etappe {i} av {n}",
     "Hide the site’s icon at the posted coordinates": "Skjul nettstedets ikon ved oppgitte koordinater",
     "Solved caches you have found: only the smiley at the solved spot is left (with the marks on)": "Løste cacher du har funnet: bare smilefjeset ved den løste plassen blir igjen (når merkene er på)",
     "Crosshair": "Trådkors",
@@ -484,6 +513,9 @@
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
     flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+    car: '<path d="M5 16V11.5L7 6.5h10l2 5V16z"/><path d="M5 11.5h14"/><circle cx="8" cy="16.5" r="1.6"/><circle cx="16" cy="16.5" r="1.6"/>',
+    bike: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 9h6.5l3 7.5"/><path d="M12 16.5 9 9"/><path d="M14 6h2.5l-1 3"/>',
+    walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2-6 3 3v3"/><path d="M7 12.5l2.5-4.5 4 1 2.5 3.5H18"/><path d="M12 15l.5-5.5"/>',
     route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/>',
     up: '<path d="m6 15 6-6 6 6"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -4543,6 +4575,22 @@
       .gcct-route .rt-go:hover b{text-decoration:underline}
       .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
       .gcct-route .rt-prof{margin:0 0 10px}
+      .gcct-route .rt-calc{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--rc);background:color-mix(in srgb,#8250df 4%,#fff)}
+      .gcct-route .rt-calc-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .gcct-route .rt-calc-row button{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-calc-row svg{color:#8250df;flex:none}
+      .gcct-route .rt-calc .hint{margin:6px 0 0}
+      .gcct-route .rt-calc .btns{margin:8px 0 0;padding:0;border:0;background:none;position:static;box-shadow:none}
+      .gcct-route .rt-calc-p{white-space:nowrap}
+      .gcct-route .rt-calc-sum{margin-top:4px}
+      .gcct-route .rt-calc-k{display:inline-block;width:16px;height:0;margin:0 4px 3px 2px;vertical-align:middle;border-top:4px solid #8250df}
+      .gcct-route .rt-calc-k.k-bike{border-top-color:#1a7f37}
+      .gcct-route .rt-calc-k.k-foot{border-top:3px dotted #8250df}
+      .gcct-route .rt-calc-k.k-air{border-top:2px dashed #cf222e}
+      .gcct-route .rt-calc-ask p{margin:6px 0}
+      .gcct-route .rt-calc-ord{font-size:12px;line-height:1.7}
+      .gcct-route .rt-calc-ord span{display:inline-block;min-width:16px;padding:0 3px;border-radius:8px;background:#8250df;color:#fff;font-size:11px;text-align:center;line-height:16px}
+      .gcct-route .rt-calc-err{color:#cf222e}
       .gcct-route .rt-prof button{display:inline-flex;align-items:center;gap:6px}
       .gcct-route .rt-prof button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
       .gcct-route .rt-prof-svg{display:block;max-width:100%;margin:8px 0 4px;border:1px solid var(--line);border-radius:var(--rc);background:#fff;cursor:crosshair}
@@ -6891,9 +6939,18 @@
     map.on('zoomend', () => { if (route.length) try { drawRoute(); } catch (e) { /* ignore */ } });
     function drawRoute() {
       routeLayer.clearLayers();
+      checkCalc();
       if (!route.length) return;
       const lls = routeStops().map(r => L.latLng(r.lat, r.lng));
-      if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
+      const calcLines = [];
+      if (lls.length > 1 && calcValid()) {
+        // the calculated route: by car / bike solid, on foot dotted, the straight bits off the path dashed red
+        routeCalc.legs.forEach(l => l.segs.forEach(sg => {
+          routeLayer.addLayer(L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air)));
+          calcLines.push(sg.pts);
+        }));
+        tuckRouteLine();
+      } else if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
       // the cache's ♥ (above), D/T (below) and FTF badge (right) as far as they are shown, the icons of
       // caches nearby and the route's lines. Tried on rings around the stop, nearest first.
@@ -6902,7 +6959,8 @@
       const favS = api.favSettings ? api.favSettings() : { show: false, min: 10 }, dtS = api.dtSettings ? api.dtSettings() : { show: false };
       const ftfS = api.ftfSettings ? api.ftfSettings() : { show: false };
       const pts = lls.map(pt), segs = [];
-      for (let k = 1; k < pts.length; k++) if (pts[k - 1] && pts[k]) segs.push([pts[k - 1], pts[k]]);
+      if (calcLines.length) calcLines.forEach(line => { let prev = null; line.forEach(q => { const p2 = pt(L.latLng(q[0], q[1])); if (prev && p2) segs.push([prev, p2]); prev = p2; }); });
+      else for (let k = 1; k < pts.length; k++) if (pts[k - 1] && pts[k]) segs.push([pts[k - 1], pts[k]]);
       const segDist = (p, a, b) => { const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy, t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / l2)) : 0; return Math.hypot(p.x - a.x - t * vx, p.y - a.y - t * vy); };
       const rectDist = (p, r) => Math.hypot(Math.max(r[0] - p.x, 0, p.x - r[2]), Math.max(r[1] - p.y, 0, p.y - r[3]));
       const NUM = 9, ICON = 13;
@@ -6933,8 +6991,9 @@
           const circles = [], rects = [];
           spotsNear(here).forEach(o => { circles.push([o.p, ICON]); rects.push(...labelRects(o.p, o.i)); });
           circles.push([here, ICON]);                                   // the stop itself (a pin, an address)
+          const near = segs.filter(([a, b]) => segDist(here, a, b) < 90);
           const free = c => circles.every(([p, rad]) => Math.hypot(c.x - p.x, c.y - p.y) >= rad + NUM + 1)
-            && rects.every(rc => rectDist(c, rc) >= NUM + 1) && segs.every(([a, b]) => segDist(c, a, b) >= NUM + 3);
+            && rects.every(rc => rectDist(c, rc) >= NUM + 1) && near.every(([a, b]) => segDist(c, a, b) >= NUM + 3);
           let found = null;
           for (let rad = ICON + NUM + 1; rad <= 60 && !found; rad += 1) {
             for (let k = 0; k < 24 && !found; k++) {
@@ -6997,7 +7056,7 @@
         map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
       } catch (e) { /* ignore */ }
     }
-    const routeLength = () => routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
+    const routeLength = () => calcOn() ? routeCalc.legs.reduce((a, l) => a + l.d, 0) : routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
     // Everything you can pick: pins, and every geocache the script knows a position for (solved ones at the solved spot).
     function routeCandidates() {
       const out = [];
@@ -7180,7 +7239,14 @@
     function plainRouteGpx() {
       const pts = routeStops().map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n${calcTrk()}</gpx>\n`;
+    }
+    // The accepted calculated route as a track, so the GPS can show the way along roads and paths too.
+    function calcTrk() {
+      if (!calcOn()) return '';
+      const pts = [];
+      calcLegLines().forEach((line, i) => line.forEach((p, k) => { if (i && !k) return; pts.push(`      <trkpt lat="${p[0]}" lon="${p[1]}" />`); }));
+      return `  <trk>\n    <name>${xmlEsc(T('Calculated route'))}</name>\n    <trkseg>\n${pts.join('\n')}\n    </trkseg>\n  </trk>\n`;
     }
     async function routeGpx(progress, full) {
       if (!full) return { text: plainRouteGpx(), failed: [] };
@@ -7207,7 +7273,7 @@ ${wpts.join('\n')}${wpts.length ? '\n' : ''}  <rte>
     <name>${xmlEsc(name)}</name>
 ${pts}
   </rte>
-</gpx>
+${calcTrk()}</gpx>
 `;
       return { text, failed };
     }
@@ -7218,6 +7284,162 @@ ${pts}
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
+    // --- Route calculation along roads and paths ------------------------------------------------------
+    // From OSRM on OpenStreetMap data (FOSSGIS, routing.openstreetmap.de). By car or bike along roads to the
+    // nearest point by each geocache, the rest on foot along paths, and the last bit in a straight line from
+    // the nearest point on the path. Short legs (under 1 km by car, 400 m by bike) are walked; the car (or
+    // bike) stays where you left it, and you walk back to it. On foot: paths all the way.
+    // A calculated route is first only shown on the map; once accepted, the distances, the total and the
+    // elevation profile follow it. Discarded, everything is back to straight lines.
+    const OSRM = 'https://routing.openstreetmap.de/routed-';
+    const CALC_KEY = 'gcct.routeCalc', WALK_MAX = { car: 1000, bike: 400, foot: Infinity };
+    const OFF_PATH = 0.7;                          // m/s walking where there is no path
+    let routeCalc = null;
+    try { routeCalc = JSON.parse(sessionStorage.getItem(CALC_KEY) || 'null'); } catch (e) { routeCalc = null; }
+    const saveCalc = () => { try { if (routeCalc) sessionStorage.setItem(CALC_KEY, JSON.stringify(routeCalc)); else sessionStorage.removeItem(CALC_KEY); } catch (e) { /* full or blocked */ } };
+    const stopsSig = () => JSON.stringify(routeStops().map(r => [+(+r.lat).toFixed(6), +(+r.lng).toFixed(6)]));
+    const calcValid = () => !!(routeCalc && routeCalc.sig === stopsSig());
+    const calcOn = () => calcValid() && !!routeCalc.accepted;
+    // A route that no longer fits the stops (one added, moved, removed) is dropped.
+    function checkCalc() { if (routeCalc && !calcValid()) { routeCalc = null; saveCalc(); } }
+    let routeMode = 'car';
+    try { routeMode = localStorage.getItem('gcct.routeMode') || 'car'; } catch (e) { /* ignore */ }
+    if (!WALK_MAX[routeMode]) routeMode = 'car';
+    const osrmCache = new Map();
+    let osrmLast = 0;
+    async function osrm(prof, service, pts, extra) {
+      const url = `${OSRM}${prof}/${service}/v1/driving/${pts.map(p => (+p.lng).toFixed(6) + ',' + (+p.lat).toFixed(6)).join(';')}?${extra || ''}`;
+      if (osrmCache.has(url)) return osrmCache.get(url);
+      let j = null;
+      for (let t = 0; t < 3 && !j; t++) {
+        const wait = osrmLast + 300 - Date.now();      // gently: a few requests a second at most
+        if (wait > 0) await new Promise(res => setTimeout(res, wait));
+        osrmLast = Date.now();
+        const r = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (r.status === 429 || r.status >= 500) { await new Promise(res => setTimeout(res, 1500 * (t + 1))); continue; }
+        const body = await r.json().catch(() => null);
+        if (!body || body.code !== 'Ok') throw new Error((body && (body.message || body.code)) || ('HTTP ' + r.status));
+        j = body;
+      }
+      if (!j) throw new Error(T('The route service is busy – try again in a moment.'));
+      if (osrmCache.size > 300) osrmCache.delete(osrmCache.keys().next().value);
+      osrmCache.set(url, j);
+      return j;
+    }
+    const ll2 = p => ({ lat: +p.lat, lng: +p.lng });
+    const wpt = w => ({ lat: w.location[1], lng: w.location[0] });
+    // a → b on one network: straight to where it meets the network, along it, straight on to b.
+    async function along(prof, a, b) {
+      const segs = [], air = (p, q) => { const dd = distM(p, q); if (dd > 2) segs.push({ m: 'air', pts: [[p.lat, p.lng], [q.lat, q.lng]], d: dd, t: dd / OFF_PATH }); };
+      if (distM(a, b) < 3) return { segs, end: b };
+      const j = await osrm(prof, 'route', [a, b], 'overview=full&geometries=geojson&steps=false');
+      const rt = j.routes[0], sa = wpt(j.waypoints[0]), sb = wpt(j.waypoints[1]);
+      air(a, sa);
+      // keep the line light: drop points closer than 3 m to the one before
+      const g = [];
+      rt.geometry.coordinates.forEach(c => { const p = [+c[1].toFixed(6), +c[0].toFixed(6)]; const q = g[g.length - 1]; if (!q || distM({ lat: q[0], lng: q[1] }, { lat: p[0], lng: p[1] }) >= 3) g.push(p); });
+      if (g.length > 1 && rt.distance > 0) segs.push({ m: prof, pts: g, d: rt.distance, t: rt.duration });
+      air(sb, b);
+      return { segs, end: sb };
+    }
+    async function calcLegs(stops, mode, progress) {
+      const legs = [];
+      let carAt = null;
+      if (mode !== 'foot') carAt = wpt((await osrm(mode, 'nearest', [ll2(stops[0])], 'number=1')).waypoints[0]);
+      for (let i = 1; i < stops.length; i++) {
+        if (progress) progress(i, stops.length - 1);
+        const A = ll2(stops[i - 1]), B = ll2(stops[i]), segs = [];
+        if (mode === 'foot' || distM(A, B) <= WALK_MAX[mode]) segs.push(...(await along('foot', A, B)).segs);
+        else {
+          if (distM(A, carAt) > 25) segs.push(...(await along('foot', A, carAt)).segs);   // back to the car
+          const drv = await along(mode, carAt, B);
+          if (drv.segs.length && drv.segs[drv.segs.length - 1].m === 'air') drv.segs.pop();
+          segs.push(...drv.segs);
+          const park = drv.end;
+          if (stops[i].kind === 'cache' && distM(park, B) > 30) segs.push(...(await along('foot', park, B)).segs);
+          else if (distM(park, B) > 2) segs.push({ m: 'air', pts: [[park.lat, park.lng], [B.lat, B.lng]], d: distM(park, B), t: distM(park, B) / OFF_PATH });
+          carAt = park;
+        }
+        if (!segs.length) segs.push({ m: 'air', pts: [[A.lat, A.lng], [B.lat, B.lng]], d: distM(A, B), t: distM(A, B) / OFF_PATH });   // the same spot
+        const leg = { segs, d: 0, t: 0, by: {} };
+        segs.forEach(s => { leg.d += s.d; leg.t += s.t; leg.by[s.m] = (leg.by[s.m] || 0) + s.d; });
+        legs.push(leg);
+      }
+      return legs;
+    }
+    // Travel times between all stops, the same way the legs are worked out (an estimate: the walks to and
+    // from the road are counted at the road's distance from each stop).
+    async function costMatrix(stops, mode) {
+      const pts = stops.map(ll2), n = pts.length;
+      const foot = await osrm('foot', 'table', pts, 'annotations=duration');
+      const drv = mode === 'foot' ? null : await osrm(mode, 'table', pts, 'annotations=duration');
+      const snap = drv ? drv.sources.map(s => s.distance || 0) : [];
+      const c = [];
+      for (let i = 0; i < n; i++) {
+        c.push([]);
+        for (let j = 0; j < n; j++) {
+          if (i === j) { c[i].push(0); continue; }
+          const walk = foot.durations[i][j];
+          let v = walk;
+          if (drv && distM(pts[i], pts[j]) > WALK_MAX[mode]) { const dv = drv.durations[i][j]; v = dv == null ? walk : dv + (snap[i] + snap[j]) * 1.4 / 1.2; }
+          c[i].push(v == null ? 1e7 : v);
+        }
+      }
+      return c;
+    }
+    // The best order: the first stop stays first; the last stays last on a round trip or when it is not a
+    // geocache (home, a pin, a place). Exact for up to 11 stops in between, otherwise a good approximation.
+    function bestOrder(c, n, endFixed) {
+      const end = endFixed ? n - 1 : null;
+      const mid = []; for (let i = 1; i < n; i++) if (i !== end) mid.push(i);
+      const cost = o => { let s = 0; for (let k = 1; k < o.length; k++) s += c[o[k - 1]][o[k]]; return s; };
+      const close = o => (routeLoop ? o.concat([0]) : o);
+      const total = o => cost(close(o));
+      if (mid.length <= 11) {
+        const m = mid.length, F = 1 << m, dp = new Float64Array(F * m).fill(Infinity), par = new Int16Array(F * m).fill(-1);
+        for (let j = 0; j < m; j++) dp[(1 << j) * m + j] = c[0][mid[j]];
+        for (let s = 1; s < F; s++) for (let j = 0; j < m; j++) {
+          const v = dp[s * m + j];
+          if (!(s & (1 << j)) || v === Infinity) continue;
+          for (let k = 0; k < m; k++) if (!(s & (1 << k))) { const t = s | (1 << k), w = v + c[mid[j]][mid[k]]; if (w < dp[t * m + k]) { dp[t * m + k] = w; par[t * m + k] = j; } }
+        }
+        let bj = -1, bv = Infinity;
+        const tail = j => (end != null ? c[mid[j]][end] : routeLoop ? c[mid[j]][0] : 0);
+        for (let j = 0; j < m; j++) { const v = dp[(F - 1) * m + j] + tail(j); if (v < bv) { bv = v; bj = j; } }
+        const seq = []; let s = F - 1, j = bj;
+        while (j >= 0) { seq.unshift(mid[j]); const p = par[s * m + j]; s &= ~(1 << j); j = p; }
+        const o = [0].concat(seq); if (end != null) o.push(end);
+        return o;
+      }
+      // nearest neighbour, then 2-opt and moving single stops until nothing improves
+      let o = [0]; const rest = mid.slice();
+      while (rest.length) { const a = o[o.length - 1]; let bi = 0; rest.forEach((x, k) => { if (c[a][x] < c[a][rest[bi]]) bi = k; }); o.push(rest.splice(bi, 1)[0]); }
+      if (end != null) o.push(end);
+      const lo = 1, hi = o.length - (end != null ? 2 : 1);
+      let best = total(o), better = true, guard = 0;
+      while (better && guard++ < 200) {
+        better = false;
+        for (let a = lo; a < hi; a++) for (let b = a + 1; b <= hi; b++) {
+          const t = o.slice(0, a).concat(o.slice(a, b + 1).reverse(), o.slice(b + 1)), v = total(t);
+          if (v < best - 0.5) { o = t; best = v; better = true; }
+        }
+        for (let a = lo; a <= hi; a++) for (let b = lo; b <= hi; b++) {
+          if (a === b) continue;
+          const t = o.slice(); const x = t.splice(a, 1)[0]; t.splice(b, 0, x); const v = total(t);
+          if (v < best - 0.5) { o = t; best = v; better = true; }
+        }
+      }
+      return o;
+    }
+    const fmtDur = s => { const m = Math.round(s / 60); if (!m) return s > 0 ? '< 1 min' : '0 min'; return m < 60 ? `${m} min` : `${Math.floor(m / 60)} t ${String(m % 60).padStart(2, '0')} min`.replace(' t ', LANG === 'no' ? ' t ' : ' h '); };
+    // The legs of the accepted route as polylines ([lat, lng] points), for the elevation profile and the GPX.
+    const calcLegLines = () => routeCalc.legs.map(l => { const out = []; l.segs.forEach(s => s.pts.forEach(p => { const q = out[out.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) out.push(p); })); return out; });
+    const CALC_STYLE = {
+      car: { color: '#8250df', weight: 4, opacity: 0.85 },
+      bike: { color: '#1a7f37', weight: 4, opacity: 0.85 },
+      foot: { color: '#8250df', weight: 3, opacity: 0.9, dashArray: '1 6', lineCap: 'round' },
+      air: { color: '#cf222e', weight: 2, opacity: 0.9, dashArray: '4 4' },
+    };
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
     // The list follows the map while the route window is open.
@@ -7567,7 +7789,33 @@ ${pts}
         }
         return z;
       }
+      const profSig = () => stopsSig() + (calcOn() ? '|' + routeCalc.id : '');
+      // Along the accepted calculated route: points spread evenly along each leg's line.
+      function calcSamples() {
+        const lines = calcLegLines(), lens = lines.map(line => { let a = 0; for (let k = 1; k < line.length; k++) a += distM({ lat: line[k - 1][0], lng: line[k - 1][1] }, { lat: line[k][0], lng: line[k][1] }); return a; });
+        const tot = lens.reduce((a, b) => a + b, 0), n = Math.max(30, Math.min(300, Math.round(tot / 20)));
+        const pts = [], at = [], stopAt = [0], stopIdx = [0];
+        let acc = 0;
+        lines.forEach((line, i) => {
+          const len = lens[i], k = Math.max(2, Math.round(n * len / (tot || 1)));
+          let seg = 1, segStart = 0;
+          for (let j = i ? 1 : 0; j <= k; j++) {
+            const want = len * j / k;
+            while (seg < line.length - 1) {
+              const sl = distM({ lat: line[seg - 1][0], lng: line[seg - 1][1] }, { lat: line[seg][0], lng: line[seg][1] });
+              if (segStart + sl >= want) break;
+              segStart += sl; seg++;
+            }
+            const a = line[Math.max(0, seg - 1)], b = line[Math.min(line.length - 1, seg)];
+            const sl = distM({ lat: a[0], lng: a[1] }, { lat: b[0], lng: b[1] }) || 1, t = Math.max(0, Math.min(1, (want - segStart) / sl));
+            pts.push(L.latLng(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)); at.push(acc + want);
+          }
+          acc += len; stopAt.push(acc); stopIdx.push(pts.length - 1);
+        });
+        return { pts, at, stopAt, stopIdx, tot };
+      }
       function profileSamples() {
+        if (calcOn()) return calcSamples();
         const stops = routeStops(), legs = [];
         let tot = 0;
         for (let i = 1; i < stops.length; i++) { const dd = distM(L.latLng(stops[i - 1].lat, stops[i - 1].lng), L.latLng(stops[i].lat, stops[i].lng)); legs.push(dd); tot += dd; }
@@ -7583,7 +7831,7 @@ ${pts}
       }
       // Heights for the route, fetched once per route (the profile and the legs' climb share them).
       function routeHeights(cb) {
-        const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
+        const sig = profSig();
         if (profCache.sig === sig && profCache.data) { cb(profCache.data); return; }
         (profCache.waiters ||= []).push(cb);
         if (profCache.busy === sig) return;
@@ -7635,7 +7883,7 @@ ${pts}
         if (!body) return;
         if (pb) pb.classList.toggle('on', profOpen);
         if (!profOpen) { body.innerHTML = ''; clearProfMark(); return; }
-        const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
+        const sig = profSig();
         if (profCache.sig === sig && profCache.data) { drawProfile(body, profCache.data); return; }
         body.innerHTML = `<div class="gm">${esc(T('Fetching heights …'))}</div>`;
         routeHeights(() => { if (profOpen && pv.isConnected) showProfile(); });
@@ -7660,7 +7908,7 @@ ${pts}
             <text x="${pl - 4}" y="${Y(hi) + 4}" class="ax">${Math.round(hi)}</text><text x="${pl - 4}" y="${Y(lo) + 4}" class="ax">${Math.round(lo)}</text>
             <line class="cur" x1="0" x2="0" y1="${pt}" y2="${H - pbm}" style="display:none"/></svg>
           <div class="rt-prof-sum">↑ ${Math.round(up)} m · ↓ ${Math.round(down)} m · ${esc(T('lowest'))} ${Math.round(lo)} m · ${esc(T('highest'))} ${Math.round(hi)} m · ${esc(fmtDist(P.tot))}</div><div class="rt-prof-at">&nbsp;</div>
-          <p class="hint rt-note">${esc(T('Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
+          <p class="hint rt-note">${esc(T(calcOn() ? 'Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.' : 'Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
         const svg = body.querySelector('svg'), cur = svg.querySelector('.cur'), atEl = body.querySelector('.rt-prof-at');
         svg.addEventListener('mousemove', e => {
           const r = svg.getBoundingClientRect(), d0 = Math.max(0, Math.min(P.tot, (((e.clientX - r.left) / r.width) * W - pl) / (W - pl - pr) * P.tot));
@@ -7675,25 +7923,111 @@ ${pts}
         });
         svg.addEventListener('mouseleave', () => { cur.style.display = 'none'; atEl.innerHTML = '&nbsp;'; clearProfMark(); });
       }
+      // --- Route calculation in the preview -----------------------------------------------------------
+      const MODE_NAME = { car: 'By car', bike: 'By bike', foot: 'On foot' }, MODE_ICON = { car: 'car', bike: 'bike', foot: 'walk' };
+      let calcBusy = null, calcAsk = null, calcErr = '', calcToken = 0;
+      const stopName = r => (r.kind === 'cache' ? r.code : r.name);
+      function drawCalc() {
+        const box = pv.querySelector('.rt-calc');
+        if (!box) return;
+        let html = '';
+        if (calcBusy) {
+          html = `<div class="rt-calc-row"><span class="gm">${esc(calcBusy.msg)}</span><span class="sp"></span><button data-c="stop">${esc(T('Cancel'))}</button></div>`;
+        } else if (calcAsk) {
+          html = `<div class="rt-calc-ask"><b>${esc(T('A shorter order'))}</b>
+            <p>${esc(T('Visiting the stops in this order saves about {t} ({b} instead of {a}):', calcAsk))}</p>
+            <p class="rt-calc-ord">${calcAsk.order.map(i => `<span>${i + 1}</span> ${esc(stopName(route[i]))}`).join(' → ')}${routeLoop ? ' → <span>1</span>' : ''}</p>
+            <div class="btns"><button class="primary" data-c="reorder">${esc(T('Change the order'))}</button><button data-c="keep">${esc(T('Keep my order'))}</button></div></div>`;
+        } else if (calcValid()) {
+          const L0 = routeCalc.legs, D = L0.reduce((a, l) => a + l.d, 0), Tt = L0.reduce((a, l) => a + l.t, 0), by = {};
+          L0.forEach(l => Object.keys(l.by).forEach(k => { by[k] = (by[k] || 0) + l.by[k]; }));
+          const parts = ['car', 'bike', 'foot', 'air'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot', air: 'straight line' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ');
+          html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b></div>
+            <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}</span></div>
+            ${routeCalc.accepted ? '' : `<p class="hint">${esc(T('Accept it to measure the legs, the total and the elevation profile along it.'))}</p>`}
+            <div class="btns">${routeCalc.accepted ? '' : `<button class="primary" data-c="accept">${esc(T('Accept'))}</button>`}<button data-c="discard">${esc(T(routeCalc.accepted ? 'Discard the calculated route' : 'Discard'))}</button></div>`;
+        } else {
+          html = `<div class="rt-calc-row"><select class="rt-mode" title="${esc(T('How you travel between the geocaches'))}">${['car', 'bike', 'foot'].map(m => `<option value="${m}"${m === routeMode ? ' selected' : ''}>${esc(T(MODE_NAME[m]))}</option>`).join('')}</select><button data-c="go">${icon('route', 15)}<span>${esc(T('Calculate route'))}</span></button></div>
+            <p class="hint">${esc(T(routeMode === 'foot' ? 'Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.' : 'Along roads to the nearest point by each geocache, then on foot along paths, and in a straight line from the nearest point on the path. Short legs are walked. From OpenStreetMap.'))}</p>
+            ${calcErr ? `<div class="gm rt-calc-err">${esc(calcErr)}</div>` : ''}`;
+        }
+        box.innerHTML = html;
+        const on = (k, f) => { const b = box.querySelector(`[data-c=${k}]`); if (b) b.onclick = f; };
+        const sel = box.querySelector('.rt-mode');
+        if (sel) sel.onchange = () => { routeMode = sel.value; try { localStorage.setItem('gcct.routeMode', routeMode); } catch (e) { /* ignore */ } drawCalc(); };
+        on('go', startCalc);
+        on('stop', () => { calcToken++; calcBusy = null; calcAsk = null; drawCalc(); });
+        on('keep', () => { const tok = calcAsk.tok; calcAsk = null; runLegs(tok); });
+        on('reorder', () => {
+          const { order, tok } = calcAsk; calcAsk = null;
+          route = order.map(i => route[i]); saveRoute(); drawRoute(); drawRouteList(); drawList();
+          runLegs(tok);
+        });
+        on('accept', () => { routeCalc.accepted = true; saveCalc(); preview(true, false); });
+        on('discard', () => { routeCalc = null; saveCalc(); drawRoute(); preview(true, false); });
+      }
+      const calcFail = e => { calcBusy = null; calcErr = T('Could not calculate the route: {e}', { e: (e && e.message) || String(e) }); drawCalc(); };
+      async function startCalc() {
+        const tok = ++calcToken;
+        calcErr = ''; calcAsk = null;
+        try {
+          const n = route.length, endFixed = !routeLoop && route[n - 1].kind !== 'cache';
+          const movable = n - 1 - (endFixed ? 1 : 0);
+          if (movable >= 2 && n <= 60) {
+            calcBusy = { msg: T('Checking the order of the stops …') }; drawCalc();
+            const c = await costMatrix(route, routeMode);
+            if (tok !== calcToken) return;
+            const o = bestOrder(c, n, endFixed);
+            const cost = ord => { let v = 0; for (let k = 1; k < ord.length; k++) v += c[ord[k - 1]][ord[k]]; return routeLoop ? v + c[ord[ord.length - 1]][0] : v; };
+            const cur = route.map((r, i) => i), a = cost(cur), b = cost(o);
+            if (o.some((x, k) => x !== k) && a - b > 60 && b < a * 0.97) {
+              calcBusy = null; calcAsk = { tok, order: o, a: fmtDur(a), b: fmtDur(b), t: fmtDur(a - b) }; drawCalc();
+              return;                                   // waits for your answer
+            }
+          }
+          await runLegs(tok);
+        } catch (e) { if (tok === calcToken) calcFail(e); }
+      }
+      async function runLegs(tok) {
+        if (tok !== calcToken) return;
+        try {
+          const stops = routeStops(), sig = stopsSig(), mode = routeMode;
+          calcBusy = { msg: T('Calculating the route …') }; drawCalc();
+          const legs = await calcLegs(stops, mode, (i, n) => { if (tok === calcToken) { calcBusy = { msg: T('Calculating the route … leg {i} of {n}', { i, n }) }; drawCalc(); } });
+          if (tok !== calcToken) return;
+          routeCalc = { id: Date.now().toString(36), sig, mode, legs, accepted: false };
+          saveCalc(); calcBusy = null;
+          drawRoute();
+          if (routeOpen() && pv.style.display !== 'none') preview(true, false);
+          try {
+            const b = L.latLngBounds([]);
+            legs.forEach(l => l.segs.forEach(sg => sg.pts.forEach(p => b.extend(p))));
+            const fa = freeArea(d);
+            if (b.isValid()) map.fitBounds(b, { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
+          } catch (e) { /* ignore */ }
+        } catch (e) { if (tok === calcToken) calcFail(e); }
+      }
       function preview(on, refit = true) {
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
         if (!on) return;
         let tot = 0;
-        const pts = routeStops();
+        const pts = routeStops(), cOn = calcOn();
         const rows = pts.map((r, i) => {
-          const leg = i ? distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
+          const leg = !i ? 0 : cOn ? routeCalc.legs[i - 1].d : distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng));
           tot += leg;
+          const legTxt = !i ? '' : cOn ? `${fmtDist(leg)} · ${fmtDur(routeCalc.legs[i - 1].t)}` : legText(i, pts);
           return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
-            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i, pts))}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legTxt)}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
-        pv.innerHTML = `<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
+        pv.innerHTML = `${route.length > 1 ? '<div class="rt-calc"></div>' : ''}<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
           <p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''}<span class="rt-climb-tot"></span> · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''}<span class="rt-climb-tot"></span>${cOn ? ` · ${esc(fmtDur(routeCalc.legs.reduce((a, l) => a + l.t, 0)))} · ${esc(T('Along the calculated route.'))}` : ` · ${esc(T('Straight-line distances; the way there is always longer.'))}`}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         const pb = pv.querySelector('[data-a=prof]');
         if (pb) pb.onclick = () => { profOpen = !profOpen; showProfile(); };
+        drawCalc();
         if (profOpen) showProfile();
         if (route.length > 1) showLegClimbs();
         if (refit) fitRoute(d);
