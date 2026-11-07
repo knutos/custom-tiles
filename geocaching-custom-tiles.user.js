@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.3
+// @version      1.56.4
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -225,6 +225,14 @@
     "Home (on the map)": "Hjemme",
     "The route service is busy – try again in a moment.": "Ruteberegningen er opptatt – prøv igjen om litt.",
     "Calculated route": "Beregnet rute",
+    "Pause": "Pause",
+    "Continue": "Fortsett",
+    "Play the route": "Spill av ruten",
+    "Stop": "Stopp",
+    "Pace": "Tempo",
+    "along the calculated route": "langs den beregnede ruten",
+    "straight lines, walking pace": "luftlinje, gåtempo",
+    "leg {i}": "etappe {i}",
     "where the car is left": "der bilen settes igjen",
     "where the bike is left": "der sykkelen settes igjen",
     "Calculated route – shown on the map": "Beregnet rute – vist i kartet",
@@ -4580,6 +4588,7 @@
       .gcct-route .rt-calc{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--rc);background:color-mix(in srgb,#8250df 4%,#fff)}
       .gcct-route .rt-calc-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
       .gcct-route .rt-calc-row button{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-calc-row select{width:auto;flex:none;margin:0}
       .gcct-route .rt-calc-row svg{color:#8250df;flex:none}
       .gcct-route .rt-calc .hint{margin:6px 0 0}
       .gcct-route .rt-calc .btns{margin:8px 0 0;padding:0;border:0;background:none;position:static;box-shadow:none}
@@ -4593,6 +4602,13 @@
       .gcct-route .rt-calc-ord{font-size:12px;line-height:1.7}
       .gcct-route .rt-calc-ord span{display:inline-block;min-width:16px;padding:0 3px;border-radius:8px;background:#8250df;color:#fff;font-size:11px;text-align:center;line-height:16px}
       .gcct-route .rt-calc-err{color:#cf222e}
+      .gcct-route .rt-play{margin:0 0 10px}
+      .gcct-route .rt-play button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
+      .gcct-route .rt-play-bar{width:100%;margin:8px 0 2px;accent-color:#8250df}
+      .gcct-me{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#cf222e;color:#fff;box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.45)}
+      .gcct-me svg{color:#fff}
+      .gcct-me-bike{background:#1a7f37}
+      .gcct-me-car{background:#8250df}
       .gcct-route .rt-calc-pk{display:inline-flex;width:14px;height:14px;margin:0 4px 0 2px;vertical-align:-2px;font-size:10px;box-shadow:none}
       .gcct-route .rt-prof button{display:inline-flex;align-items:center;gap:6px}
       .gcct-route .rt-prof button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
@@ -6921,6 +6937,8 @@
     const routeStops = () => routeLoop && route.length > 1 ? route.concat([route[0]]) : route;
     const routeLayer = L.layerGroup().addTo(map);
     routeLayer.__gcct = true;
+    const playLayer = L.layerGroup().addTo(map);       // you, during the playback of the route
+    playLayer.__gcct = true;
     // The route line is drawn below the cache icons: on /map the icons are tiles, so the line goes into the
     // tile pane just below the site's cache tiles; on /play/map the icons are markers, above it anyway.
     let routeRenderer = null;
@@ -7816,7 +7834,7 @@ ${calcTrk()}</gpx>
       // --- Elevation profile along the route (straight lines between the stops) ---------------------
       // Heights from Kartverket (Norway, from the national elevation model); elsewhere from Open-Meteo
       // (Copernicus 90 m). Climb and descent count only changes of at least 2 m, so noise doesn't add up.
-      let profOpen = false, profCache = { sig: '', data: null, busy: false }, profMark = null;
+      let profOpen = false, profCache = { sig: '', data: null, busy: false }, profMark = null, profApi = null;
       async function heightsOf(pts) {
         const z = new Array(pts.length).fill(null);
         // Kartverket only for points in and around Norway (elsewhere it answers 0, not "no data").
@@ -7972,6 +7990,15 @@ ${calcTrk()}</gpx>
           routeLayer.addLayer(profMark);
         });
         svg.addEventListener('mouseleave', () => { cur.style.display = 'none'; atEl.innerHTML = '&nbsp;'; clearProfMark(); });
+        // the playback moves the cursor too
+        profApi = d0 => {
+          if (!svg.isConnected) { profApi = null; return; }
+          if (d0 == null) { cur.style.display = 'none'; atEl.innerHTML = '&nbsp;'; return; }
+          let k = 0; while (k < P.at.length - 1 && P.at[k + 1] < d0) k++;
+          const x = X(Math.min(P.tot, d0));
+          cur.setAttribute('x1', x); cur.setAttribute('x2', x); cur.style.display = '';
+          atEl.textContent = `${fmtDist(d0)}: ${Math.round(z[k])} m`;
+        };
       }
       // --- Route calculation in the preview -----------------------------------------------------------
       const MODE_NAME = { car: 'By car', bike: 'By bike', foot: 'On foot' }, MODE_ICON = { car: 'car', bike: 'bike', foot: 'walk' };
@@ -8057,6 +8084,111 @@ ${calcTrk()}</gpx>
           } catch (e) { /* ignore */ }
         } catch (e) { if (tok === calcToken) calcFail(e); }
       }
+      // --- Playback: you, moving along the route --------------------------------------------------------
+      // Along the calculated route when there is one (at its own pace by car, bike and on foot), otherwise
+      // along the straight lines at walking pace. The pace is a choice: ×10 … ×600 real time.
+      const PLAY_SPEEDS = [10, 30, 60, 120, 300, 600];
+      let playSpeed = 60;
+      try { playSpeed = +localStorage.getItem('gcct.playSpeed') || 60; } catch (e) { /* ignore */ }
+      if (!PLAY_SPEEDS.includes(playSpeed)) playSpeed = 60;
+      const play = { on: false, t: 0, tl: null, raf: 0, last: 0, marker: null, sig: '' };
+      // The timeline: pieces with points, their cumulated distance and the time each one takes.
+      function playTimeline() {
+        const pieces = [];
+        let T0 = 0, D0 = 0;
+        const add = (pts, m, dur, legIdx) => {
+          if (pts.length < 2) return;
+          const cum = [0];
+          for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + distM({ lat: pts[k - 1][0], lng: pts[k - 1][1] }, { lat: pts[k][0], lng: pts[k][1] }));
+          const len = cum[cum.length - 1];
+          pieces.push({ pts, cum, len, m, t0: T0, t1: T0 + Math.max(0.5, dur), d0: D0, leg: legIdx });
+          T0 += Math.max(0.5, dur); D0 += len;
+        };
+        if (calcValid()) routeCalc.legs.forEach((l, i) => l.segs.forEach(sg => add(sg.pts, sg.m, sg.t, i)));
+        else { const st = routeStops(); for (let i = 1; i < st.length; i++) { const a = [+st[i - 1].lat, +st[i - 1].lng], b = [+st[i].lat, +st[i].lng]; add([a, b], 'foot', distM({ lat: a[0], lng: a[1] }, { lat: b[0], lng: b[1] }) / 1.3, i - 1); } }
+        return { pieces, T: T0, D: D0 };
+      }
+      function playAt(t) {
+        const tl = play.tl, p = tl.pieces.find(x => t <= x.t1) || tl.pieces[tl.pieces.length - 1];
+        const f = Math.max(0, Math.min(1, (t - p.t0) / (p.t1 - p.t0))), want = p.len * f;
+        let k = 1; while (k < p.cum.length - 1 && p.cum[k] < want) k++;
+        const a = p.pts[k - 1], b = p.pts[k], sl = (p.cum[k] - p.cum[k - 1]) || 1, u = Math.max(0, Math.min(1, (want - p.cum[k - 1]) / sl));
+        return { ll: L.latLng(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u), m: p.m, d: p.d0 + want, leg: p.leg };
+      }
+      const clock = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(x).padStart(2, '0'); };
+      function playMarkerIcon(m) {
+        const ic = m === 'car' ? 'car' : m === 'bike' ? 'bike' : 'walk';
+        return L.divIcon({ className: 'gcct-me gcct-me-' + (m === 'air' ? 'foot' : m), html: icon(ic, 14), iconSize: [24, 24], iconAnchor: [12, 12] });
+      }
+      function playShow() {
+        const s = playAt(play.t);
+        if (!play.marker) {
+          play.marker = L.marker(s.ll, { interactive: false, keyboard: false, zIndexOffset: 1000, ...(typeof labelPane === 'function' ? labelPane() : {}), icon: playMarkerIcon(s.m) });
+          play.marker.__gcct = true; play.marker.__m = s.m;
+          playLayer.addLayer(play.marker);
+          clearInterval(play.watch); play.watch = setInterval(() => { if (!d.isConnected) playStop(); }, 1000);
+        } else {
+          play.marker.setLatLng(s.ll);
+          if (play.marker.__m !== s.m) { play.marker.__m = s.m; play.marker.setIcon(playMarkerIcon(s.m)); }
+        }
+        // keep yourself in view, in the part of the map the dialog leaves free
+        try {
+          const fa = freeArea(d), sz = map.getSize(), p = map.latLngToContainerPoint(s.ll);
+          if (p.x < fa.tl[0] || p.y < fa.tl[1] || p.x > sz.x - fa.br[0] || p.y > sz.y - fa.br[1]) {
+            play.panning = true; showInFree(s.ll, map.getZoom(), d); setTimeout(() => { play.panning = false; }, 400);
+          }
+        } catch (e) { /* ignore */ }
+        if (profApi) profApi(s.d);
+        const at = pv.querySelector('.rt-play-at');
+        if (at) at.textContent = `${clock(play.t)} / ${clock(play.tl.T)} · ${fmtDist(s.d)} · ${T('leg {i}', { i: s.leg + 1 })}`;
+        const bar = pv.querySelector('.rt-play-bar');
+        if (bar) bar.value = String(Math.round(1000 * play.t / (play.tl.T || 1)));
+      }
+      function playTick(now) {
+        if (!play.on) return;
+        if (!d.isConnected) { playStop(); return; }          // the route window was closed
+        const dt = Math.min(0.25, (now - play.last) / 1000);
+        play.last = now;
+        play.t = Math.min(play.tl.T, play.t + dt * playSpeed);
+        playShow();
+        if (play.t >= play.tl.T) { play.on = false; drawPlay(); return; }
+        play.raf = requestAnimationFrame(playTick);
+      }
+      function playStart() {
+        const sig = profSig();
+        if (!play.tl || play.sig !== sig) { play.tl = playTimeline(); play.sig = sig; play.t = 0; }
+        if (!play.tl.pieces.length) return;
+        if (play.t >= play.tl.T) play.t = 0;
+        play.on = true; play.last = performance.now();
+        cancelAnimationFrame(play.raf); play.raf = requestAnimationFrame(playTick);
+        drawPlay();
+      }
+      function playPause() { play.on = false; cancelAnimationFrame(play.raf); drawPlay(); }
+      function playStop() {
+        play.on = false; cancelAnimationFrame(play.raf); play.t = 0; play.tl = null;
+        clearInterval(play.watch);
+        if (play.marker) { playLayer.removeLayer(play.marker); play.marker = null; }
+        if (profApi) profApi(null);
+        drawPlay();
+      }
+      function drawPlay() {
+        const box = pv.querySelector('.rt-play');
+        if (!box) return;
+        const started = !!play.tl;
+        box.innerHTML = `<div class="rt-calc-row">
+            <button data-p="${play.on ? 'pause' : 'play'}" class="${play.on ? 'on' : ''}">${play.on ? '❚❚' : '▶'} <span>${esc(T(play.on ? 'Pause' : started ? 'Continue' : 'Play the route'))}</span></button>
+            ${started ? `<button data-p="stop" title="${esc(T('Stop'))}">■</button>` : ''}
+            <select class="rt-play-speed" title="${esc(T('Pace'))}">${PLAY_SPEEDS.map(v => `<option value="${v}"${v === playSpeed ? ' selected' : ''}>×${v}</option>`).join('')}</select>
+            <span class="rt-desc">${esc(T(calcValid() ? 'along the calculated route' : 'straight lines, walking pace'))}</span></div>
+          ${started ? `<input type="range" class="rt-play-bar" min="0" max="1000" value="0"><div class="rt-desc rt-play-at">&nbsp;</div>` : ''}`;
+        const on = (k, f) => { const b = box.querySelector(`[data-p=${k}]`); if (b) b.onclick = f; };
+        on('play', playStart); on('pause', playPause); on('stop', playStop);
+        const sel = box.querySelector('.rt-play-speed');
+        sel.onchange = () => { playSpeed = +sel.value; try { localStorage.setItem('gcct.playSpeed', String(playSpeed)); } catch (e) { /* ignore */ } };
+        const bar = box.querySelector('.rt-play-bar');
+        if (bar) bar.oninput = () => { play.t = play.tl.T * (+bar.value) / 1000; playShow(); };
+        if (started) playShow();
+      }
       function preview(on, refit = true) {
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
@@ -8070,22 +8202,22 @@ ${calcTrk()}</gpx>
           return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
             <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legTxt)}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
-        pv.innerHTML = `${route.length > 1 ? '<div class="rt-calc"></div>' : ''}<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
+        pv.innerHTML = `${route.length > 1 ? '<div class="rt-calc"></div><div class="rt-play"></div>' : ''}<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
           <p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
           <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''}<span class="rt-climb-tot"></span>${cOn ? ` · ${esc(fmtDur(routeCalc.legs.reduce((a, l) => a + l.t, 0)))} · ${esc(T('Along the calculated route.'))}` : ` · ${esc(T('Straight-line distances; the way there is always longer.'))}`}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         const pb = pv.querySelector('[data-a=prof]');
         if (pb) pb.onclick = () => { profOpen = !profOpen; showProfile(); };
-        drawCalc();
+        drawCalc(); drawPlay();
         if (profOpen) showProfile();
         if (route.length > 1) showLegClimbs();
         if (refit) fitRoute(d);
       }
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
-      d.querySelector('[data-a=back]').onclick = () => { clearProfMark(); preview(false); };
+      d.querySelector('[data-a=back]').onclick = () => { clearProfMark(); playStop(); preview(false); };
       function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
-      routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
+      routeDlg = d; routeRefresh = () => { if (play.on || play.panning) return; drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
       d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
         if (route.length < 3) return;
         const rest = route.slice(1), out = [route[0]];
