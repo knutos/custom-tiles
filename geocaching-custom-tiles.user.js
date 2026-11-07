@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.5
+// @version      1.56.6
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7402,11 +7402,12 @@ ${calcTrk()}</gpx>
       air(sb, b);
       return { segs, end: sb };
     }
-    // On foot: along roads and paths – or straight across when that is quicker (a path that goes the long
-    // way round, or no path near the geocache at all).
+    // On foot: along roads and paths. Only a short way (up to 200 m) goes straight across instead, when the
+    // path goes the long way round – off the path you are slow (counted at 1.8 km/h).
+    const ACROSS_MAX = 200, ACROSS = 0.5;
     async function walk(a, b) {
       const r = await along('foot', a, b), viaPath = r.segs.reduce((t, sg) => t + sg.t, 0), dd = distM(a, b);
-      if (dd > 2 && dd / OFF_PATH < viaPath) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / OFF_PATH }], end: b };
+      if (dd > 2 && dd <= ACROSS_MAX && dd / ACROSS < viaPath) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
       return r;
     }
     async function calcLegs(stops, mode, progress) {
@@ -7453,7 +7454,7 @@ ${calcTrk()}</gpx>
         c.push([]);
         for (let j = 0; j < n; j++) {
           if (i === j) { c[i].push(0); continue; }
-          const fw = foot.durations[i][j], across = distM(pts[i], pts[j]) / OFF_PATH, walk = fw == null ? across : Math.min(fw, across);
+          const fw = foot.durations[i][j], dij = distM(pts[i], pts[j]), across = dij <= ACROSS_MAX ? dij / ACROSS : Infinity, walk = fw == null ? dij / ACROSS : Math.min(fw, across);
           let v = walk;
           // by car / bike: walk back to it from i, drive, walk on to j – unless both are reached from the same spot
           if (drv) { const dv = drv.durations[i][j], dd = drv.distances ? drv.distances[i][j] : null; if (dv != null && !(dd != null && dd < 50)) v = dv + (snap[i] + snap[j]) * 1.4 / 1.2; }
