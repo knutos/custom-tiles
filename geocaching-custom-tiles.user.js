@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.0
+// @version      1.56.1
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -247,7 +247,7 @@
     "How you travel between the geocaches": "Hvordan du kommer deg mellom cachene",
     "Calculate route": "Beregn rute",
     "Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.": "Langs veger og stier, og i luftlinje fra nærmeste punkt på stien til hver cache. Fra OpenStreetMap.",
-    "Along roads to the nearest point by each geocache, then on foot along paths, and in a straight line from the nearest point on the path. Short legs are walked. From OpenStreetMap.": "Langs veg til nærmeste punkt ved hver cache, så til fots på sti, og i luftlinje fra nærmeste punkt på stien. Korte etapper går du. Fra OpenStreetMap.",
+    "By car (or bike) from the start as far as the roads go towards each geocache – a road closed to cars stops the car, not the bike – then on foot along paths, the last bit in a straight line, and back to the car. From OpenStreetMap.": "Med bil (eller sykkel) fra start så langt vegen går mot hver cache – en veg stengt for bil stopper bilen, ikke sykkelen – så til fots på sti, det siste stykket i luftlinje, og tilbake til bilen. Fra OpenStreetMap.",
     "Could not calculate the route: {e}": "Kunne ikke beregne ruten: {e}",
     "Checking the order of the stops …": "Sjekker rekkefølgen på stoppene …",
     "Calculating the route …": "Beregner ruten …",
@@ -7286,13 +7286,14 @@ ${calcTrk()}</gpx>
     }
     // --- Route calculation along roads and paths ------------------------------------------------------
     // From OSRM on OpenStreetMap data (FOSSGIS, routing.openstreetmap.de). By car or bike along roads to the
-    // nearest point by each geocache, the rest on foot along paths, and the last bit in a straight line from
-    // the nearest point on the path. Short legs (under 1 km by car, 400 m by bike) are walked; the car (or
-    // bike) stays where you left it, and you walk back to it. On foot: paths all the way.
+    // nearest point by each geocache it can reach (a road closed to cars stops the car, not the bike), the
+    // rest on foot along paths, and the last bit in a straight line from the nearest point on the path; then
+    // back to the car (or bike) and on. Two caches reached from the same spot are walked between. On foot:
+    // roads and paths all the way.
     // A calculated route is first only shown on the map; once accepted, the distances, the total and the
     // elevation profile follow it. Discarded, everything is back to straight lines.
     const OSRM = 'https://routing.openstreetmap.de/routed-';
-    const CALC_KEY = 'gcct.routeCalc', WALK_MAX = { car: 1000, bike: 400, foot: Infinity };
+    const CALC_KEY = 'gcct.routeCalc', MODES = { car: 1, bike: 1, foot: 1 };
     const OFF_PATH = 0.7;                          // m/s walking where there is no path
     let routeCalc = null;
     try { routeCalc = JSON.parse(sessionStorage.getItem(CALC_KEY) || 'null'); } catch (e) { routeCalc = null; }
@@ -7304,7 +7305,7 @@ ${calcTrk()}</gpx>
     function checkCalc() { if (routeCalc && !calcValid()) { routeCalc = null; saveCalc(); } }
     let routeMode = 'car';
     try { routeMode = localStorage.getItem('gcct.routeMode') || 'car'; } catch (e) { /* ignore */ }
-    if (!WALK_MAX[routeMode]) routeMode = 'car';
+    if (!MODES[routeMode]) routeMode = 'car';
     const osrmCache = new Map();
     let osrmLast = 0;
     async function osrm(prof, service, pts, extra) {
@@ -7349,10 +7350,15 @@ ${calcTrk()}</gpx>
       for (let i = 1; i < stops.length; i++) {
         if (progress) progress(i, stops.length - 1);
         const A = ll2(stops[i - 1]), B = ll2(stops[i]), segs = [];
-        if (mode === 'foot' || distM(A, B) <= WALK_MAX[mode]) segs.push(...(await along('foot', A, B)).segs);
+        let drv = null;
+        if (mode !== 'foot') {
+          drv = await along(mode, carAt, B);
+          // Parked at the same spot for the next one too: no point in moving the car – just walk on.
+          if (distM(drv.end, carAt) < 50) drv = null;
+        }
+        if (!drv) segs.push(...(await along('foot', A, B)).segs);
         else {
           if (distM(A, carAt) > 25) segs.push(...(await along('foot', A, carAt)).segs);   // back to the car
-          const drv = await along(mode, carAt, B);
           if (drv.segs.length && drv.segs[drv.segs.length - 1].m === 'air') drv.segs.pop();
           segs.push(...drv.segs);
           const park = drv.end;
@@ -7372,7 +7378,7 @@ ${calcTrk()}</gpx>
     async function costMatrix(stops, mode) {
       const pts = stops.map(ll2), n = pts.length;
       const foot = await osrm('foot', 'table', pts, 'annotations=duration');
-      const drv = mode === 'foot' ? null : await osrm(mode, 'table', pts, 'annotations=duration');
+      const drv = mode === 'foot' ? null : await osrm(mode, 'table', pts, 'annotations=duration,distance');
       const snap = drv ? drv.sources.map(s => s.distance || 0) : [];
       const c = [];
       for (let i = 0; i < n; i++) {
@@ -7381,7 +7387,8 @@ ${calcTrk()}</gpx>
           if (i === j) { c[i].push(0); continue; }
           const walk = foot.durations[i][j];
           let v = walk;
-          if (drv && distM(pts[i], pts[j]) > WALK_MAX[mode]) { const dv = drv.durations[i][j]; v = dv == null ? walk : dv + (snap[i] + snap[j]) * 1.4 / 1.2; }
+          // by car / bike: walk back to it from i, drive, walk on to j – unless both are reached from the same spot
+          if (drv) { const dv = drv.durations[i][j], dd = drv.distances ? drv.distances[i][j] : null; if (dv != null && !(dd != null && dd < 50)) v = dv + (snap[i] + snap[j]) * 1.4 / 1.2; }
           c[i].push(v == null ? 1e7 : v);
         }
       }
@@ -7948,7 +7955,7 @@ ${calcTrk()}</gpx>
             <div class="btns">${routeCalc.accepted ? '' : `<button class="primary" data-c="accept">${esc(T('Accept'))}</button>`}<button data-c="discard">${esc(T(routeCalc.accepted ? 'Discard the calculated route' : 'Discard'))}</button></div>`;
         } else {
           html = `<div class="rt-calc-row"><select class="rt-mode" title="${esc(T('How you travel between the geocaches'))}">${['car', 'bike', 'foot'].map(m => `<option value="${m}"${m === routeMode ? ' selected' : ''}>${esc(T(MODE_NAME[m]))}</option>`).join('')}</select><button data-c="go">${icon('route', 15)}<span>${esc(T('Calculate route'))}</span></button></div>
-            <p class="hint">${esc(T(routeMode === 'foot' ? 'Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.' : 'Along roads to the nearest point by each geocache, then on foot along paths, and in a straight line from the nearest point on the path. Short legs are walked. From OpenStreetMap.'))}</p>
+            <p class="hint">${esc(T(routeMode === 'foot' ? 'Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.' : 'By car (or bike) from the start as far as the roads go towards each geocache – a road closed to cars stops the car, not the bike – then on foot along paths, the last bit in a straight line, and back to the car. From OpenStreetMap.'))}</p>
             ${calcErr ? `<div class="gm rt-calc-err">${esc(calcErr)}</div>` : ''}`;
         }
         box.innerHTML = html;
