@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.47
+// @version      1.55.51
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -222,6 +222,7 @@
     "highest": "høyest",
     "Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.": "Langs de rette linjene mellom stoppene; høyder fra Kartverket (Norge) eller Open-Meteo.",
     "Home": "Hjem",
+    "Home (on the map)": "Hjemme",
     "Hide the site’s icon at the posted coordinates": "Skjul nettstedets ikon ved oppgitte koordinater",
     "Solved caches you have found: only the smiley at the solved spot is left (with the marks on)": "Løste cacher du har funnet: bare smilefjeset ved den løste plassen blir igjen (når merkene er på)",
     "Crosshair": "Trådkors",
@@ -6663,8 +6664,10 @@
       if (!h) return openSearch({ home: true });
       const ll = L.latLng(h.lat, h.lng);
       map.setView(ll, Math.max(map.getZoom(), 16));
-      pin(ll, '#bf8700');
-      label(ll, icon('home', 13) + ' ' + esc(h.name));
+      // the same red dot as other pins, named Home/Hjemme – never the address on the map
+      const m = pin(ll);
+      m.__label = pinLabel(ll, esc(LANG === 'no' ? T('Home (on the map)') : 'Home'));
+      showPin(m);
     }
 
     function openSearch(opts = {}) {
@@ -7433,12 +7436,12 @@ ${pts}
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
         <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
-      const tag = c => c.kind === 'place' && c.pkind === 'home' ? `<em class="tag tag-home">${esc(T('Home'))}</em>` : c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
+      const tag = c => c.kind === 'place' && c.pkind === 'home' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
         c.kind === 'cache' && c.code && window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
       const title = c => c.kind === 'pin' || c.kind === 'place' ? esc(c.name) : `<b>${esc(c.code)}</b>${c.name ? ' · ' + esc(c.name) : ''}`;
       // The cache type's own icon from geocaching.com (or a plain dot when the type isn't known); pins get our pin.
       const typeIcon = c => {
-        if (c.kind === 'pin') return `<span class="rt-ic rt-ic-pin">${icon('pin', 14)}</span>`;
+        if (c.kind === 'pin' || c.pkind === 'home') return `<span class="rt-ic rt-ic-pin">${icon('pin', 14)}</span>`;
         if (c.kind === 'place') return `<span class="rt-ic rt-ic-place">${icon('flag', 14)}</span>`;
         const t = c.type != null ? c.type : (CACHE_INFO.get(c.code) || {}).type;
         return t != null && t !== -1 ? `<img class="rt-ic" src="/images/wpttypes/${encodeURIComponent(t)}.gif" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rt-ic rt-ic-dot'}))">`
@@ -7476,13 +7479,19 @@ ${pts}
         const text = q.value.trim().toLowerCase(), ctr = map.getCenter();
         const inRoute = new Set(route.map(r => r.key));
         let c = routeCandidates();
-        if (text) c = c.filter(x => (x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text));
+        // Your home address is listed like a pin, named Home/Hjemme: always there, sorted by distance, and found
+        // by its name, "hjem", "home" or part of the address.
+        const home = load('gcct.home', null), homeName = LANG === 'no' ? T('Home (on the map)') : 'Home';
+        if (home && isFinite(home.lat) && isFinite(home.lng))
+          c.push({ key: 'g:' + (+home.lat).toFixed(5) + ',' + (+home.lng).toFixed(5), kind: 'place', pkind: 'home', name: homeName, sub: '', lat: +home.lat, lng: +home.lng,
+            match: t => t.length >= 2 && (homeName.toLowerCase().startsWith(t) || 'hjem'.startsWith(t) || 'home'.startsWith(t) || (t.length >= 3 && String(home.name || '').toLowerCase().includes(t))) });
+        if (text) c = c.filter(x => x.match ? x.match(text) : ((x.code || '').toLowerCase().includes(text) || (x.name || '').toLowerCase().includes(text)));
         else {
           // Without a search: only what is on the map you see (a little beyond the edges), and your pins.
           // Caches remembered from elsewhere are still found by searching for their code or name.
           let bb = null;
           try { bb = map.getBounds().pad(0.15); } catch (e) { bb = null; }
-          if (bb) c = c.filter(x => x.kind === 'pin' || bb.contains(L.latLng(x.lat, x.lng)));
+          if (bb) c = c.filter(x => x.kind === 'pin' || x.pkind === 'home' || bb.contains(L.latLng(x.lat, x.lng)));
         }
         const gc = /^gc[0-9a-z]{1,7}$/.test(text) ? text.toUpperCase() : null;
         let extra = '', pre = [];
@@ -7492,11 +7501,6 @@ ${pts}
           else if (st === 'none') extra = `<div class="gm">${esc(T('{code} not found.', { code: gc }))}</div>`;
           else { extra = `<div class="gm">${esc(T('Looking up {code} …', { code: gc }))}</div>`; lookUp(gc); }
         }
-        // Your home address, like in Find a place: "hjem", "home" or part of its name.
-        const home = load('gcct.home', null);
-        if (home && isFinite(home.lat) && isFinite(home.lng) && text.length >= 2 && !gc
-          && ('hjem'.startsWith(text) || 'home'.startsWith(text) || (text.length >= 3 && String(home.name || '').toLowerCase().includes(text))))
-          pre.unshift({ key: 'g:' + (+home.lat).toFixed(5) + ',' + (+home.lng).toFixed(5), kind: 'place', pkind: 'home', name: home.name || T('Home'), sub: '', lat: +home.lat, lng: +home.lng });
         c.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
         c.sort((a, b) => a.d - b.d);
         pre.forEach(x => { x.d = distM(ctr, L.latLng(x.lat, x.lng)); });
