@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.2
+// @version      1.56.3
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -6954,18 +6954,6 @@
           routeLayer.addLayer(L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air)));
           calcLines.push(sg.pts);
         }));
-        // where the car (or bike) is left: a "P" (or a bike) at each spot, once
-        const seenP = new Set();
-        routeCalc.legs.forEach(l => {
-          if (!l.park) return;
-          const k = l.park[0].toFixed(5) + ',' + l.park[1].toFixed(5);
-          if (seenP.has(k)) return;
-          seenP.add(k);
-          const m = L.marker(L.latLng(l.park[0], l.park[1]), { interactive: false, keyboard: false, ...(typeof labelPane === 'function' ? labelPane() : {}),
-            icon: L.divIcon({ className: 'gcct-park', html: routeCalc.mode === 'bike' ? icon('bike', 13) : '<b>P</b>', iconSize: [18, 18], iconAnchor: [9, 9] }) });
-          m.__gcct = true;
-          routeLayer.addLayer(m);
-        });
         tuckRouteLine();
       } else if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
@@ -7001,6 +6989,7 @@
         if (ftfS.show && i2.neverFound === true && i2.found !== true) rs.push([p.x + 4, p.y - 8, p.x + 36, p.y + 8]);
         return rs;
       };
+      const numAt = [], parkAt = [];
       route.forEach((r, i) => {
         const here = pts[i];
         let dx = -21, dy = -10;
@@ -7024,7 +7013,42 @@
           icon: L.divIcon({ className: 'gcct-rtnum', html: `<span>${i + 1}</span>`, iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) });
         m.__gcct = true;
         routeLayer.addLayer(m);
+        if (here) numAt.push({ x: here.x + dx, y: here.y + dy });
       });
+      // Where the car (or bike) is left: a "P" (or a bike), once per spot – beside the spot if a cache icon,
+      // its labels or a route number is there, with a small dot on the spot itself.
+      if (calcLines.length) {
+        const seenP = new Set(), PK = 10;
+        routeCalc.legs.forEach(l => {
+          if (!l.park) return;
+          const k = l.park[0].toFixed(5) + ',' + l.park[1].toFixed(5);
+          if (seenP.has(k)) return;
+          seenP.add(k);
+          const ll = L.latLng(l.park[0], l.park[1]), here = pt(ll);
+          let dx = 0, dy = 0;
+          if (here) {
+            const circles = [], rects = [];
+            spotsNear(here).forEach(o => { circles.push([o.p, ICON]); rects.push(...labelRects(o.p, o.i)); });
+            pts.forEach(c => { if (c && Math.abs(c.x - here.x) < 90 && Math.abs(c.y - here.y) < 90) circles.push([c, ICON]); });   // the stops (pins, places)
+            numAt.forEach(c => circles.push([c, NUM]));
+            parkAt.forEach(c => circles.push([c, PK]));
+            const free = c => circles.every(([p2, rad]) => Math.hypot(c.x - p2.x, c.y - p2.y) >= rad + PK + 1) && rects.every(rc => rectDist(c, rc) >= PK + 1);
+            let found = free(here) ? here : null;
+            for (let rad = PK + 4; rad <= 70 && !found; rad += 1) {
+              for (let q = 0; q < 24 && !found; q++) {
+                const ang = (45 + q * 15) * Math.PI / 180, c = { x: here.x + rad * Math.cos(ang), y: here.y + rad * Math.sin(ang) };
+                if (free(c)) found = c;
+              }
+            }
+            if (found) { dx = Math.round(found.x - here.x); dy = Math.round(found.y - here.y); parkAt.push(found); }
+          }
+          const opts = { interactive: false, keyboard: false, ...(typeof labelPane === 'function' ? labelPane() : {}) };
+          if (dx || dy) { const dot = L.circleMarker(ll, Object.assign({ radius: 3, color: '#fff', weight: 1.5, fillColor: '#0969da', fillOpacity: 1 }, opts)); dot.__gcct = true; routeLayer.addLayer(dot); }
+          const m = L.marker(ll, Object.assign({}, opts, { icon: L.divIcon({ className: 'gcct-park', html: routeCalc.mode === 'bike' ? icon('bike', 13) : '<b>P</b>', iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) }));
+          m.__gcct = true;
+          routeLayer.addLayer(m);
+        });
+      }
     }
     const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
     // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
