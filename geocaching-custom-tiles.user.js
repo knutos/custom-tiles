@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.1
+// @version      1.56.2
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -225,6 +225,8 @@
     "Home (on the map)": "Hjemme",
     "The route service is busy – try again in a moment.": "Ruteberegningen er opptatt – prøv igjen om litt.",
     "Calculated route": "Beregnet rute",
+    "where the car is left": "der bilen settes igjen",
+    "where the bike is left": "der sykkelen settes igjen",
     "Calculated route – shown on the map": "Beregnet rute – vist i kartet",
     "Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.": "Langs den beregnede ruten; høyder fra Kartverket (Norge) eller Open-Meteo.",
     "Along the calculated route.": "Langs den beregnede ruten.",
@@ -240,7 +242,7 @@
     "Change the order": "Endre rekkefølgen",
     "Keep my order": "Behold min rekkefølge",
     "about {t}": "ca. {t}",
-    "Accept it to measure the legs, the total and the elevation profile along it.": "Godta den for å måle etappene, totalen og høydeprofilen langs den.",
+    "Accept it to measure the legs and the total along it.": "Godta den for å måle etappene og totalen langs den.",
     "Accept": "Godta",
     "Discard": "Forkast",
     "Discard the calculated route": "Forkast den beregnede ruten",
@@ -4591,6 +4593,7 @@
       .gcct-route .rt-calc-ord{font-size:12px;line-height:1.7}
       .gcct-route .rt-calc-ord span{display:inline-block;min-width:16px;padding:0 3px;border-radius:8px;background:#8250df;color:#fff;font-size:11px;text-align:center;line-height:16px}
       .gcct-route .rt-calc-err{color:#cf222e}
+      .gcct-route .rt-calc-pk{display:inline-flex;width:14px;height:14px;margin:0 4px 0 2px;vertical-align:-2px;font-size:10px;box-shadow:none}
       .gcct-route .rt-prof button{display:inline-flex;align-items:center;gap:6px}
       .gcct-route .rt-prof button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
       .gcct-route .rt-prof-svg{display:block;max-width:100%;margin:8px 0 4px;border:1px solid var(--line);border-radius:var(--rc);background:#fff;cursor:crosshair}
@@ -4614,6 +4617,8 @@
       .gcct-route .num{text-align:right;white-space:nowrap}
       .gcct-route .rt-desc{color:var(--muted);font-size:11.5px}
       .gcct-route .rt-note{margin-top:8px}
+      .gcct-park{display:flex;align-items:center;justify-content:center;border-radius:4px;background:#0969da;color:#fff;font:700 12px/1 system-ui,sans-serif;box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)}
+      .gcct-park svg{color:#fff}
       .gcct-rtnum{pointer-events:none!important}
       .gcct-rtnum span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8250df;color:#fff;
         font:700 11px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1.5px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.35);box-sizing:border-box}
@@ -6949,6 +6954,18 @@
           routeLayer.addLayer(L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air)));
           calcLines.push(sg.pts);
         }));
+        // where the car (or bike) is left: a "P" (or a bike) at each spot, once
+        const seenP = new Set();
+        routeCalc.legs.forEach(l => {
+          if (!l.park) return;
+          const k = l.park[0].toFixed(5) + ',' + l.park[1].toFixed(5);
+          if (seenP.has(k)) return;
+          seenP.add(k);
+          const m = L.marker(L.latLng(l.park[0], l.park[1]), { interactive: false, keyboard: false, ...(typeof labelPane === 'function' ? labelPane() : {}),
+            icon: L.divIcon({ className: 'gcct-park', html: routeCalc.mode === 'bike' ? icon('bike', 13) : '<b>P</b>', iconSize: [18, 18], iconAnchor: [9, 9] }) });
+          m.__gcct = true;
+          routeLayer.addLayer(m);
+        });
         tuckRouteLine();
       } else if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
@@ -7350,6 +7367,7 @@ ${calcTrk()}</gpx>
       for (let i = 1; i < stops.length; i++) {
         if (progress) progress(i, stops.length - 1);
         const A = ll2(stops[i - 1]), B = ll2(stops[i]), segs = [];
+        let parkAt = null;
         let drv = null;
         if (mode !== 'foot') {
           drv = await along(mode, carAt, B);
@@ -7365,9 +7383,10 @@ ${calcTrk()}</gpx>
           if (stops[i].kind === 'cache' && distM(park, B) > 30) segs.push(...(await along('foot', park, B)).segs);
           else if (distM(park, B) > 2) segs.push({ m: 'air', pts: [[park.lat, park.lng], [B.lat, B.lng]], d: distM(park, B), t: distM(park, B) / OFF_PATH });
           carAt = park;
+          parkAt = [park.lat, park.lng];
         }
         if (!segs.length) segs.push({ m: 'air', pts: [[A.lat, A.lng], [B.lat, B.lng]], d: distM(A, B), t: distM(A, B) / OFF_PATH });   // the same spot
-        const leg = { segs, d: 0, t: 0, by: {} };
+        const leg = { segs, d: 0, t: 0, by: {}, park: parkAt };
         segs.forEach(s => { leg.d += s.d; leg.t += s.t; leg.by[s.m] = (leg.by[s.m] || 0) + s.d; });
         legs.push(leg);
       }
@@ -7796,7 +7815,7 @@ ${calcTrk()}</gpx>
         }
         return z;
       }
-      const profSig = () => stopsSig() + (calcOn() ? '|' + routeCalc.id : '');
+      const profSig = () => stopsSig() + (calcValid() ? '|' + routeCalc.id : '');
       // Along the accepted calculated route: points spread evenly along each leg's line.
       function calcSamples() {
         const lines = calcLegLines(), lens = lines.map(line => { let a = 0; for (let k = 1; k < line.length; k++) a += distM({ lat: line[k - 1][0], lng: line[k - 1][1] }, { lat: line[k][0], lng: line[k][1] }); return a; });
@@ -7822,7 +7841,7 @@ ${calcTrk()}</gpx>
         return { pts, at, stopAt, stopIdx, tot };
       }
       function profileSamples() {
-        if (calcOn()) return calcSamples();
+        if (calcValid()) return calcSamples();
         const stops = routeStops(), legs = [];
         let tot = 0;
         for (let i = 1; i < stops.length; i++) { const dd = distM(L.latLng(stops[i - 1].lat, stops[i - 1].lng), L.latLng(stops[i].lat, stops[i].lng)); legs.push(dd); tot += dd; }
@@ -7915,7 +7934,7 @@ ${calcTrk()}</gpx>
             <text x="${pl - 4}" y="${Y(hi) + 4}" class="ax">${Math.round(hi)}</text><text x="${pl - 4}" y="${Y(lo) + 4}" class="ax">${Math.round(lo)}</text>
             <line class="cur" x1="0" x2="0" y1="${pt}" y2="${H - pbm}" style="display:none"/></svg>
           <div class="rt-prof-sum">↑ ${Math.round(up)} m · ↓ ${Math.round(down)} m · ${esc(T('lowest'))} ${Math.round(lo)} m · ${esc(T('highest'))} ${Math.round(hi)} m · ${esc(fmtDist(P.tot))}</div><div class="rt-prof-at">&nbsp;</div>
-          <p class="hint rt-note">${esc(T(calcOn() ? 'Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.' : 'Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
+          <p class="hint rt-note">${esc(T(calcValid() ? 'Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.' : 'Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
         const svg = body.querySelector('svg'), cur = svg.querySelector('.cur'), atEl = body.querySelector('.rt-prof-at');
         svg.addEventListener('mousemove', e => {
           const r = svg.getBoundingClientRect(), d0 = Math.max(0, Math.min(P.tot, (((e.clientX - r.left) / r.width) * W - pl) / (W - pl - pr) * P.tot));
@@ -7950,8 +7969,8 @@ ${calcTrk()}</gpx>
           L0.forEach(l => Object.keys(l.by).forEach(k => { by[k] = (by[k] || 0) + l.by[k]; }));
           const parts = ['car', 'bike', 'foot', 'air'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot', air: 'straight line' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ');
           html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b></div>
-            <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}</span></div>
-            ${routeCalc.accepted ? '' : `<p class="hint">${esc(T('Accept it to measure the legs, the total and the elevation profile along it.'))}</p>`}
+            <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}${L0.some(l => l.park) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${routeCalc.mode === 'bike' ? icon('bike', 11) : '<b>P</b>'}</span>${esc(T(routeCalc.mode === 'bike' ? 'where the bike is left' : 'where the car is left'))}</span>` : ''}</span></div>
+            ${routeCalc.accepted ? '' : `<p class="hint">${esc(T('Accept it to measure the legs and the total along it.'))}</p>`}
             <div class="btns">${routeCalc.accepted ? '' : `<button class="primary" data-c="accept">${esc(T('Accept'))}</button>`}<button data-c="discard">${esc(T(routeCalc.accepted ? 'Discard the calculated route' : 'Discard'))}</button></div>`;
         } else {
           html = `<div class="rt-calc-row"><select class="rt-mode" title="${esc(T('How you travel between the geocaches'))}">${['car', 'bike', 'foot'].map(m => `<option value="${m}"${m === routeMode ? ' selected' : ''}>${esc(T(MODE_NAME[m]))}</option>`).join('')}</select><button data-c="go">${icon('route', 15)}<span>${esc(T('Calculate route'))}</span></button></div>
