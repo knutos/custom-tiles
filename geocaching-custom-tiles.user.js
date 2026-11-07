@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.6
+// @version      1.56.7
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -8025,7 +8025,7 @@ ${calcTrk()}</gpx>
             <div class="btns"><button class="primary" data-c="reorder">${esc(T('Change the order'))}</button><button data-c="keep">${esc(T('Keep my order'))}</button></div></div>`;
         } else if (calcValid()) {
           const L0 = routeCalc.legs, D = L0.reduce((a, l) => a + l.d, 0), Tt = L0.reduce((a, l) => a + l.t, 0), by = {};
-          L0.forEach(l => Object.keys(l.by).forEach(k => { by[k] = (by[k] || 0) + l.by[k]; }));
+          L0.forEach(l => Object.keys(l.by).forEach(k => { const kk = k === 'air' ? 'foot' : k; by[kk] = (by[kk] || 0) + l.by[k]; }));   // straight across is on foot too
           const parts = ['car', 'bike', 'foot', 'air'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot', air: 'straight line' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ');
           html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b></div>
             <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}${L0.some(l => l.park) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${routeCalc.mode === 'bike' ? icon('bike', 11) : '<b>P</b>'}</span>${esc(T(routeCalc.mode === 'bike' ? 'where the bike is left' : 'where the car is left'))}</span>` : ''}</span></div>
