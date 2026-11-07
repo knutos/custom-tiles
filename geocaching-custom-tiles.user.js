@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.4
+// @version      1.56.5
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7402,6 +7402,13 @@ ${calcTrk()}</gpx>
       air(sb, b);
       return { segs, end: sb };
     }
+    // On foot: along roads and paths – or straight across when that is quicker (a path that goes the long
+    // way round, or no path near the geocache at all).
+    async function walk(a, b) {
+      const r = await along('foot', a, b), viaPath = r.segs.reduce((t, sg) => t + sg.t, 0), dd = distM(a, b);
+      if (dd > 2 && dd / OFF_PATH < viaPath) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / OFF_PATH }], end: b };
+      return r;
+    }
     async function calcLegs(stops, mode, progress) {
       const legs = [];
       let carAt = null;
@@ -7416,13 +7423,13 @@ ${calcTrk()}</gpx>
           // Parked at the same spot for the next one too: no point in moving the car – just walk on.
           if (distM(drv.end, carAt) < 50) drv = null;
         }
-        if (!drv) segs.push(...(await along('foot', A, B)).segs);
+        if (!drv) segs.push(...(await walk(A, B)).segs);
         else {
-          if (distM(A, carAt) > 25) segs.push(...(await along('foot', A, carAt)).segs);   // back to the car
+          if (distM(A, carAt) > 25) segs.push(...(await walk(A, carAt)).segs);   // back to the car
           if (drv.segs.length && drv.segs[drv.segs.length - 1].m === 'air') drv.segs.pop();
           segs.push(...drv.segs);
           const park = drv.end;
-          if (stops[i].kind === 'cache' && distM(park, B) > 30) segs.push(...(await along('foot', park, B)).segs);
+          if (stops[i].kind === 'cache' && distM(park, B) > 30) segs.push(...(await walk(park, B)).segs);
           else if (distM(park, B) > 2) segs.push({ m: 'air', pts: [[park.lat, park.lng], [B.lat, B.lng]], d: distM(park, B), t: distM(park, B) / OFF_PATH });
           carAt = park;
           parkAt = [park.lat, park.lng];
@@ -7446,7 +7453,7 @@ ${calcTrk()}</gpx>
         c.push([]);
         for (let j = 0; j < n; j++) {
           if (i === j) { c[i].push(0); continue; }
-          const walk = foot.durations[i][j];
+          const fw = foot.durations[i][j], across = distM(pts[i], pts[j]) / OFF_PATH, walk = fw == null ? across : Math.min(fw, across);
           let v = walk;
           // by car / bike: walk back to it from i, drive, walk on to j – unless both are reached from the same spot
           if (drv) { const dv = drv.durations[i][j], dd = drv.distances ? drv.distances[i][j] : null; if (dv != null && !(dd != null && dd < 50)) v = dv + (snap[i] + snap[j]) * 1.4 / 1.2; }
