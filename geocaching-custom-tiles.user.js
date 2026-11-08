@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.59
+// @version      1.56.61
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -8503,8 +8503,9 @@ ${calcTrk(stamp)}</gpx>
           play.marker.setLatLng(s.ll);
           if (play.marker.__m !== s.m) { play.marker.__m = s.m; play.marker.setIcon(playMarkerIcon(s.m)); }
         }
-        // keep yourself in view, in the part of the map the dialog leaves free
-        try {
+        // keep yourself in view, in the part of the map the dialog leaves free – only while playing (or when
+        // you move the slider): a paused or finished playback must not pull the map back when you pan it
+        if (play.on || play.follow) try {
           const fa = freeArea(d), sz = map.getSize(), p = map.latLngToContainerPoint(s.ll);
           if (p.x < fa.tl[0] || p.y < fa.tl[1] || p.x > sz.x - fa.br[0] || p.y > sz.y - fa.br[1]) {
             play.panning = true; showInFree(s.ll, map.getZoom(), d); setTimeout(() => { play.panning = false; }, 400);
@@ -8523,7 +8524,7 @@ ${calcTrk(stamp)}</gpx>
         play.last = now;
         play.t = Math.min(play.tl.T, play.t + dt * playSpeed);
         playShow();
-        if (play.t >= play.tl.T) { play.on = false; drawPlay(); return; }
+        if (play.t >= play.tl.T) { playStop(); return; }      // at the end: stopped, the map is yours again
         play.raf = requestAnimationFrame(playTick);
       }
       function playStart() {
@@ -8558,7 +8559,7 @@ ${calcTrk(stamp)}</gpx>
         const sel = box.querySelector('.rt-play-speed');
         sel.onchange = () => { playSpeed = +sel.value; try { localStorage.setItem('gcct.playSpeed', String(playSpeed)); } catch (e) { /* ignore */ } };
         const bar = box.querySelector('.rt-play-bar');
-        if (bar) bar.oninput = () => { play.t = play.tl.T * (+bar.value) / 1000; playShow(); };
+        if (bar) bar.oninput = () => { play.t = play.tl.T * (+bar.value) / 1000; play.follow = true; playShow(); play.follow = false; };
         if (started) playShow();
       }
       function preview(on, refit = true) {
