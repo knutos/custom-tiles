@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.33
+// @version      1.56.52
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -225,7 +225,15 @@
     "Home (on the map)": "Hjemme",
     "The route service is busy – try again in a moment.": "Ruteberegningen er opptatt – prøv igjen om litt.",
     "Calculated route": "Beregnet rute",
+    "By bike from the start as far as a bike may go towards each geocache – not on paths, steps or ski trails – then on foot, the last bit in a straight line, and back to the bike. From OpenStreetMap.": "Med sykkel fra start så langt sykkelen kan mot hver cache – ikke på sti, trapp eller skiløype – så til fots, det siste stykket i luftlinje, og tilbake til sykkelen. Fra OpenStreetMap.",
+    "By car from the start as far as the car may go towards each geocache – closed roads, gates, tracks and ski trails stop it – then on foot, the last bit in a straight line, and back to the car. From OpenStreetMap.": "Med bil fra start så langt bilen kan mot hver cache – stengte veger, bommer, traktorveger og skiløyper stopper den – så til fots, det siste stykket i luftlinje, og tilbake til bilen. Fra OpenStreetMap.",
+    "Accepted": "Godtatt",
+    "See-through": "Gjennomsiktig",
+    "of it straight across": "av det rett over terrenget",
+    "to": "til",
     "Order": "Rekkefølge",
+    "By car and bike": "Med bil og sykkel",
+    "By car as far as the car may go, then by bike as far as a bike may go, the rest on foot – and back by bike to the car. From OpenStreetMap.": "Med bil så langt bilen kan kjøre, så med sykkel så langt sykkelen kan sykles, resten til fots – og tilbake med sykkel til bilen. Fra OpenStreetMap.",
     "Straight across the terrain up to": "Rett over terrenget inntil",
     "never": "aldri",
     "Suggest a shorter order of the stops": "Foreslå en kortere rekkefølge på stoppene",
@@ -270,7 +278,6 @@
     "How you travel between the geocaches": "Hvordan du kommer deg mellom cachene",
     "Calculate route": "Beregn rute",
     "Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.": "Langs veger og stier, og i luftlinje fra nærmeste punkt på stien til hver cache. Fra OpenStreetMap.",
-    "By car (or bike) from the start as far as the roads go towards each geocache – a road closed to cars stops the car, not the bike; a bike keeps off paths – then on foot along paths, the last bit in a straight line, and back to the car. From OpenStreetMap.": "Med bil (eller sykkel) fra start så langt vegen går mot hver cache – en veg stengt for bil stopper bilen, ikke sykkelen; sykkelen holder seg unna stier – så til fots på sti, det siste stykket i luftlinje, og tilbake til bilen. Fra OpenStreetMap.",
     "Could not calculate the route: {e}": "Kunne ikke beregne ruten: {e}",
     "Checking the order of the stops …": "Sjekker rekkefølgen på stoppene …",
     "Calculating the route …": "Beregner ruten …",
@@ -2339,7 +2346,7 @@
       .gcct .x:hover,.gcct-dlg .x:hover{background:var(--hover);color:var(--ink)}
 
       /* Text fields – the same everywhere */
-      .gcct .quick input,.gcct-dlg input:not([type=checkbox]):not([type=file]):not([type=radio]),.gcct-dlg select,.gcct-dlg textarea,.gcct label.opt select{
+      .gcct .quick input,.gcct-dlg input:not([type=checkbox]):not([type=file]):not([type=radio]):not([type=range]),.gcct-dlg select,.gcct-dlg textarea,.gcct label.opt select{
         display:block;width:100%;height:auto;margin:0;font-size:14px;line-height:1.4;padding:7px 10px;
         border:1px solid var(--line2);border-radius:var(--rc);background:#fff;color:var(--ink);box-shadow:none;transition:border-color .12s,box-shadow .12s}
       .gcct .quick input:focus,.gcct-dlg input:focus,.gcct-dlg select:focus,.gcct-dlg textarea:focus,.gcct label.opt select:focus{outline:0;border-color:var(--acc);box-shadow:var(--ring)}
@@ -4609,20 +4616,24 @@
       .gcct-route .rt-calc-sum{margin-top:4px}
       .gcct-route .rt-calc-k{display:inline-block;width:16px;height:0;margin:0 4px 3px 2px;vertical-align:middle;border-top:4px solid #8250df}
       .gcct-route .rt-calc-k.k-bike{border-top-color:#1a7f37}
-      .gcct-route .rt-calc-k.k-foot{border-top:3px dotted #8250df}
-      .gcct-route .rt-calc-k.k-air{border-top:2px dashed #cf222e}
+      .gcct-route .rt-calc-k.k-foot{border-top:4px solid #f5a000}
+      .gcct-route .rt-calc-k.k-air{border-top:4px solid #cf222e}
       .gcct-route .rt-calc-ask p{margin:6px 0}
       .gcct-route .rt-calc-ord{font-size:12px;line-height:1.7}
       .gcct-route .rt-calc-ord span{display:inline-block;min-width:16px;padding:0 3px;border-radius:8px;background:#8250df;color:#fff;font-size:11px;text-align:center;line-height:16px}
       .gcct-route .rt-calc-err{color:#cf222e}
+      .gcct-route .rt-ok{display:inline-flex;align-items:center;gap:3px;margin-left:auto;padding:1px 8px 1px 6px;border-radius:10px;background:#dafbe1;color:#1a7f37;font-size:12px;font-weight:600}
+      .gcct-route .rt-calc-row .rt-ok svg{color:#1a7f37}
       .gcct-route .rt-calc-time{font-size:11px}
       .gcct-route .rt-calc-opt{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;cursor:pointer}
       .gcct-route .rt-calc-opt input{margin:0}
+      .gcct-route .rt-alpha input{flex:1;max-width:180px;accent-color:#8250df;padding:0;margin:0;border:0;background:none;box-shadow:none;height:auto;min-height:0}
+      .gcct-route .rt-alpha span{min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
       .gcct-route .rt-calc-opt select{width:auto;margin:0;padding:2px 6px}
       .gcct-route .rt-play{margin:0 0 10px}
       .gcct-route .rt-play button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
       .gcct-route .rt-play-bar{width:100%;margin:8px 0 2px;accent-color:#8250df}
-      .gcct-me{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#cf222e;color:#fff;box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.45)}
+      .gcct-me{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#f5a000;color:#fff;box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.45)}
       .gcct-me svg{color:#fff}
       .gcct-me-bike{background:#1a7f37}
       .gcct-me-car{background:#8250df}
@@ -6986,11 +6997,13 @@
       if (lls.length > 1 && calcValid()) {
         // the calculated route: by car / bike solid, on foot dotted, the straight bits off the path dashed red
         routeCalc.legs.forEach(l => l.segs.forEach(sg => {
-          routeLayer.addLayer(L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air)));
+          const pl = L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air, { opacity: 1 - routeAlpha / 100 }));
+          pl.__calcLine = true;
+          routeLayer.addLayer(pl);
           calcLines.push(sg.pts);
         }));
         tuckRouteLine();
-      } else if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
+      } else if (lls.length > 1) { const pl = L.polyline(lls, Object.assign(routeLineOpts(), { opacity: 1 - routeAlpha / 100 })); pl.__calcLine = true; routeLayer.addLayer(pl); tuckRouteLine(); }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
       // the cache's ♥ (above), D/T (below) and FTF badge (right) as far as they are shown, the icons of
       // caches nearby and the route's lines. Tried on rings around the stop, nearest first.
@@ -7053,13 +7066,17 @@
       // Where the car (or bike) is left: a "P" (or a bike), once per spot – beside the spot if a cache icon,
       // its labels or a route number is there, with a small dot on the spot itself.
       if (calcLines.length) {
-        const seenP = new Set(), PK = 10;
+        const seenP = new Set(), PK = 10, spots = [];
         routeCalc.legs.forEach(l => {
-          if (!l.park) return;
-          const k = l.park[0].toFixed(5) + ',' + l.park[1].toFixed(5);
+          // where the car is left ("P", or a bike when cycling), and with the bike on the car where the bike is left
+          if (l.park) spots.push([l.park, routeCalc.mode === 'bike' ? 'bike' : 'car']);
+          if (l.bpark) spots.push([l.bpark, 'bike']);
+        });
+        spots.forEach(([spot, kind]) => {
+          const k = kind + spot[0].toFixed(5) + ',' + spot[1].toFixed(5);
           if (seenP.has(k)) return;
           seenP.add(k);
-          const ll = L.latLng(l.park[0], l.park[1]), here = pt(ll);
+          const ll = L.latLng(spot[0], spot[1]), here = pt(ll);
           let dx = 0, dy = 0;
           if (here) {
             const circles = [], rects = [];
@@ -7079,7 +7096,7 @@
           }
           const opts = { interactive: false, keyboard: false, ...(typeof labelPane === 'function' ? labelPane() : {}) };
           if (dx || dy) { const dot = L.circleMarker(ll, Object.assign({ radius: 3, color: '#fff', weight: 1.5, fillColor: '#0969da', fillOpacity: 1 }, opts)); dot.__gcct = true; routeLayer.addLayer(dot); }
-          const m = L.marker(ll, Object.assign({}, opts, { icon: L.divIcon({ className: 'gcct-park', html: routeCalc.mode === 'bike' ? icon('bike', 13) : '<b>P</b>', iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) }));
+          const m = L.marker(ll, Object.assign({}, opts, { icon: L.divIcon({ className: 'gcct-park', html: kind === 'bike' ? icon('bike', 13) : '<b>P</b>', iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) }));
           m.__gcct = true;
           routeLayer.addLayer(m);
         });
@@ -7385,7 +7402,7 @@ ${calcTrk(stamp)}</gpx>
     // A calculated route is first only shown on the map; once accepted, the distances, the total and the
     // elevation profile follow it. Discarded, everything is back to straight lines.
     const OSRM = 'https://routing.openstreetmap.de/routed-';
-    const CALC_KEY = 'gcct.routeCalc', MODES = { car: 1, bike: 1, foot: 1 };
+    const CALC_KEY = 'gcct.routeCalc', MODES = { car: 1, carbike: 1, bike: 1, foot: 1 };
     const OFF_PATH = 0.7;                          // m/s walking where there is no path
     let routeCalc = null;
     try { routeCalc = JSON.parse(sessionStorage.getItem(CALC_KEY) || 'null'); } catch (e) { routeCalc = null; }
@@ -7395,6 +7412,14 @@ ${calcTrk(stamp)}</gpx>
     const calcOn = () => calcValid() && !!routeCalc.accepted;
     // A route that no longer fits the stops (one added, moved, removed) is dropped.
     function checkCalc() { if (routeCalc && !calcValid()) { routeCalc = null; saveCalc(); } }
+    // How see-through the route is drawn over the map: 0–90 %.
+    let routeAlpha = 15;
+    try { const v = localStorage.getItem('gcct.routeAlpha'); if (v != null && isFinite(+v)) routeAlpha = Math.max(0, Math.min(90, +v)); } catch (e) { /* ignore */ }
+    const setRouteAlpha = v => {
+      routeAlpha = Math.max(0, Math.min(90, Math.round(v)));
+      try { localStorage.setItem('gcct.routeAlpha', String(routeAlpha)); } catch (e) { /* ignore */ }
+      routeLayer.eachLayer(l => { if (l.__calcLine) l.setStyle({ opacity: 1 - routeAlpha / 100 }); });
+    };
     let routeOptimize = true;
     try { routeOptimize = localStorage.getItem('gcct.routeOptimize') !== '0'; } catch (e) { /* ignore */ }
     let routeMode = 'car';
@@ -7480,7 +7505,10 @@ ${calcTrk(stamp)}</gpx>
       const tags = await osmWayTags(ids);
       const closedFor = t => {
         if (!t) return null;
-        if (t['piste:type'] && !(prof === 'bike' ? /^(yes|designated|permissive)$/.test(t.bicycle || '') : /^(yes|designated|permissive|destination)$/.test(t.motor_vehicle || t.motorcar || ''))) return 'piste';
+        // A ski trail stops car and bike only where it is a trail of its own – a lit trail (lysløype), or a ski
+        // trail by name. Many forest roads are ski trails in winter only; on those you drive and cycle as usual.
+        const ownTrail = t['piste:type'] && (t.lit === 'yes' || /lysløype|skiløype|lysloype/i.test(t.name || '') || !/^(track|service|unclassified|residential|tertiary|secondary|primary|living_street|road)$/.test(t.highway || ''));
+        if (ownTrail && !(prof === 'bike' ? /^(yes|designated|permissive)$/.test(t.bicycle || '') : /^(yes|designated|permissive|destination)$/.test(t.motor_vehicle || t.motorcar || ''))) return 'piste';
         // a closed road (bom, private, forestry …) stops the car; the bike only where bikes are explicitly not allowed
         const a = prof === 'car' ? (t.motor_vehicle || t.motorcar || t.vehicle || t.access) : t.bicycle;
         return a && /^(no|private|forestry|agricultural|delivery|customers|permit|emergency|military|use_sidepath)$/.test(a) ? 'access=' + a : null;
@@ -7508,6 +7536,7 @@ ${calcTrk(stamp)}</gpx>
         if (prof === 'car' && cum[p] >= 80 && e.end_node && CAR_NO_NODE.has(e.end_node.type) && nx && nx.edge_index != null && nx.edge_index !== mp[p].edge_index) { stop = p; why = e.end_node.type; }
       }
       routeDebug.push({ prof, valhallaMs: Date.now() - t0, points: idx.length, stopAt: stop, why, ways: uses.join(' > ') });
+      vehicleStopValhalla.bad = stop >= 0 ? coords[idx[Math.min(idx.length - 1, stop + 1)]] : null;   // [lng, lat] where it may not go on
       return stop < 0 ? -1 : idx[stop];
     }
     async function along(prof, a, b) {
@@ -7537,6 +7566,73 @@ ${calcTrk(stamp)}</gpx>
       air(sb, b);
       return { segs, end: sb, stopped };
     }
+    // By bike: the bike route may take a short cut along a path, where the bike has to stop – while the road
+    // a walker would follow goes on. So both are tried: the bike route, and the walking route ridden as far as
+    // a bike may go; the one that takes the bike closest to the geocache is used.
+    const decode6 = str => {           // Valhalla's shapes: an encoded polyline, 6 decimals → [[lng, lat] …]
+      const out = []; let i = 0, lat = 0, lng = 0;
+      while (i < str.length) {
+        for (const k of [0, 1]) {
+          let sh = 0, res = 0, c;
+          do { c = str.charCodeAt(i++) - 63; res |= (c & 31) << sh; sh += 5; } while (c >= 32);
+          const v = res & 1 ? ~(res >> 1) : res >> 1;
+          if (k) lng += v; else lat += v;
+        }
+        out.push([lng / 1e6, lat / 1e6]);
+      }
+      return out;
+    };
+    // A line of [lng, lat] ridden by bike from a, as far as a bike may go; then on to b.
+    async function rideLine(coords, a, b) {
+      let k = -1, bad = null;
+      try { k = valhallaFail >= 3 ? -1 : await vehicleStopValhalla('bike', coords); bad = vehicleStopValhalla.bad; } catch (e) { valhallaFail++; }
+      if (k >= 0) coords = coords.slice(0, k + 1);
+      if (coords.length < 2) return null;
+      const g = [];
+      coords.forEach(c => { const p = [+c[1].toFixed(6), +c[0].toFixed(6)]; const q = g[g.length - 1]; if (!q || distM({ lat: q[0], lng: q[1] }, { lat: p[0], lng: p[1] }) >= 3) g.push(p); });
+      let dd = 0; for (let i = 1; i < g.length; i++) dd += distM({ lat: g[i - 1][0], lng: g[i - 1][1] }, { lat: g[i][0], lng: g[i][1] });
+      const sa = { lat: g[0][0], lng: g[0][1] }, end = { lat: g[g.length - 1][0], lng: g[g.length - 1][1] }, segs = [];
+      if (distM(a, sa) > 2) segs.push({ m: 'air', pts: [[a.lat, a.lng], [sa.lat, sa.lng]], d: distM(a, sa), t: distM(a, sa) / OFF_PATH });
+      if (g.length > 1) segs.push({ m: 'bike', pts: g, d: dd, t: dd / 4 });   // about 14 km/h
+      if (distM(end, b) > 2) segs.push({ m: 'air', pts: [[end.lat, end.lng], [b.lat, b.lng]], d: distM(end, b), t: distM(end, b) / OFF_PATH });
+      return { segs, end, stopped: k >= 0, bad };
+    }
+    // By bike: the bike route may take a short cut along a path, where the bike has to stop, while a road goes
+    // on. So several ways are tried – the bike route, the walking route ridden as far as a bike may go, and
+    // Valhalla's bike route kept away from the spots where the others had to stop – and the one that takes the
+    // bike closest to the geocache is used.
+    async function bikeAlong(a, b) {
+      const cands = [];
+      const r1 = await along('bike', a, b);
+      r1.bad = r1.stopped ? vehicleStopValhalla.bad : null;
+      cands.push(r1);
+      try {
+        const j = await osrm('foot', 'route', [a, b], 'overview=full&geometries=geojson&steps=false');
+        const r2 = await rideLine(j.routes[0].geometry.coordinates, a, b);
+        if (r2) cands.push(r2);
+      } catch (e) { /* the bike route alone, then */ }
+      const best = () => cands.reduce((x, y) => (distM(y.end, b) + 30 < distM(x.end, b) ? y : x));
+      const exclude = cands.filter(c => c.stopped && c.bad).map(c => c.bad);
+      for (let tries = 0; tries < 2 && best().stopped && distM(best().end, b) > 300 && exclude.length && valhallaFail < 3; tries++) {
+        try {
+          const body = { locations: [{ lat: a.lat, lon: a.lng }, { lat: b.lat, lon: b.lng }], costing: 'bicycle',
+            costing_options: { bicycle: { bicycle_type: 'Hybrid', ignore_access: true, use_roads: 0.6 } },
+            exclude_locations: exclude.map(p => ({ lat: p[1], lon: p[0] })), directions_type: 'none' };
+          const r = await fetch('https://valhalla1.openstreetmap.de/route', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
+          if (!r.ok) throw new Error('Valhalla route ' + r.status);
+          const jj = await r.json();
+          const r3 = await rideLine(decode6(jj.trip.legs[0].shape), a, b);
+          if (!r3) break;
+          cands.push(r3);
+          routeDebug.push({ bike: 'Valhalla bike route, avoiding ' + exclude.length, reachesWithin: Math.round(distM(r3.end, b)) });
+          if (!r3.stopped || !r3.bad) break;
+          exclude.push(r3.bad);
+        } catch (e) { routeDebug.push({ bikeRouteError: String(e) }); break; }
+      }
+      const pick = best();
+      if (pick !== r1) routeDebug.push({ bike: 'another way ridden', closer: Math.round(distM(r1.end, b) - distM(pick.end, b)) });
+      return pick;
+    }
     // On foot: along roads and paths – or straight across, up to a distance you choose, when that is quicker:
     // off the path you walk at about 1.8 km/h, on it about 5 km/h, so the path has to be close to three times
     // as long before going straight across pays.
@@ -7553,7 +7649,71 @@ ${calcTrk(stamp)}</gpx>
     // The drives are worked out one after the other (each starts where the last one parked); the walks
     // to and from the car are asked for alongside. The walk back to the car is the walk in, reversed.
     const reversed = segs => segs.slice().reverse().map(sg => Object.assign({}, sg, { pts: sg.pts.slice().reverse() }));
+    // Car with the bike on it: drive as far as the car may go, take the bike off and cycle on as far as a bike
+    // may go, walk the rest; then back – walk to the bike, cycle to the car – and on. When the car need not be
+    // moved for the next one, you go on from where the bike is (or walk, when it is close).
+    const vehSegs = r => { const sg = r.segs.slice(); if (sg.length && sg[sg.length - 1].m === 'air') sg.pop(); return sg; };
+    async function calcLegsCarBike(stops, progress) {
+      const out = [];
+      let carAt = wpt((await osrm('car', 'nearest', [ll2(stops[0])], 'number=1')).waypoints[0]), bikeAt = null;   // bikeAt null: on the car
+      let trail = [];          // the bike rides since the bike left the car – the way back, reversed
+      // From the bike back to the car: by bike all the way – the way it came, if no other way gets there.
+      const bikeBack = async from => {
+        const r = await bikeAlong(from, carAt);
+        const segs = vehSegs(r);
+        if (distM(r.end, carAt) > 30) {
+          if (trail.length) { segs.length = 0; segs.push(...reversed(trail)); }
+          else segs.push(...(await walk(r.end, carAt)).segs);
+        }
+        trail = [];
+        return segs;
+      };
+      for (let i = 1; i < stops.length; i++) {
+        if (progress) progress(i, stops.length - 1);
+        const A = ll2(stops[i - 1]), B = ll2(stops[i]), last = i === stops.length - 1, isCache = stops[i].kind === 'cache';
+        const segs = [];
+        let park = null, bpark = null, at = A;
+        const drv = await along('car', carAt, B);
+        const moveCar = distM(drv.end, carAt) >= (last ? 25 : 300);
+        if (moveCar) {
+          // back to the car – by way of the bike if it is out
+          if (bikeAt) { segs.push(...(await walk(at, bikeAt)).segs); segs.push(...(await bikeBack(bikeAt))); bikeAt = null; }
+          else if (distM(at, carAt) > 25) segs.push(...(await walk(at, carAt)).segs);
+          segs.push(...vehSegs(drv));
+          carAt = drv.end; park = [carAt.lat, carAt.lng]; at = carAt;
+        } else if (distM(A, B) > 400 || bikeAt) {
+          // the car stays: fetch the bike (from the car, or where it was left)
+          const bk = bikeAt || carAt;
+          if (distM(at, bk) > 25) segs.push(...(await walk(at, bk)).segs);
+          at = bk; bikeAt = null;
+          // the end of the route: the bike goes back on the car
+          if (last && distM(at, carAt) > 25) { segs.push(...(await bikeBack(at))); at = carAt; }
+        }
+        // on by bike from here, as far as a bike may go – if that is a real stretch
+        if (isCache && distM(at, B) > 150 && (moveCar || at !== A)) {
+          const ride = await bikeAlong(at, B);
+          if (distM(ride.end, at) > 100) { const rs = vehSegs(ride); segs.push(...rs); trail.push(...rs.filter(sg => sg.m === 'bike')); at = ride.end; bikeAt = at; bpark = [at.lat, at.lng]; }
+          else if (!moveCar && at !== A && !bikeAt) bikeAt = at;      // left where it was fetched
+        } else if (!moveCar && at !== A && at !== carAt) bikeAt = at;
+        // and the rest on foot
+        if (isCache || !moveCar) segs.push(...(await walk(at, B)).segs);
+        else if (distM(at, B) > 2) segs.push({ m: 'air', pts: [[at.lat, at.lng], [B.lat, B.lng]], d: distM(at, B), t: distM(at, B) / OFF_PATH });
+        if (!segs.length) segs.push({ m: 'air', pts: [[A.lat, A.lng], [B.lat, B.lng]], d: distM(A, B), t: distM(A, B) / OFF_PATH });
+        const leg = { segs, d: 0, t: 0, by: {}, park, bpark };
+        segs.forEach(sg => { leg.d += sg.d; leg.t += sg.t; leg.by[sg.m] = (leg.by[sg.m] || 0) + sg.d; });
+        out.push(leg);
+      }
+      return out;
+    }
     async function calcLegs(stops, mode, progress) {
+      if (mode === 'carbike') {
+        const keep0 = routeDebug.filter(x => x.orderMs != null).slice(-1);
+        routeDebug.length = 0; routeDebug.push(...keep0);
+        calcLegs.unchecked = false; valhallaFail = 0;
+        const t0 = Date.now(), r = await calcLegsCarBike(stops, progress);
+        routeDebug.push({ drivesMs: Date.now() - t0, walksAfterMs: 0 });
+        return r;
+      }
       const jobs = [];
       let carAt = null, lastIn = null;        // lastIn: { from: park, to: cache, job } of the leg before
       const keep = routeDebug.filter(x => x.orderMs != null).slice(-1);
@@ -7566,7 +7726,7 @@ ${calcTrk(stamp)}</gpx>
         const A = ll2(stops[i - 1]), B = ll2(stops[i]);
         let drv = null;
         if (mode !== 'foot') {
-          drv = await along(mode, carAt, B);
+          drv = mode === 'bike' ? await bikeAlong(carAt, B) : await along(mode, carAt, B);
           // Parked at the same spot for the next one too: no point in moving the car – just walk on.
           // (within 300 m: walk rather than move it – but at the end of the route the car comes along, all the way)
           const last = i === stops.length - 1;
@@ -7611,7 +7771,7 @@ ${calcTrk(stamp)}</gpx>
     // from the road are counted at the road's distance from each stop).
     async function costMatrix(stops, mode) {
       const pts = stops.map(ll2), n = pts.length;
-      const [foot, drv] = await Promise.all([osrm('foot', 'table', pts, 'annotations=duration'), mode === 'foot' ? null : osrm(mode, 'table', pts, 'annotations=duration')]);   // (distances in a table are slow to work out – not asked)
+      const [foot, drv] = await Promise.all([osrm('foot', 'table', pts, 'annotations=duration'), mode === 'foot' ? null : osrm(mode === 'carbike' ? 'car' : mode, 'table', pts, 'annotations=duration')]);   // (distances in a table are slow to work out – not asked)
       const snap = drv ? drv.sources.map(s => s.distance || 0) : [], at = drv ? drv.sources.map(wpt) : [];
       const c = [];
       for (let i = 0; i < n; i++) {
@@ -7677,8 +7837,8 @@ ${calcTrk(stamp)}</gpx>
     const CALC_STYLE = {
       car: { color: '#8250df', weight: 4, opacity: 0.85 },
       bike: { color: '#1a7f37', weight: 4, opacity: 0.85 },
-      foot: { color: '#8250df', weight: 3, opacity: 0.9, dashArray: '1 6', lineCap: 'round' },
-      air: { color: '#cf222e', weight: 2, opacity: 0.9, dashArray: '4 4' },
+      foot: { color: '#f5a000', weight: 4, opacity: 0.85 },
+      air: { color: '#cf222e', weight: 4, opacity: 0.85 },
     };
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
@@ -8173,7 +8333,7 @@ ${calcTrk(stamp)}</gpx>
         };
       }
       // --- Route calculation in the preview -----------------------------------------------------------
-      const MODE_NAME = { car: 'By car', bike: 'By bike', foot: 'On foot' }, MODE_ICON = { car: 'car', bike: 'bike', foot: 'walk' };
+      const MODE_NAME = { car: 'By car', carbike: 'By car and bike', bike: 'By bike', foot: 'On foot' }, MODE_ICON = { car: 'car', carbike: 'car', bike: 'bike', foot: 'walk' };
       let calcBusy = null, calcAsk = null, calcErr = '', calcToken = 0;
       const stopName = r => (r.kind === 'cache' ? r.code : r.name);
       function drawCalc() {
@@ -8190,21 +8350,27 @@ ${calcTrk(stamp)}</gpx>
         } else if (calcValid()) {
           const L0 = routeCalc.legs, D = L0.reduce((a, l) => a + l.d, 0), Tt = L0.reduce((a, l) => a + l.t, 0), by = {};
           L0.forEach(l => Object.keys(l.by).forEach(k => { const kk = k === 'air' ? 'foot' : k; by[kk] = (by[kk] || 0) + l.by[k]; }));   // straight across is on foot too
-          const parts = ['car', 'bike', 'foot', 'air'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot', air: 'straight line' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ');
-          html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b></div>
-            <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}${L0.some(l => l.park) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${routeCalc.mode === 'bike' ? icon('bike', 11) : '<b>P</b>'}</span>${esc(T(routeCalc.mode === 'bike' ? 'where the bike is left' : 'where the car is left'))}</span>` : ''}</span></div>
+          const hasAir = L0.some(l => l.segs.some(sg => sg.m === 'air' && sg.d > 5));
+          const parts = ['car', 'bike', 'foot'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ')
+            + (hasAir ? ` · <span class="rt-calc-p"><span class="rt-calc-k k-air"></span>${esc(T('of it straight across'))}</span>` : '');
+          html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b>${routeCalc.accepted ? `<span class="rt-ok">${icon('check', 13)}${esc(T('Accepted'))}</span>` : ''}</div>
+            <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}${L0.some(l => l.park) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${routeCalc.mode === 'bike' ? icon('bike', 11) : '<b>P</b>'}</span>${esc(T(routeCalc.mode === 'bike' ? 'where the bike is left' : 'where the car is left'))}</span>` : ''}${L0.some(l => l.bpark) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${icon('bike', 11)}</span>${esc(T('where the bike is left'))}</span>` : ''}</span></div>
             ${routeCalc.unchecked ? `<p class="hint rt-calc-err">${esc(T('The roads could not be checked (the road service did not answer), so the car may be shown on tracks and trails. Discard and try again in a minute.'))}</p>` : ''}
             ${routeCalc.accepted ? '' : `<p class="hint">${esc(T('Accept it to measure the legs and the total along it.'))}</p>`}
+            <label class="rt-calc-opt rt-alpha">${esc(T('See-through'))} <input type="range" min="0" max="90" step="5" value="${routeAlpha}"> <span>${routeAlpha} %</span></label>
             <div class="btns">${routeCalc.accepted ? '' : `<button class="primary" data-c="accept">${esc(T('Accept'))}</button>`}<button data-c="discard">${esc(T(routeCalc.accepted ? 'Discard the calculated route' : 'Discard'))}</button></div>`;
         } else {
-          html = `<div class="rt-calc-row"><select class="rt-mode" title="${esc(T('How you travel between the geocaches'))}">${['car', 'bike', 'foot'].map(m => `<option value="${m}"${m === routeMode ? ' selected' : ''}>${esc(T(MODE_NAME[m]))}</option>`).join('')}</select><button data-c="go">${icon('route', 15)}<span>${esc(T('Calculate route'))}</span></button></div>
+          html = `<div class="rt-calc-row"><select class="rt-mode" title="${esc(T('How you travel between the geocaches'))}">${['car', 'carbike', 'bike', 'foot'].map(m => `<option value="${m}"${m === routeMode ? ' selected' : ''}>${esc(T(MODE_NAME[m]))}</option>`).join('')}</select><button data-c="go">${icon('route', 15)}<span>${esc(T('Calculate route'))}</span></button></div>
             <label class="rt-calc-opt">${esc(T('Straight across the terrain up to'))} <select class="rt-across">${ACROSS_CHOICES.map(v => `<option value="${v}"${v === acrossMax ? ' selected' : ''}>${v ? fmtDist(v) : esc(T('never'))}</option>`).join('')}</select></label>
+            <label class="rt-calc-opt rt-alpha">${esc(T('See-through'))} <input type="range" min="0" max="90" step="5" value="${routeAlpha}"> <span>${routeAlpha} %</span></label>
             <label class="rt-calc-opt"><input type="checkbox" class="rt-opt"${routeOptimize ? ' checked' : ''}> ${esc(T('Suggest a shorter order of the stops'))}</label>
-            <p class="hint">${esc(T(routeMode === 'foot' ? 'Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.' : 'By car (or bike) from the start as far as the roads go towards each geocache – a road closed to cars stops the car, not the bike; a bike keeps off paths – then on foot along paths, the last bit in a straight line, and back to the car. From OpenStreetMap.'))}</p>
+            <p class="hint">${esc(T(routeMode === 'carbike' ? 'By car as far as the car may go, then by bike as far as a bike may go, the rest on foot – and back by bike to the car. From OpenStreetMap.' : routeMode === 'foot' ? 'Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.' : (routeMode === 'bike' ? 'By bike from the start as far as a bike may go towards each geocache – not on paths, steps or ski trails – then on foot, the last bit in a straight line, and back to the bike. From OpenStreetMap.' : 'By car from the start as far as the car may go towards each geocache – closed roads, gates, tracks and ski trails stop it – then on foot, the last bit in a straight line, and back to the car. From OpenStreetMap.')))}</p>
             ${calcErr ? `<div class="gm rt-calc-err">${esc(calcErr)}</div>` : ''}`;
         }
         box.innerHTML = html;
         const on = (k, f) => { const b = box.querySelector(`[data-c=${k}]`); if (b) b.onclick = f; };
+        const al = box.querySelector('.rt-alpha input');
+        if (al) al.oninput = () => { setRouteAlpha(+al.value); const sp = box.querySelector('.rt-alpha span'); if (sp) sp.textContent = routeAlpha + ' %'; };
         const acr = box.querySelector('.rt-across');
         if (acr) acr.onchange = () => { acrossMax = +acr.value; try { localStorage.setItem('gcct.routeAcross', String(acrossMax)); } catch (e) { /* ignore */ } };
         const opt = box.querySelector('.rt-opt');
