@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.64
+// @version      1.56.66
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7627,7 +7627,7 @@ ${calcTrk(stamp)}</gpx>
     // on. So several ways are tried – the bike route, the walking route ridden as far as a bike may go, and
     // Valhalla's bike route kept away from the spots where the others had to stop – and the one that takes the
     // bike closest to the geocache is used.
-    async function bikeAlong(a, b) {
+    async function bikeAlong(a, b, back) {   // back: the bike rides that brought it to a (to ride back along)
       const cands = [];
       const r1 = await along('bike', a, b);
       r1.bad = r1.stopped ? vehicleStopValhalla.bad : null;
@@ -7637,7 +7637,11 @@ ${calcTrk(stamp)}</gpx>
         const r2 = await rideLine(j.routes[0].geometry.coordinates, a, b);
         if (r2) cands.push(r2);
       } catch (e) { /* the bike route alone, then */ }
-      const best = () => cands.reduce((x, y) => (distM(y.end, b) + 30 < distM(x.end, b) ? y : x));
+      // The bike is not carried: a way that starts far off (more than 40 m straight across to where the riding
+      // begins) only counts if none starts closer.
+      const carry = c => (c.segs[0] && c.segs[0].m === 'air' ? c.segs[0].d : 0);
+      const ok = c => carry(c) <= 40;
+      const best = () => { const pool = cands.some(ok) ? cands.filter(ok) : [cands.reduce((x, y) => (carry(y) < carry(x) ? y : x))]; return pool.reduce((x, y) => (distM(y.end, b) + 30 < distM(x.end, b) ? y : x)); };
       const exclude = cands.filter(c => c.stopped && c.bad).map(c => c.bad);
       for (let tries = 0; tries < 2 && best().stopped && distM(best().end, b) > 300 && exclude.length && valhallaFail < 3; tries++) {
         try {
@@ -7654,6 +7658,32 @@ ${calcTrk(stamp)}</gpx>
           if (!r3.stopped || !r3.bad) break;
           exclude.push(r3.bad);
         } catch (e) { routeDebug.push({ bikeRouteError: String(e) }); break; }
+      }
+      // Every way would start with the bike carried a long way (the bike stands on a way the bike route does
+      // not know – where the last ride ended): ride back the way it came first, then on from there.
+      if (!cands.some(ok) && back && back.length) {
+        try {
+          // the way back as one line, and points along it 50, 100, 200 … m back: the first from which the bike
+          // route can start right away is used – only as far back as needed
+          const line = [];
+          reversed(back).forEach(sg => sg.pts.forEach(p => { const q = line[line.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) line.push(p); }));
+          let acc = 0, k = 1;
+          for (const want of [50, 100, 200, 400, 800, 1600, 3200, Infinity]) {
+            while (k < line.length && acc < want) { acc += distM({ lat: line[k - 1][0], lng: line[k - 1][1] }, { lat: line[k][0], lng: line[k][1] }); k++; }
+            const p = line[k - 1], from = { lat: p[0], lng: p[1] };
+            const on = await along('bike', from, b);
+            const lead = on.segs[0] && on.segs[0].m === 'air' ? on.segs[0].d : 0;
+            if (lead <= 40) {
+              const part = line.slice(0, k);
+              let dd = 0; for (let i = 1; i < part.length; i++) dd += distM({ lat: part[i - 1][0], lng: part[i - 1][1] }, { lat: part[i][0], lng: part[i][1] });
+              const segs = (part.length > 1 ? [{ m: 'bike', pts: part, d: dd, t: dd / 4 }] : []).concat(on.segs.filter((sg, i) => !(i === 0 && sg.m === 'air')));
+              cands.push({ segs, end: on.end, stopped: on.stopped, bad: null });
+              routeDebug.push({ bike: 'rode back the way it came first', backM: Math.round(dd) });
+              break;
+            }
+            if (k >= line.length) break;
+          }
+        } catch (e) { /* ignore */ }
       }
       const pick = best();
       if (pick !== r1) routeDebug.push({ bike: 'another way ridden', closer: Math.round(distM(r1.end, b) - distM(pick.end, b)) });
@@ -7702,7 +7732,7 @@ ${calcTrk(stamp)}</gpx>
       let trail = [];          // the bike rides since the bike left the car – the way back, reversed
       // From the bike back to the car: by bike all the way – the way it came, if no other way gets there.
       const bikeBack = async from => {
-        const r = await bikeAlong(from, carAt);
+        const r = await bikeAlong(from, carAt, trail);
         const segs = vehSegs(r);
         if (distM(r.end, carAt) > 30) {
           if (trail.length) { segs.length = 0; segs.push(...reversed(trail)); }
@@ -7734,7 +7764,7 @@ ${calcTrk(stamp)}</gpx>
         }
         // on by bike from here, as far as a bike may go – if that is a real stretch
         if (isCache && distM(at, B) > 150 && (moveCar || at !== A)) {
-          const ride = await bikeAlong(at, B);
+          const ride = await bikeAlong(at, B, trail.length ? trail : null);
           if (distM(ride.end, at) > 100) { const rs = vehSegs(ride); segs.push(...rs); trail.push(...rs.filter(sg => sg.m === 'bike')); at = ride.end; bikeAt = at; bpark = [at.lat, at.lng]; }
           else if (!moveCar && at !== A && !bikeAt) bikeAt = at;      // left where it was fetched
         } else if (!moveCar && at !== A && at !== carAt) bikeAt = at;
@@ -7758,7 +7788,7 @@ ${calcTrk(stamp)}</gpx>
         return r;
       }
       const jobs = [];
-      let carAt = null, lastIn = null;        // lastIn: { from: park, to: cache, job } of the leg before
+      let carAt = null, lastIn = null, lastRide = null;   // lastRide: the bike rides of the last leg (bike mode)        // lastIn: { from: park, to: cache, job } of the leg before
       const keep = routeDebug.filter(x => x.orderMs != null).slice(-1);
       routeDebug.length = 0; routeDebug.push(...keep);
       calcLegs.unchecked = false; valhallaFail = 0;
@@ -7769,7 +7799,7 @@ ${calcTrk(stamp)}</gpx>
         const A = ll2(stops[i - 1]), B = ll2(stops[i]);
         let drv = null;
         if (mode !== 'foot') {
-          drv = mode === 'bike' ? await bikeAlong(carAt, B) : await along(mode, carAt, B);
+          drv = mode === 'bike' ? await bikeAlong(carAt, B, lastRide) : await along(mode, carAt, B);
           // Parked at the same spot for the next one too: no point in moving the car – just walk on.
           // (within 300 m: walk rather than move it – but at the end of the route the car comes along, all the way)
           const last = i === stops.length - 1;
@@ -7783,6 +7813,7 @@ ${calcTrk(stamp)}</gpx>
         let back = null;
         if (distM(A, from) > 25) back = lastIn && distM(lastIn.from, from) < 1 && distM(lastIn.to, A) < 1 ? lastIn.job.then(r => ({ segs: reversed(r.segs) })) : walk(A, from);
         if (drv.segs.length && drv.segs[drv.segs.length - 1].m === 'air') drv.segs.pop();
+        if (mode === 'bike') lastRide = drv.segs.filter(sg => sg.m === 'bike');
         let inn = null;
         if ((stops[i].kind === 'cache' || drv.stopped) && distM(park, B) > 30) inn = walk(park, B);
         lastIn = inn ? { from: park, to: B, job: inn } : null;
