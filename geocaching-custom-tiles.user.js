@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.58
+// @version      1.56.59
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7464,7 +7464,10 @@ ${calcTrk(stamp)}</gpx>
     // path …) and where there is a gate or a bollard. Quick – it looks it up in ready-made data.
     const routeDebug = window.gcctRouteDebug = window.gcctRouteDebug || [];   // for gcctRouteDebug in the console
     const VALHALLA = 'https://valhalla1.openstreetmap.de/trace_attributes';
-    const CAR_NO_USE = new Set(['track', 'cycleway', 'mountain_bike', 'sidewalk', 'footway', 'steps', 'path', 'pedestrian', 'bridleway', 'pedestrian_crossing', 'emergency_access', 'elevator', 'escalator', 'platform']);
+    // The car route never uses footways, paths or cycleways – where Valhalla puts a piece of it on one, that is
+    // a sidewalk or a path beside the road it was laid onto, not the road the car drives. So for the car only
+    // tracks (and emergency-only ways) count here; closed roads, ski trails and gates are checked below.
+    const CAR_NO_USE = new Set(['track', 'emergency_access']);
     // A bike goes on roads, tracks, cycleways, footways, bridleways and mountain-bike trails – not on paths or steps.
     const BIKE_NO_USE = new Set(['path', 'steps', 'elevator', 'escalator', 'platform']);
     const CAR_NO_NODE = new Set(['gate', 'bollard', 'multi_use_pole', 'sump_buster']);
