@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.55.51
+// @version      1.56.31
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -223,6 +223,58 @@
     "Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.": "Langs de rette linjene mellom stoppene; høyder fra Kartverket (Norge) eller Open-Meteo.",
     "Home": "Hjem",
     "Home (on the map)": "Hjemme",
+    "The route service is busy – try again in a moment.": "Ruteberegningen er opptatt – prøv igjen om litt.",
+    "Calculated route": "Beregnet rute",
+    "Order": "Rekkefølge",
+    "Straight across the terrain up to": "Rett over terrenget inntil",
+    "never": "aldri",
+    "Suggest a shorter order of the stops": "Foreslå en kortere rekkefølge på stoppene",
+    "road check": "vegsjekk",
+    "roads": "veger",
+    "from memory": "fra minnet",
+    "waited": "ventet",
+    "drives": "bilturer",
+    "walks": "gåturer",
+    "Time used:": "Tidsbruk:",
+    "Fetching the roads from OpenStreetMap …": "Henter vegene fra OpenStreetMap …",
+    "The roads could not be checked (the road service did not answer), so the car may be shown on tracks and trails. Discard and try again in a minute.": "Vegene kunne ikke sjekkes (vegtjenesten svarte ikke), så bilen kan være lagt på traktorveger og stier. Forkast og prøv igjen om et minutt.",
+    "Pause": "Pause",
+    "Continue": "Fortsett",
+    "Play the route": "Spill av ruten",
+    "Stop": "Stopp",
+    "Pace": "Tempo",
+    "along the calculated route": "langs den beregnede ruten",
+    "straight lines, walking pace": "luftlinje, gåtempo",
+    "leg {i}": "etappe {i}",
+    "where the car is left": "der bilen settes igjen",
+    "where the bike is left": "der sykkelen settes igjen",
+    "Calculated route – shown on the map": "Beregnet rute – vist i kartet",
+    "Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.": "Langs den beregnede ruten; høyder fra Kartverket (Norge) eller Open-Meteo.",
+    "Along the calculated route.": "Langs den beregnede ruten.",
+    "By car": "Med bil",
+    "By bike": "Med sykkel",
+    "On foot": "Til fots",
+    "by car": "med bil",
+    "by bike": "med sykkel",
+    "on foot": "til fots",
+    "straight line": "luftlinje",
+    "A shorter order": "En kortere rekkefølge",
+    "Visiting the stops in this order saves about {t} ({b} instead of {a}):": "Besøker du stoppene i denne rekkefølgen, sparer du ca. {t} ({b} i stedet for {a}):",
+    "Change the order": "Endre rekkefølgen",
+    "Keep my order": "Behold min rekkefølge",
+    "about {t}": "ca. {t}",
+    "Accept it to measure the legs and the total along it.": "Godta den for å måle etappene og totalen langs den.",
+    "Accept": "Godta",
+    "Discard": "Forkast",
+    "Discard the calculated route": "Forkast den beregnede ruten",
+    "How you travel between the geocaches": "Hvordan du kommer deg mellom cachene",
+    "Calculate route": "Beregn rute",
+    "Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.": "Langs veger og stier, og i luftlinje fra nærmeste punkt på stien til hver cache. Fra OpenStreetMap.",
+    "By car (or bike) from the start as far as the roads go towards each geocache – a road closed to cars stops the car, not the bike; a bike keeps off paths – then on foot along paths, the last bit in a straight line, and back to the car. From OpenStreetMap.": "Med bil (eller sykkel) fra start så langt vegen går mot hver cache – en veg stengt for bil stopper bilen, ikke sykkelen; sykkelen holder seg unna stier – så til fots på sti, det siste stykket i luftlinje, og tilbake til bilen. Fra OpenStreetMap.",
+    "Could not calculate the route: {e}": "Kunne ikke beregne ruten: {e}",
+    "Checking the order of the stops …": "Sjekker rekkefølgen på stoppene …",
+    "Calculating the route …": "Beregner ruten …",
+    "Calculating the route … leg {i} of {n}": "Beregner ruten … etappe {i} av {n}",
     "Hide the site’s icon at the posted coordinates": "Skjul nettstedets ikon ved oppgitte koordinater",
     "Solved caches you have found: only the smiley at the solved spot is left (with the marks on)": "Løste cacher du har funnet: bare smilefjeset ved den løste plassen blir igjen (når merkene er på)",
     "Crosshair": "Trådkors",
@@ -484,6 +536,9 @@
   // Line icons (24×24, drawn with the current text colour) – same look in every browser, unlike emoji.
   const ICONS = {
     flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+    car: '<path d="M5 16V11.5L7 6.5h10l2 5V16z"/><path d="M5 11.5h14"/><circle cx="8" cy="16.5" r="1.6"/><circle cx="16" cy="16.5" r="1.6"/>',
+    bike: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 9h6.5l3 7.5"/><path d="M12 16.5 9 9"/><path d="M14 6h2.5l-1 3"/>',
+    walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2-6 3 3v3"/><path d="M7 12.5l2.5-4.5 4 1 2.5 3.5H18"/><path d="M12 15l.5-5.5"/>',
     route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/>',
     up: '<path d="m6 15 6-6 6 6"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -4543,6 +4598,35 @@
       .gcct-route .rt-go:hover b{text-decoration:underline}
       .gcct-route .rt-leg{color:var(--muted);font-size:11.5px;font-weight:400;white-space:nowrap}
       .gcct-route .rt-prof{margin:0 0 10px}
+      .gcct-route .rt-calc{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--rc);background:color-mix(in srgb,#8250df 4%,#fff)}
+      .gcct-route .rt-calc-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .gcct-route .rt-calc-row button{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-calc-row select{width:auto;flex:none;margin:0}
+      .gcct-route .rt-calc-row svg{color:#8250df;flex:none}
+      .gcct-route .rt-calc .hint{margin:6px 0 0}
+      .gcct-route .rt-calc .btns{margin:8px 0 0;padding:0;border:0;background:none;position:static;box-shadow:none}
+      .gcct-route .rt-calc-p{white-space:nowrap}
+      .gcct-route .rt-calc-sum{margin-top:4px}
+      .gcct-route .rt-calc-k{display:inline-block;width:16px;height:0;margin:0 4px 3px 2px;vertical-align:middle;border-top:4px solid #8250df}
+      .gcct-route .rt-calc-k.k-bike{border-top-color:#1a7f37}
+      .gcct-route .rt-calc-k.k-foot{border-top:3px dotted #8250df}
+      .gcct-route .rt-calc-k.k-air{border-top:2px dashed #cf222e}
+      .gcct-route .rt-calc-ask p{margin:6px 0}
+      .gcct-route .rt-calc-ord{font-size:12px;line-height:1.7}
+      .gcct-route .rt-calc-ord span{display:inline-block;min-width:16px;padding:0 3px;border-radius:8px;background:#8250df;color:#fff;font-size:11px;text-align:center;line-height:16px}
+      .gcct-route .rt-calc-err{color:#cf222e}
+      .gcct-route .rt-calc-time{font-size:11px}
+      .gcct-route .rt-calc-opt{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;cursor:pointer}
+      .gcct-route .rt-calc-opt input{margin:0}
+      .gcct-route .rt-calc-opt select{width:auto;margin:0;padding:2px 6px}
+      .gcct-route .rt-play{margin:0 0 10px}
+      .gcct-route .rt-play button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
+      .gcct-route .rt-play-bar{width:100%;margin:8px 0 2px;accent-color:#8250df}
+      .gcct-me{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#cf222e;color:#fff;box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.45)}
+      .gcct-me svg{color:#fff}
+      .gcct-me-bike{background:#1a7f37}
+      .gcct-me-car{background:#8250df}
+      .gcct-route .rt-calc-pk{display:inline-flex;width:14px;height:14px;margin:0 4px 0 2px;vertical-align:-2px;font-size:10px;box-shadow:none}
       .gcct-route .rt-prof button{display:inline-flex;align-items:center;gap:6px}
       .gcct-route .rt-prof button.on{background:color-mix(in srgb,#8250df 12%,#fff);border-color:#8250df;color:#6639ba}
       .gcct-route .rt-prof-svg{display:block;max-width:100%;margin:8px 0 4px;border:1px solid var(--line);border-radius:var(--rc);background:#fff;cursor:crosshair}
@@ -4566,6 +4650,8 @@
       .gcct-route .num{text-align:right;white-space:nowrap}
       .gcct-route .rt-desc{color:var(--muted);font-size:11.5px}
       .gcct-route .rt-note{margin-top:8px}
+      .gcct-park{display:flex;align-items:center;justify-content:center;border-radius:4px;background:#0969da;color:#fff;font:700 12px/1 system-ui,sans-serif;box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)}
+      .gcct-park svg{color:#fff}
       .gcct-rtnum{pointer-events:none!important}
       .gcct-rtnum span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8250df;color:#fff;
         font:700 11px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border:1.5px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.35);box-sizing:border-box}
@@ -6868,6 +6954,8 @@
     const routeStops = () => routeLoop && route.length > 1 ? route.concat([route[0]]) : route;
     const routeLayer = L.layerGroup().addTo(map);
     routeLayer.__gcct = true;
+    const playLayer = L.layerGroup().addTo(map);       // you, during the playback of the route
+    playLayer.__gcct = true;
     // The route line is drawn below the cache icons: on /map the icons are tiles, so the line goes into the
     // tile pane just below the site's cache tiles; on /play/map the icons are markers, above it anyway.
     let routeRenderer = null;
@@ -6891,9 +6979,18 @@
     map.on('zoomend', () => { if (route.length) try { drawRoute(); } catch (e) { /* ignore */ } });
     function drawRoute() {
       routeLayer.clearLayers();
+      checkCalc();
       if (!route.length) return;
       const lls = routeStops().map(r => L.latLng(r.lat, r.lng));
-      if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
+      const calcLines = [];
+      if (lls.length > 1 && calcValid()) {
+        // the calculated route: by car / bike solid, on foot dotted, the straight bits off the path dashed red
+        routeCalc.legs.forEach(l => l.segs.forEach(sg => {
+          routeLayer.addLayer(L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air)));
+          calcLines.push(sg.pts);
+        }));
+        tuckRouteLine();
+      } else if (lls.length > 1) { routeLayer.addLayer(L.polyline(lls, routeLineOpts())); tuckRouteLine(); }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
       // the cache's ♥ (above), D/T (below) and FTF badge (right) as far as they are shown, the icons of
       // caches nearby and the route's lines. Tried on rings around the stop, nearest first.
@@ -6902,7 +6999,8 @@
       const favS = api.favSettings ? api.favSettings() : { show: false, min: 10 }, dtS = api.dtSettings ? api.dtSettings() : { show: false };
       const ftfS = api.ftfSettings ? api.ftfSettings() : { show: false };
       const pts = lls.map(pt), segs = [];
-      for (let k = 1; k < pts.length; k++) if (pts[k - 1] && pts[k]) segs.push([pts[k - 1], pts[k]]);
+      if (calcLines.length) calcLines.forEach(line => { let prev = null; line.forEach(q => { const p2 = pt(L.latLng(q[0], q[1])); if (prev && p2) segs.push([prev, p2]); prev = p2; }); });
+      else for (let k = 1; k < pts.length; k++) if (pts[k - 1] && pts[k]) segs.push([pts[k - 1], pts[k]]);
       const segDist = (p, a, b) => { const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy, t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / l2)) : 0; return Math.hypot(p.x - a.x - t * vx, p.y - a.y - t * vy); };
       const rectDist = (p, r) => Math.hypot(Math.max(r[0] - p.x, 0, p.x - r[2]), Math.max(r[1] - p.y, 0, p.y - r[3]));
       const NUM = 9, ICON = 13;
@@ -6926,6 +7024,7 @@
         if (ftfS.show && i2.neverFound === true && i2.found !== true) rs.push([p.x + 4, p.y - 8, p.x + 36, p.y + 8]);
         return rs;
       };
+      const numAt = [], parkAt = [];
       route.forEach((r, i) => {
         const here = pts[i];
         let dx = -21, dy = -10;
@@ -6933,8 +7032,9 @@
           const circles = [], rects = [];
           spotsNear(here).forEach(o => { circles.push([o.p, ICON]); rects.push(...labelRects(o.p, o.i)); });
           circles.push([here, ICON]);                                   // the stop itself (a pin, an address)
+          const near = segs.filter(([a, b]) => segDist(here, a, b) < 90);
           const free = c => circles.every(([p, rad]) => Math.hypot(c.x - p.x, c.y - p.y) >= rad + NUM + 1)
-            && rects.every(rc => rectDist(c, rc) >= NUM + 1) && segs.every(([a, b]) => segDist(c, a, b) >= NUM + 3);
+            && rects.every(rc => rectDist(c, rc) >= NUM + 1) && near.every(([a, b]) => segDist(c, a, b) >= NUM + 3);
           let found = null;
           for (let rad = ICON + NUM + 1; rad <= 60 && !found; rad += 1) {
             for (let k = 0; k < 24 && !found; k++) {
@@ -6948,7 +7048,42 @@
           icon: L.divIcon({ className: 'gcct-rtnum', html: `<span>${i + 1}</span>`, iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) });
         m.__gcct = true;
         routeLayer.addLayer(m);
+        if (here) numAt.push({ x: here.x + dx, y: here.y + dy });
       });
+      // Where the car (or bike) is left: a "P" (or a bike), once per spot – beside the spot if a cache icon,
+      // its labels or a route number is there, with a small dot on the spot itself.
+      if (calcLines.length) {
+        const seenP = new Set(), PK = 10;
+        routeCalc.legs.forEach(l => {
+          if (!l.park) return;
+          const k = l.park[0].toFixed(5) + ',' + l.park[1].toFixed(5);
+          if (seenP.has(k)) return;
+          seenP.add(k);
+          const ll = L.latLng(l.park[0], l.park[1]), here = pt(ll);
+          let dx = 0, dy = 0;
+          if (here) {
+            const circles = [], rects = [];
+            spotsNear(here).forEach(o => { circles.push([o.p, ICON]); rects.push(...labelRects(o.p, o.i)); });
+            pts.forEach(c => { if (c && Math.abs(c.x - here.x) < 90 && Math.abs(c.y - here.y) < 90) circles.push([c, ICON]); });   // the stops (pins, places)
+            numAt.forEach(c => circles.push([c, NUM]));
+            parkAt.forEach(c => circles.push([c, PK]));
+            const free = c => circles.every(([p2, rad]) => Math.hypot(c.x - p2.x, c.y - p2.y) >= rad + PK + 1) && rects.every(rc => rectDist(c, rc) >= PK + 1);
+            let found = free(here) ? here : null;
+            for (let rad = PK + 4; rad <= 70 && !found; rad += 1) {
+              for (let q = 0; q < 24 && !found; q++) {
+                const ang = (45 + q * 15) * Math.PI / 180, c = { x: here.x + rad * Math.cos(ang), y: here.y + rad * Math.sin(ang) };
+                if (free(c)) found = c;
+              }
+            }
+            if (found) { dx = Math.round(found.x - here.x); dy = Math.round(found.y - here.y); parkAt.push(found); }
+          }
+          const opts = { interactive: false, keyboard: false, ...(typeof labelPane === 'function' ? labelPane() : {}) };
+          if (dx || dy) { const dot = L.circleMarker(ll, Object.assign({ radius: 3, color: '#fff', weight: 1.5, fillColor: '#0969da', fillOpacity: 1 }, opts)); dot.__gcct = true; routeLayer.addLayer(dot); }
+          const m = L.marker(ll, Object.assign({}, opts, { icon: L.divIcon({ className: 'gcct-park', html: routeCalc.mode === 'bike' ? icon('bike', 13) : '<b>P</b>', iconSize: [18, 18], iconAnchor: [9 - dx, 9 - dy] }) }));
+          m.__gcct = true;
+          routeLayer.addLayer(m);
+        });
+      }
     }
     const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
     // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
@@ -6997,7 +7132,7 @@
         map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
       } catch (e) { /* ignore */ }
     }
-    const routeLength = () => routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
+    const routeLength = () => calcOn() ? routeCalc.legs.reduce((a, l) => a + l.d, 0) : routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
     // Everything you can pick: pins, and every geocache the script knows a position for (solved ones at the solved spot).
     function routeCandidates() {
       const out = [];
@@ -7177,10 +7312,56 @@
       return list;
     }
     // The plain route: only the stops (GPX 1.1).
+    // The stops as waypoints too: pins and places (home included) – and in the plain GPX also the geocaches
+    // (the full GPX has them with all their data already).
+    function stopWpts(withCaches) {
+      const seen = new Set(), out = [];
+      route.forEach(r => {
+        if (r.kind === 'cache' && !withCaches) return;
+        const k = r.kind === 'cache' ? r.code : (+r.lat).toFixed(6) + ',' + (+r.lng).toFixed(6);
+        if (seen.has(k)) return;
+        seen.add(k);
+        const sym = r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue';
+        out.push(`  <wpt lat="${r.lat}" lon="${r.lng}">\n    <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n    <desc>${xmlEsc(r.name)}</desc>` : ''}\n    <sym>${sym}</sym>${r.kind === 'cache' ? '\n    <type>Geocache</type>' : ''}\n  </wpt>`);
+      });
+      return out.length ? out.join('\n') + '\n' : '';
+    }
     function plainRouteGpx() {
       const pts = routeStops().map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
       const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n</gpx>\n`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n${stopWpts(true)}  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n${calcTrk()}</gpx>\n`;
+    }
+    // The calculated route (once accepted) goes into the GPX twice: as a route (<rte>,
+    // simplified to the points that matter, at most 500, for devices that navigate a route) and as a track
+    // (<trk>, every point, for devices that draw the line).
+    function calcTrk() {
+      if (!calcOn()) return '';                // only an accepted route
+      const all = [];
+      calcLegLines().forEach((line, i) => line.forEach((p, k) => { if (i && !k) return; all.push(p); }));
+      // Douglas–Peucker: keep the points more than tol metres off the straight line between their neighbours
+      const simplify = tol => {
+        const keep = new Uint8Array(all.length); keep[0] = keep[all.length - 1] = 1;
+        const k0 = Math.cos(all[0][0] * Math.PI / 180) * 111320, k1 = 110540;
+        const xy = all.map(p => [p[1] * k0, p[0] * k1]);
+        const stack = [[0, all.length - 1]];
+        while (stack.length) {
+          const [a, b] = stack.pop();
+          let best = -1, bd = tol;
+          const [ax, ay] = xy[a], [bx, by] = xy[b], dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
+          for (let i = a + 1; i < b; i++) {
+            const t = Math.max(0, Math.min(1, ((xy[i][0] - ax) * dx + (xy[i][1] - ay) * dy) / L2));
+            const d = Math.hypot(xy[i][0] - ax - t * dx, xy[i][1] - ay - t * dy);
+            if (d > bd) { bd = d; best = i; }
+          }
+          if (best > 0) { keep[best] = 1; stack.push([a, best], [best, b]); }
+        }
+        return all.filter((p, i) => keep[i]);
+      };
+      let rp = simplify(5);
+      for (let tol = 10; rp.length > 500 && tol < 2000; tol *= 2) rp = simplify(tol);
+      const name = xmlEsc(T('Calculated route'));
+      return `  <rte>\n    <name>${name}</name>\n${rp.map(p => `    <rtept lat="${p[0]}" lon="${p[1]}" />`).join('\n')}\n  </rte>\n`
+        + `  <trk>\n    <name>${name}</name>\n    <trkseg>\n${all.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}" />`).join('\n')}\n    </trkseg>\n  </trk>\n`;
     }
     async function routeGpx(progress, full) {
       if (!full) return { text: plainRouteGpx(), failed: [] };
@@ -7203,11 +7384,11 @@
   <time>${new Date().toISOString()}</time>
   <keywords>cache, geocache</keywords>
   <bounds minlat="${Math.min(...lats)}" minlon="${Math.min(...lngs)}" maxlat="${Math.max(...lats)}" maxlon="${Math.max(...lngs)}" />
-${wpts.join('\n')}${wpts.length ? '\n' : ''}  <rte>
+${wpts.join('\n')}${wpts.length ? '\n' : ''}${stopWpts(false)}  <rte>
     <name>${xmlEsc(name)}</name>
 ${pts}
   </rte>
-</gpx>
+${calcTrk()}</gpx>
 `;
       return { text, failed };
     }
@@ -7218,6 +7399,301 @@ ${pts}
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
+    // --- Route calculation along roads and paths ------------------------------------------------------
+    // From OSRM on OpenStreetMap data (FOSSGIS, routing.openstreetmap.de). By car or bike along roads to the
+    // nearest point by each geocache it can reach (a road closed to cars stops the car, not the bike; a bike keeps off paths), the
+    // rest on foot along paths, and the last bit in a straight line from the nearest point on the path; then
+    // back to the car (or bike) and on. Two caches reached from the same spot are walked between. On foot:
+    // roads and paths all the way.
+    // A calculated route is first only shown on the map; once accepted, the distances, the total and the
+    // elevation profile follow it. Discarded, everything is back to straight lines.
+    const OSRM = 'https://routing.openstreetmap.de/routed-';
+    const CALC_KEY = 'gcct.routeCalc', MODES = { car: 1, bike: 1, foot: 1 };
+    const OFF_PATH = 0.7;                          // m/s walking where there is no path
+    let routeCalc = null;
+    try { routeCalc = JSON.parse(sessionStorage.getItem(CALC_KEY) || 'null'); } catch (e) { routeCalc = null; }
+    const saveCalc = () => { try { if (routeCalc) sessionStorage.setItem(CALC_KEY, JSON.stringify(routeCalc)); else sessionStorage.removeItem(CALC_KEY); } catch (e) { /* full or blocked */ } };
+    const stopsSig = () => JSON.stringify(routeStops().map(r => [+(+r.lat).toFixed(6), +(+r.lng).toFixed(6)]));
+    const calcValid = () => !!(routeCalc && routeCalc.sig === stopsSig());
+    const calcOn = () => calcValid() && !!routeCalc.accepted;
+    // A route that no longer fits the stops (one added, moved, removed) is dropped.
+    function checkCalc() { if (routeCalc && !calcValid()) { routeCalc = null; saveCalc(); } }
+    let routeOptimize = true;
+    try { routeOptimize = localStorage.getItem('gcct.routeOptimize') !== '0'; } catch (e) { /* ignore */ }
+    let routeMode = 'car';
+    try { routeMode = localStorage.getItem('gcct.routeMode') || 'car'; } catch (e) { /* ignore */ }
+    if (!MODES[routeMode]) routeMode = 'car';
+    const osrmCache = new Map();
+    let osrmLast = 0;
+    // At most three requests at a time, a little apart; the same request twice is asked once.
+    let osrmActive = 0;
+    const osrmQueue = [];
+    const osrmSlot = () => new Promise(res => { const go = () => { if (osrmActive < 3) { osrmActive++; res(); } else osrmQueue.push(go); }; go(); });
+    const osrmFree = () => { osrmActive--; const nx = osrmQueue.shift(); if (nx) nx(); };
+    function osrm(prof, service, pts, extra) {
+      const url = `${OSRM}${prof}/${service}/v1/driving/${pts.map(p => (+p.lng).toFixed(6) + ',' + (+p.lat).toFixed(6)).join(';')}?${extra || ''}`;
+      if (osrmCache.has(url)) return osrmCache.get(url);
+      const job = (async () => {
+        await osrmSlot();
+        try {
+          for (let t = 0; t < 3; t++) {
+            const wait = osrmLast + 80 - Date.now();
+            if (wait > 0) await new Promise(res => setTimeout(res, wait));
+            osrmLast = Date.now();
+            const r = await fetch(url, { headers: { Accept: 'application/json' } });
+            if (r.status === 429 || r.status >= 500) { await new Promise(res => setTimeout(res, 1500 * (t + 1))); continue; }
+            const body = await r.json().catch(() => null);
+            if (!body || body.code !== 'Ok') throw new Error((body && (body.message || body.code)) || ('HTTP ' + r.status));
+            return body;
+          }
+          throw new Error(T('The route service is busy – try again in a moment.'));
+        } finally { osrmFree(); }
+      })();
+      job.catch(() => osrmCache.delete(url));
+      if (osrmCache.size > 300) osrmCache.delete(osrmCache.keys().next().value);
+      osrmCache.set(url, job);
+      return job;
+    }
+    const ll2 = p => ({ lat: +p.lat, lng: +p.lng });
+    const wpt = w => ({ lat: w.location[1], lng: w.location[0] });
+    // a → b on one network: straight to where it meets the network, along it, straight on to b.
+    // Where the car (or bike) has to stop, asked from Valhalla (FOSSGIS, valhalla1.openstreetmap.de): it
+    // lays the drive onto its own road data and tells, for each piece, what kind of way it is (road, track,
+    // path …) and where there is a gate or a bollard. Quick – it looks it up in ready-made data.
+    const routeDebug = window.gcctRouteDebug = window.gcctRouteDebug || [];   // for gcctRouteDebug in the console
+    const VALHALLA = 'https://valhalla1.openstreetmap.de/trace_attributes';
+    const CAR_NO_USE = new Set(['track', 'cycleway', 'mountain_bike', 'sidewalk', 'footway', 'steps', 'path', 'pedestrian', 'bridleway', 'pedestrian_crossing', 'emergency_access', 'elevator', 'escalator', 'platform']);
+    // A bike goes on roads, tracks, cycleways, footways, bridleways and mountain-bike trails – not on paths or steps.
+    const BIKE_NO_USE = new Set(['path', 'steps', 'elevator', 'escalator', 'platform']);
+    const CAR_NO_NODE = new Set(['gate', 'bollard', 'multi_use_pole', 'sump_buster']);
+    let valhallaFail = 0;
+    const wayTagCache = new Map();
+    async function osmWayTags(ids) {
+      const out = new Map(), want = ids.filter(id => { if (wayTagCache.has(id)) { out.set(id, wayTagCache.get(id)); return false; } return true; });
+      for (let k = 0; k < want.length; k += 100) {
+        const chunk = want.slice(k, k + 100);
+        try {
+          const r = await fetch('https://api.openstreetmap.org/api/0.6/ways.json?ways=' + chunk.join(','), { headers: { Accept: 'application/json' } });
+          if (!r.ok) throw new Error('OSM ' + r.status);        // (a way deleted since: the whole chunk is refused)
+          ((await r.json()).elements || []).forEach(e => { wayTagCache.set(e.id, e.tags || {}); out.set(e.id, e.tags || {}); });
+        } catch (e) { routeDebug.push({ osmTagsError: String(e) }); }
+      }
+      return out;
+    }
+    async function vehicleStopValhalla(prof, coords) {
+      // a lighter shape for the request: points at least 8 m apart (and their index in the full line)
+      const idx = [];
+      coords.forEach((c, i) => { const q = idx.length ? coords[idx[idx.length - 1]] : null; if (!q || i === coords.length - 1 || distM({ lat: q[1], lng: q[0] }, { lat: c[1], lng: c[0] }) >= 8) idx.push(i); });
+      const body = {
+        shape: idx.map(i => ({ lat: +coords[i][1].toFixed(6), lon: +coords[i][0].toFixed(6) })),
+        costing: prof === 'car' ? 'auto' : 'bicycle',
+        costing_options: prof === 'car' ? { auto: { ignore_access: true, ignore_closures: true } } : { bicycle: { ignore_access: true, ignore_closures: true } },
+        shape_match: 'map_snap',
+        filters: { attributes: ['edge.use', 'edge.road_class', 'edge.way_id', 'node.type', 'matched.edge_index', 'matched.type'], action: 'include' },
+      };
+      const t0 = Date.now();
+      // text/plain keeps it a "simple" request (no extra preflight round trip); Valhalla reads the JSON anyway
+      const r = await fetch(VALHALLA, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
+      if (!r.ok) throw new Error('Valhalla ' + r.status);
+      const j = await r.json();
+      const edges = j.edges || [], mp = j.matched_points || [];
+      // The ski trails (lysløyper) and closed roads: Valhalla does not tell, so the tags of the ways are read
+      // from OpenStreetMap itself (one quick request for all of them).
+      const ids = [...new Set(edges.map(e => e.way_id).filter(Boolean))];
+      const tags = await osmWayTags(ids);
+      const closedFor = t => {
+        if (!t) return null;
+        if (t['piste:type'] && !(prof === 'bike' ? /^(yes|designated|permissive)$/.test(t.bicycle || '') : /^(yes|designated|permissive|destination)$/.test(t.motor_vehicle || t.motorcar || ''))) return 'piste';
+        // a closed road (bom, private, forestry …) stops the car; the bike only where bikes are explicitly not allowed
+        const a = prof === 'car' ? (t.motor_vehicle || t.motorcar || t.vehicle || t.access) : t.bicycle;
+        return a && /^(no|private|forestry|agricultural|delivery|customers|permit|emergency|military|use_sidepath)$/.test(a) ? 'access=' + a : null;
+      };
+      const bad = e => (prof === 'car' ? CAR_NO_USE.has(e.use) : BIKE_NO_USE.has(e.use)) || !!closedFor(tags.get(e.way_id));
+      const uses = [];
+      let stop = -1, why = 'ok';
+      for (let p = 0; p < mp.length && stop < 0; p++) {
+        const m = mp[p];
+        if (!m || m.type === 'unmatched' || m.edge_index == null || !edges[m.edge_index]) continue;
+        const e = edges[m.edge_index];
+        if (uses[uses.length - 1] !== e.use) uses.push(e.use);
+        if (bad(e)) { stop = Math.max(0, p - 1); why = closedFor(tags.get(e.way_id)) || e.use; break; }
+        // a gate or bollard at the end of this piece: stop at the last point before it
+        const nx = mp[p + 1];
+        if (prof === 'car' && e.end_node && CAR_NO_NODE.has(e.end_node.type) && nx && nx.edge_index != null && nx.edge_index !== m.edge_index) { stop = p; why = e.end_node.type; }
+      }
+      routeDebug.push({ prof, valhallaMs: Date.now() - t0, points: idx.length, stopAt: stop, why, ways: uses.join(' > ') });
+      return stop < 0 ? -1 : idx[stop];
+    }
+    async function along(prof, a, b) {
+      const segs = [], air = (p, q) => { const dd = distM(p, q); if (dd > 2) segs.push({ m: 'air', pts: [[p.lat, p.lng], [q.lat, q.lng]], d: dd, t: dd / OFF_PATH }); };
+      if (distM(a, b) < 3) return { segs, end: b };
+      const veh = prof === 'car' || prof === 'bike';
+      const j = await osrm(prof, 'route', [a, b], 'overview=full&geometries=geojson&steps=false');
+      const rt = j.routes[0], sa = wpt(j.waypoints[0]);
+      let sb = wpt(j.waypoints[1]), coords = rt.geometry.coordinates, dist = rt.distance, dur = rt.duration, stopped = false;
+      if (veh) {
+        try {
+          const k = valhallaFail >= 3 ? -1 : await vehicleStopValhalla(prof, coords);
+          if (k >= 0 && k < coords.length - 1) {
+            let full = 0, part = 0;
+            for (let i = 1; i < coords.length; i++) { const dd = distM({ lat: coords[i - 1][1], lng: coords[i - 1][0] }, { lat: coords[i][1], lng: coords[i][0] }); full += dd; if (i <= k) part += dd; }
+            const f = full ? part / full : 0;
+            coords = coords.slice(0, k + 1); dist *= f; dur *= f; stopped = true;
+            sb = { lat: coords[k][1], lng: coords[k][0] };
+          }
+        } catch (e) { valhallaFail++; calcLegs.unchecked = true; routeDebug.push({ valhallaError: String(e) }); }   // keep the route as the service gave it
+      }
+      air(a, sa);
+      // keep the line light: drop points closer than 3 m to the one before
+      const g = [];
+      coords.forEach(c => { const p = [+c[1].toFixed(6), +c[0].toFixed(6)]; const q = g[g.length - 1]; if (!q || distM({ lat: q[0], lng: q[1] }, { lat: p[0], lng: p[1] }) >= 3) g.push(p); });
+      if (g.length > 1 && dist > 0) segs.push({ m: prof, pts: g, d: dist, t: dur });
+      air(sb, b);
+      return { segs, end: sb, stopped };
+    }
+    // On foot: along roads and paths – or straight across, up to a distance you choose, when that is quicker:
+    // off the path you walk at about 1.8 km/h, on it about 5 km/h, so the path has to be close to three times
+    // as long before going straight across pays.
+    const ACROSS = 0.5;                       // m/s off the path
+    const ACROSS_CHOICES = [0, 100, 250, 500, 1000, 2000];
+    let acrossMax = 250;
+    try { const v = localStorage.getItem('gcct.routeAcross'); if (v != null && ACROSS_CHOICES.includes(+v)) acrossMax = +v; } catch (e) { /* ignore */ }
+    const acrossOk = (dd, viaPathM) => dd > 2 && dd <= acrossMax && viaPathM / 1.39 > dd / ACROSS;
+    async function walk(a, b) {
+      const r = await along('foot', a, b), viaPath = r.segs.reduce((m, sg) => m + sg.d, 0), dd = distM(a, b);
+      if (acrossOk(dd, viaPath)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
+      return r;
+    }
+    // The drives are worked out one after the other (each starts where the last one parked); the walks
+    // to and from the car are asked for alongside. The walk back to the car is the walk in, reversed.
+    const reversed = segs => segs.slice().reverse().map(sg => Object.assign({}, sg, { pts: sg.pts.slice().reverse() }));
+    async function calcLegs(stops, mode, progress) {
+      const jobs = [];
+      let carAt = null, lastIn = null;        // lastIn: { from: park, to: cache, job } of the leg before
+      const keep = routeDebug.filter(x => x.orderMs != null).slice(-1);
+      routeDebug.length = 0; routeDebug.push(...keep);
+      calcLegs.unchecked = false; valhallaFail = 0;
+      if (mode !== 'foot') carAt = wpt((await osrm(mode, 'nearest', [ll2(stops[0])], 'number=1')).waypoints[0]);
+      const t0legs = Date.now();
+      for (let i = 1; i < stops.length; i++) {
+        if (progress) progress(i, stops.length - 1);
+        const A = ll2(stops[i - 1]), B = ll2(stops[i]);
+        let drv = null;
+        if (mode !== 'foot') {
+          drv = await along(mode, carAt, B);
+          // Parked at the same spot for the next one too: no point in moving the car – just walk on.
+          // (within 300 m: walk rather than move it – but at the end of the route the car comes along, all the way)
+          const last = i === stops.length - 1;
+          if (distM(drv.end, carAt) < 25) drv = null;
+          else if (!last && distM(drv.end, carAt) < 300) {
+            // Parked close by: walk on – unless the walk goes a long way round and moving the car is quicker.
+            const w = await walk(A, B), wt = w.segs.reduce((x, sg) => x + sg.t, 0);
+            const viaCar = distM(A, carAt) * 1.4 / 1.2 + drv.segs.reduce((x, sg) => x + (sg.m === 'air' ? 0 : sg.t), 0) + distM(drv.end, B) * 1.4 / 1.2;
+            if (wt <= viaCar * 1.2) { jobs.push(Promise.resolve({ segs: w.segs, park: null })); lastIn = null; continue; }
+          }
+        }
+        if (!drv) { jobs.push(walk(A, B).then(r => ({ segs: r.segs, park: null }))); lastIn = null; continue; }
+        const from = carAt, park = drv.end;
+        let back = null;
+        if (distM(A, from) > 25) back = lastIn && distM(lastIn.from, from) < 1 && distM(lastIn.to, A) < 1 ? lastIn.job.then(r => ({ segs: reversed(r.segs) })) : walk(A, from);
+        if (drv.segs.length && drv.segs[drv.segs.length - 1].m === 'air') drv.segs.pop();
+        let inn = null;
+        if ((stops[i].kind === 'cache' || drv.stopped) && distM(park, B) > 30) inn = walk(park, B);
+        lastIn = inn ? { from: park, to: B, job: inn } : null;
+        const drvSegs = drv.segs;
+        jobs.push(Promise.all([back, inn]).then(([bk, inw]) => {
+          const segs = [];
+          if (bk) segs.push(...bk.segs);
+          segs.push(...drvSegs);
+          if (inw) segs.push(...inw.segs);
+          else if (distM(park, B) > 2) segs.push({ m: 'air', pts: [[park.lat, park.lng], [B.lat, B.lng]], d: distM(park, B), t: distM(park, B) / OFF_PATH });
+          return { segs, park: [park.lat, park.lng] };
+        }));
+        carAt = park;
+      }
+      const tj = Date.now();
+      const done = await Promise.all(jobs);
+      routeDebug.push({ drivesMs: tj - t0legs, walksAfterMs: Date.now() - tj });
+      return done.map((r, i) => {
+        const segs = r.segs.length ? r.segs : [{ m: 'air', pts: [[+stops[i].lat, +stops[i].lng], [+stops[i + 1].lat, +stops[i + 1].lng]], d: 0, t: 0 }];   // the same spot
+        const leg = { segs, d: 0, t: 0, by: {}, park: r.park };
+        segs.forEach(sg => { leg.d += sg.d; leg.t += sg.t; leg.by[sg.m] = (leg.by[sg.m] || 0) + sg.d; });
+        return leg;
+      });
+    }
+    // Travel times between all stops, the same way the legs are worked out (an estimate: the walks to and
+    // from the road are counted at the road's distance from each stop).
+    async function costMatrix(stops, mode) {
+      const pts = stops.map(ll2), n = pts.length;
+      const [foot, drv] = await Promise.all([osrm('foot', 'table', pts, 'annotations=duration'), mode === 'foot' ? null : osrm(mode, 'table', pts, 'annotations=duration')]);   // (distances in a table are slow to work out – not asked)
+      const snap = drv ? drv.sources.map(s => s.distance || 0) : [], at = drv ? drv.sources.map(wpt) : [];
+      const c = [];
+      for (let i = 0; i < n; i++) {
+        c.push([]);
+        for (let j = 0; j < n; j++) {
+          if (i === j) { c[i].push(0); continue; }
+          const fw = foot.durations[i][j], dij = distM(pts[i], pts[j]), walk = fw == null || acrossOk(dij, fw * 1.3) ? dij / ACROSS : fw;   // (≈ path metres from walking time)
+          let v = walk;
+          // by car / bike: walk back to it from i, drive, walk on to j – unless both are reached from the same spot
+          if (drv) { const dv = drv.durations[i][j]; if (dv != null && distM(at[i], at[j]) >= 300) v = Math.min(v, dv + (snap[i] + snap[j]) * 1.4 / 1.2); }
+          c[i].push(v == null ? 1e7 : v);
+        }
+      }
+      return c;
+    }
+    // The best order: the first stop stays first; the last stays last on a round trip or when it is not a
+    // geocache (home, a pin, a place). Exact for up to 11 stops in between, otherwise a good approximation.
+    function bestOrder(c, n, endFixed) {
+      const end = endFixed ? n - 1 : null;
+      const mid = []; for (let i = 1; i < n; i++) if (i !== end) mid.push(i);
+      const cost = o => { let s = 0; for (let k = 1; k < o.length; k++) s += c[o[k - 1]][o[k]]; return s; };
+      const close = o => (routeLoop ? o.concat([0]) : o);
+      const total = o => cost(close(o));
+      if (mid.length <= 11) {
+        const m = mid.length, F = 1 << m, dp = new Float64Array(F * m).fill(Infinity), par = new Int16Array(F * m).fill(-1);
+        for (let j = 0; j < m; j++) dp[(1 << j) * m + j] = c[0][mid[j]];
+        for (let s = 1; s < F; s++) for (let j = 0; j < m; j++) {
+          const v = dp[s * m + j];
+          if (!(s & (1 << j)) || v === Infinity) continue;
+          for (let k = 0; k < m; k++) if (!(s & (1 << k))) { const t = s | (1 << k), w = v + c[mid[j]][mid[k]]; if (w < dp[t * m + k]) { dp[t * m + k] = w; par[t * m + k] = j; } }
+        }
+        let bj = -1, bv = Infinity;
+        const tail = j => (end != null ? c[mid[j]][end] : routeLoop ? c[mid[j]][0] : 0);
+        for (let j = 0; j < m; j++) { const v = dp[(F - 1) * m + j] + tail(j); if (v < bv) { bv = v; bj = j; } }
+        const seq = []; let s = F - 1, j = bj;
+        while (j >= 0) { seq.unshift(mid[j]); const p = par[s * m + j]; s &= ~(1 << j); j = p; }
+        const o = [0].concat(seq); if (end != null) o.push(end);
+        return o;
+      }
+      // nearest neighbour, then 2-opt and moving single stops until nothing improves
+      let o = [0]; const rest = mid.slice();
+      while (rest.length) { const a = o[o.length - 1]; let bi = 0; rest.forEach((x, k) => { if (c[a][x] < c[a][rest[bi]]) bi = k; }); o.push(rest.splice(bi, 1)[0]); }
+      if (end != null) o.push(end);
+      const lo = 1, hi = o.length - (end != null ? 2 : 1);
+      let best = total(o), better = true, guard = 0;
+      while (better && guard++ < 200) {
+        better = false;
+        for (let a = lo; a < hi; a++) for (let b = a + 1; b <= hi; b++) {
+          const t = o.slice(0, a).concat(o.slice(a, b + 1).reverse(), o.slice(b + 1)), v = total(t);
+          if (v < best - 0.5) { o = t; best = v; better = true; }
+        }
+        for (let a = lo; a <= hi; a++) for (let b = lo; b <= hi; b++) {
+          if (a === b) continue;
+          const t = o.slice(); const x = t.splice(a, 1)[0]; t.splice(b, 0, x); const v = total(t);
+          if (v < best - 0.5) { o = t; best = v; better = true; }
+        }
+      }
+      return o;
+    }
+    const fmtDur = s => { const m = Math.round(s / 60); if (!m) return s > 0 ? '< 1 min' : '0 min'; return m < 60 ? `${m} min` : `${Math.floor(m / 60)} t ${String(m % 60).padStart(2, '0')} min`.replace(' t ', LANG === 'no' ? ' t ' : ' h '); };
+    // The legs of the accepted route as polylines ([lat, lng] points), for the elevation profile and the GPX.
+    const calcLegLines = () => routeCalc.legs.map(l => { const out = []; l.segs.forEach(s => s.pts.forEach(p => { const q = out[out.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) out.push(p); })); return out; });
+    const CALC_STYLE = {
+      car: { color: '#8250df', weight: 4, opacity: 0.85 },
+      bike: { color: '#1a7f37', weight: 4, opacity: 0.85 },
+      foot: { color: '#8250df', weight: 3, opacity: 0.9, dashArray: '1 6', lineCap: 'round' },
+      air: { color: '#cf222e', weight: 2, opacity: 0.9, dashArray: '4 4' },
+    };
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
     // The list follows the map while the route window is open.
@@ -7544,7 +8020,7 @@ ${pts}
       // --- Elevation profile along the route (straight lines between the stops) ---------------------
       // Heights from Kartverket (Norway, from the national elevation model); elsewhere from Open-Meteo
       // (Copernicus 90 m). Climb and descent count only changes of at least 2 m, so noise doesn't add up.
-      let profOpen = false, profCache = { sig: '', data: null, busy: false }, profMark = null;
+      let profOpen = false, profCache = { sig: '', data: null, busy: false }, profMark = null, profApi = null;
       async function heightsOf(pts) {
         const z = new Array(pts.length).fill(null);
         // Kartverket only for points in and around Norway (elsewhere it answers 0, not "no data").
@@ -7567,7 +8043,33 @@ ${pts}
         }
         return z;
       }
+      const profSig = () => stopsSig() + (calcValid() ? '|' + routeCalc.id : '');
+      // Along the accepted calculated route: points spread evenly along each leg's line.
+      function calcSamples() {
+        const lines = calcLegLines(), lens = lines.map(line => { let a = 0; for (let k = 1; k < line.length; k++) a += distM({ lat: line[k - 1][0], lng: line[k - 1][1] }, { lat: line[k][0], lng: line[k][1] }); return a; });
+        const tot = lens.reduce((a, b) => a + b, 0), n = Math.max(30, Math.min(300, Math.round(tot / 20)));
+        const pts = [], at = [], stopAt = [0], stopIdx = [0];
+        let acc = 0;
+        lines.forEach((line, i) => {
+          const len = lens[i], k = Math.max(2, Math.round(n * len / (tot || 1)));
+          let seg = 1, segStart = 0;
+          for (let j = i ? 1 : 0; j <= k; j++) {
+            const want = len * j / k;
+            while (seg < line.length - 1) {
+              const sl = distM({ lat: line[seg - 1][0], lng: line[seg - 1][1] }, { lat: line[seg][0], lng: line[seg][1] });
+              if (segStart + sl >= want) break;
+              segStart += sl; seg++;
+            }
+            const a = line[Math.max(0, seg - 1)], b = line[Math.min(line.length - 1, seg)];
+            const sl = distM({ lat: a[0], lng: a[1] }, { lat: b[0], lng: b[1] }) || 1, t = Math.max(0, Math.min(1, (want - segStart) / sl));
+            pts.push(L.latLng(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)); at.push(acc + want);
+          }
+          acc += len; stopAt.push(acc); stopIdx.push(pts.length - 1);
+        });
+        return { pts, at, stopAt, stopIdx, tot };
+      }
       function profileSamples() {
+        if (calcValid()) return calcSamples();
         const stops = routeStops(), legs = [];
         let tot = 0;
         for (let i = 1; i < stops.length; i++) { const dd = distM(L.latLng(stops[i - 1].lat, stops[i - 1].lng), L.latLng(stops[i].lat, stops[i].lng)); legs.push(dd); tot += dd; }
@@ -7583,7 +8085,7 @@ ${pts}
       }
       // Heights for the route, fetched once per route (the profile and the legs' climb share them).
       function routeHeights(cb) {
-        const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
+        const sig = profSig();
         if (profCache.sig === sig && profCache.data) { cb(profCache.data); return; }
         (profCache.waiters ||= []).push(cb);
         if (profCache.busy === sig) return;
@@ -7635,7 +8137,7 @@ ${pts}
         if (!body) return;
         if (pb) pb.classList.toggle('on', profOpen);
         if (!profOpen) { body.innerHTML = ''; clearProfMark(); return; }
-        const sig = JSON.stringify(routeStops().map(r => [r.lat, r.lng]));
+        const sig = profSig();
         if (profCache.sig === sig && profCache.data) { drawProfile(body, profCache.data); return; }
         body.innerHTML = `<div class="gm">${esc(T('Fetching heights …'))}</div>`;
         routeHeights(() => { if (profOpen && pv.isConnected) showProfile(); });
@@ -7660,7 +8162,7 @@ ${pts}
             <text x="${pl - 4}" y="${Y(hi) + 4}" class="ax">${Math.round(hi)}</text><text x="${pl - 4}" y="${Y(lo) + 4}" class="ax">${Math.round(lo)}</text>
             <line class="cur" x1="0" x2="0" y1="${pt}" y2="${H - pbm}" style="display:none"/></svg>
           <div class="rt-prof-sum">↑ ${Math.round(up)} m · ↓ ${Math.round(down)} m · ${esc(T('lowest'))} ${Math.round(lo)} m · ${esc(T('highest'))} ${Math.round(hi)} m · ${esc(fmtDist(P.tot))}</div><div class="rt-prof-at">&nbsp;</div>
-          <p class="hint rt-note">${esc(T('Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
+          <p class="hint rt-note">${esc(T(calcValid() ? 'Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.' : 'Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.'))}</p>`;
         const svg = body.querySelector('svg'), cur = svg.querySelector('.cur'), atEl = body.querySelector('.rt-prof-at');
         svg.addEventListener('mousemove', e => {
           const r = svg.getBoundingClientRect(), d0 = Math.max(0, Math.min(P.tot, (((e.clientX - r.left) / r.width) * W - pl) / (W - pl - pr) * P.tot));
@@ -7674,34 +8176,247 @@ ${pts}
           routeLayer.addLayer(profMark);
         });
         svg.addEventListener('mouseleave', () => { cur.style.display = 'none'; atEl.innerHTML = '&nbsp;'; clearProfMark(); });
+        // the playback moves the cursor too
+        profApi = d0 => {
+          if (!svg.isConnected) { profApi = null; return; }
+          if (d0 == null) { cur.style.display = 'none'; atEl.innerHTML = '&nbsp;'; return; }
+          let k = 0; while (k < P.at.length - 1 && P.at[k + 1] < d0) k++;
+          const x = X(Math.min(P.tot, d0));
+          cur.setAttribute('x1', x); cur.setAttribute('x2', x); cur.style.display = '';
+          atEl.textContent = `${fmtDist(d0)}: ${Math.round(z[k])} m`;
+        };
+      }
+      // --- Route calculation in the preview -----------------------------------------------------------
+      const MODE_NAME = { car: 'By car', bike: 'By bike', foot: 'On foot' }, MODE_ICON = { car: 'car', bike: 'bike', foot: 'walk' };
+      let calcBusy = null, calcAsk = null, calcErr = '', calcToken = 0;
+      const stopName = r => (r.kind === 'cache' ? r.code : r.name);
+      function drawCalc() {
+        const box = pv.querySelector('.rt-calc');
+        if (!box) return;
+        let html = '';
+        if (calcBusy) {
+          html = `<div class="rt-calc-row"><span class="gm">${esc(calcBusy.msg)}</span><span class="sp"></span><button data-c="stop">${esc(T('Cancel'))}</button></div>`;
+        } else if (calcAsk) {
+          html = `<div class="rt-calc-ask"><b>${esc(T('A shorter order'))}</b>
+            <p>${esc(T('Visiting the stops in this order saves about {t} ({b} instead of {a}):', calcAsk))}</p>
+            <p class="rt-calc-ord">${calcAsk.order.map(i => `<span>${i + 1}</span> ${esc(stopName(route[i]))}`).join(' → ')}${routeLoop ? ' → <span>1</span>' : ''}</p>
+            <div class="btns"><button class="primary" data-c="reorder">${esc(T('Change the order'))}</button><button data-c="keep">${esc(T('Keep my order'))}</button></div></div>`;
+        } else if (calcValid()) {
+          const L0 = routeCalc.legs, D = L0.reduce((a, l) => a + l.d, 0), Tt = L0.reduce((a, l) => a + l.t, 0), by = {};
+          L0.forEach(l => Object.keys(l.by).forEach(k => { const kk = k === 'air' ? 'foot' : k; by[kk] = (by[kk] || 0) + l.by[k]; }));   // straight across is on foot too
+          const parts = ['car', 'bike', 'foot', 'air'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot', air: 'straight line' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ');
+          html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b></div>
+            <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}${L0.some(l => l.park) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${routeCalc.mode === 'bike' ? icon('bike', 11) : '<b>P</b>'}</span>${esc(T(routeCalc.mode === 'bike' ? 'where the bike is left' : 'where the car is left'))}</span>` : ''}</span></div>
+            ${routeCalc.unchecked ? `<p class="hint rt-calc-err">${esc(T('The roads could not be checked (the road service did not answer), so the car may be shown on tracks and trails. Discard and try again in a minute.'))}</p>` : ''}
+            ${routeCalc.accepted ? '' : `<p class="hint">${esc(T('Accept it to measure the legs and the total along it.'))}</p>`}
+            <div class="btns">${routeCalc.accepted ? '' : `<button class="primary" data-c="accept">${esc(T('Accept'))}</button>`}<button data-c="discard">${esc(T(routeCalc.accepted ? 'Discard the calculated route' : 'Discard'))}</button></div>`;
+        } else {
+          html = `<div class="rt-calc-row"><select class="rt-mode" title="${esc(T('How you travel between the geocaches'))}">${['car', 'bike', 'foot'].map(m => `<option value="${m}"${m === routeMode ? ' selected' : ''}>${esc(T(MODE_NAME[m]))}</option>`).join('')}</select><button data-c="go">${icon('route', 15)}<span>${esc(T('Calculate route'))}</span></button></div>
+            <label class="rt-calc-opt">${esc(T('Straight across the terrain up to'))} <select class="rt-across">${ACROSS_CHOICES.map(v => `<option value="${v}"${v === acrossMax ? ' selected' : ''}>${v ? fmtDist(v) : esc(T('never'))}</option>`).join('')}</select></label>
+            <label class="rt-calc-opt"><input type="checkbox" class="rt-opt"${routeOptimize ? ' checked' : ''}> ${esc(T('Suggest a shorter order of the stops'))}</label>
+            <p class="hint">${esc(T(routeMode === 'foot' ? 'Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.' : 'By car (or bike) from the start as far as the roads go towards each geocache – a road closed to cars stops the car, not the bike; a bike keeps off paths – then on foot along paths, the last bit in a straight line, and back to the car. From OpenStreetMap.'))}</p>
+            ${calcErr ? `<div class="gm rt-calc-err">${esc(calcErr)}</div>` : ''}`;
+        }
+        box.innerHTML = html;
+        const on = (k, f) => { const b = box.querySelector(`[data-c=${k}]`); if (b) b.onclick = f; };
+        const acr = box.querySelector('.rt-across');
+        if (acr) acr.onchange = () => { acrossMax = +acr.value; try { localStorage.setItem('gcct.routeAcross', String(acrossMax)); } catch (e) { /* ignore */ } };
+        const opt = box.querySelector('.rt-opt');
+        if (opt) opt.onchange = () => { routeOptimize = opt.checked; try { localStorage.setItem('gcct.routeOptimize', routeOptimize ? '1' : '0'); } catch (e) { /* ignore */ } };
+        const sel = box.querySelector('.rt-mode');
+        if (sel) sel.onchange = () => { routeMode = sel.value; try { localStorage.setItem('gcct.routeMode', routeMode); } catch (e) { /* ignore */ } drawCalc(); };
+        on('go', startCalc);
+        on('stop', () => { calcToken++; calcBusy = null; calcAsk = null; drawCalc(); });
+        on('keep', () => { const tok = calcAsk.tok; calcAsk = null; runLegs(tok); });
+        on('reorder', () => {
+          const { order, tok } = calcAsk; calcAsk = null;
+          route = order.map(i => route[i]); saveRoute(); drawRoute(); drawRouteList(); drawList();
+          runLegs(tok);
+        });
+        on('accept', () => { routeCalc.accepted = true; saveCalc(); preview(true, false); });
+        on('discard', () => { routeCalc = null; saveCalc(); drawRoute(); preview(true, false); });
+      }
+      const calcFail = e => { calcBusy = null; calcErr = T('Could not calculate the route: {e}', { e: (e && e.message) || String(e) }); drawCalc(); };
+      async function startCalc() {
+        const tok = ++calcToken;
+        calcErr = ''; calcAsk = null;
+        try {
+          const n = route.length, endFixed = !routeLoop && route[n - 1].kind !== 'cache';
+          const movable = n - 1 - (endFixed ? 1 : 0);
+          if (routeOptimize && movable >= 2 && n <= 60) {
+            calcBusy = { msg: T('Checking the order of the stops …') }; drawCalc();
+            const tm = Date.now();
+            const c = await costMatrix(route, routeMode);
+            routeDebug.push({ orderMs: Date.now() - tm });
+            if (tok !== calcToken) return;
+            const o = bestOrder(c, n, endFixed);
+            const cost = ord => { let v = 0; for (let k = 1; k < ord.length; k++) v += c[ord[k - 1]][ord[k]]; return routeLoop ? v + c[ord[ord.length - 1]][0] : v; };
+            const cur = route.map((r, i) => i), a = cost(cur), b = cost(o);
+            if (o.some((x, k) => x !== k) && a - b > 60 && b < a * 0.97) {
+              calcBusy = null; calcAsk = { tok, order: o, a: fmtDur(a), b: fmtDur(b), t: fmtDur(a - b) }; drawCalc();
+              return;                                   // waits for your answer
+            }
+          }
+          await runLegs(tok);
+        } catch (e) { if (tok === calcToken) calcFail(e); }
+      }
+      async function runLegs(tok) {
+        if (tok !== calcToken) return;
+        try {
+          const stops = routeStops(), sig = stopsSig(), mode = routeMode;
+          calcBusy = { msg: T('Calculating the route …') }; drawCalc();
+          const legs = await calcLegs(stops, mode, (i, n) => { if (tok === calcToken) { calcBusy = { msg: i ? T('Calculating the route … leg {i} of {n}', { i, n }) : T('Fetching the roads from OpenStreetMap …') }; drawCalc(); } });
+          if (tok !== calcToken) return;
+          const ms = k => { const x = routeDebug.find(e => e[k] != null); return x ? x[k] : null; }, op = routeDebug.find(e => e.overpass);
+          const sec = v => (v == null ? '–' : (v / 1000).toFixed(1) + ' s');
+          const vh = routeDebug.filter(e => e.valhallaMs != null).map(e => e.valhallaMs);
+          const timing = `${T('Order')} ${sec(ms('orderMs'))} · ${T('drives')} ${sec(ms('drivesMs'))}${vh.length ? ` (${T('road check')} ${sec(vh.reduce((x, y) => x + y, 0))})` : ''} · ${T('walks')} ${sec(ms('walksAfterMs'))}`;
+          routeCalc = { id: Date.now().toString(36), sig, mode, legs, accepted: false, unchecked: mode !== 'foot' && !!calcLegs.unchecked, timing };
+          saveCalc(); calcBusy = null;
+          drawRoute();
+          if (routeOpen() && pv.style.display !== 'none') preview(true, false);
+          try {
+            const b = L.latLngBounds([]);
+            legs.forEach(l => l.segs.forEach(sg => sg.pts.forEach(p => b.extend(p))));
+            const fa = freeArea(d);
+            if (b.isValid()) map.fitBounds(b, { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
+          } catch (e) { /* ignore */ }
+        } catch (e) { if (tok === calcToken) calcFail(e); }
+      }
+      // --- Playback: you, moving along the route --------------------------------------------------------
+      // Along the calculated route when there is one (at its own pace by car, bike and on foot), otherwise
+      // along the straight lines at walking pace. The pace is a choice: ×10 … ×600 real time.
+      const PLAY_SPEEDS = [10, 30, 60, 120, 300, 600];
+      let playSpeed = 60;
+      try { playSpeed = +localStorage.getItem('gcct.playSpeed') || 60; } catch (e) { /* ignore */ }
+      if (!PLAY_SPEEDS.includes(playSpeed)) playSpeed = 60;
+      const play = { on: false, t: 0, tl: null, raf: 0, last: 0, marker: null, sig: '' };
+      // The timeline: pieces with points, their cumulated distance and the time each one takes.
+      function playTimeline() {
+        const pieces = [];
+        let T0 = 0, D0 = 0;
+        const add = (pts, m, dur, legIdx) => {
+          if (pts.length < 2) return;
+          const cum = [0];
+          for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + distM({ lat: pts[k - 1][0], lng: pts[k - 1][1] }, { lat: pts[k][0], lng: pts[k][1] }));
+          const len = cum[cum.length - 1];
+          pieces.push({ pts, cum, len, m, t0: T0, t1: T0 + Math.max(0.5, dur), d0: D0, leg: legIdx });
+          T0 += Math.max(0.5, dur); D0 += len;
+        };
+        if (calcValid()) routeCalc.legs.forEach((l, i) => l.segs.forEach(sg => add(sg.pts, sg.m, sg.t, i)));
+        else { const st = routeStops(); for (let i = 1; i < st.length; i++) { const a = [+st[i - 1].lat, +st[i - 1].lng], b = [+st[i].lat, +st[i].lng]; add([a, b], 'foot', distM({ lat: a[0], lng: a[1] }, { lat: b[0], lng: b[1] }) / 1.3, i - 1); } }
+        return { pieces, T: T0, D: D0 };
+      }
+      function playAt(t) {
+        const tl = play.tl, p = tl.pieces.find(x => t <= x.t1) || tl.pieces[tl.pieces.length - 1];
+        const f = Math.max(0, Math.min(1, (t - p.t0) / (p.t1 - p.t0))), want = p.len * f;
+        let k = 1; while (k < p.cum.length - 1 && p.cum[k] < want) k++;
+        const a = p.pts[k - 1], b = p.pts[k], sl = (p.cum[k] - p.cum[k - 1]) || 1, u = Math.max(0, Math.min(1, (want - p.cum[k - 1]) / sl));
+        return { ll: L.latLng(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u), m: p.m, d: p.d0 + want, leg: p.leg };
+      }
+      const clock = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(x).padStart(2, '0'); };
+      function playMarkerIcon(m) {
+        const ic = m === 'car' ? 'car' : m === 'bike' ? 'bike' : 'walk';
+        return L.divIcon({ className: 'gcct-me gcct-me-' + (m === 'air' ? 'foot' : m), html: icon(ic, 14), iconSize: [24, 24], iconAnchor: [12, 12] });
+      }
+      function playShow() {
+        const s = playAt(play.t);
+        if (!play.marker) {
+          play.marker = L.marker(s.ll, { interactive: false, keyboard: false, zIndexOffset: 1000, ...(typeof labelPane === 'function' ? labelPane() : {}), icon: playMarkerIcon(s.m) });
+          play.marker.__gcct = true; play.marker.__m = s.m;
+          playLayer.addLayer(play.marker);
+          clearInterval(play.watch); play.watch = setInterval(() => { if (!d.isConnected) playStop(); }, 1000);
+        } else {
+          play.marker.setLatLng(s.ll);
+          if (play.marker.__m !== s.m) { play.marker.__m = s.m; play.marker.setIcon(playMarkerIcon(s.m)); }
+        }
+        // keep yourself in view, in the part of the map the dialog leaves free
+        try {
+          const fa = freeArea(d), sz = map.getSize(), p = map.latLngToContainerPoint(s.ll);
+          if (p.x < fa.tl[0] || p.y < fa.tl[1] || p.x > sz.x - fa.br[0] || p.y > sz.y - fa.br[1]) {
+            play.panning = true; showInFree(s.ll, map.getZoom(), d); setTimeout(() => { play.panning = false; }, 400);
+          }
+        } catch (e) { /* ignore */ }
+        if (profApi) profApi(s.d);
+        const at = pv.querySelector('.rt-play-at');
+        if (at) at.textContent = `${clock(play.t)} / ${clock(play.tl.T)} · ${fmtDist(s.d)} · ${T('leg {i}', { i: s.leg + 1 })}`;
+        const bar = pv.querySelector('.rt-play-bar');
+        if (bar) bar.value = String(Math.round(1000 * play.t / (play.tl.T || 1)));
+      }
+      function playTick(now) {
+        if (!play.on) return;
+        if (!d.isConnected) { playStop(); return; }          // the route window was closed
+        const dt = Math.min(0.25, (now - play.last) / 1000);
+        play.last = now;
+        play.t = Math.min(play.tl.T, play.t + dt * playSpeed);
+        playShow();
+        if (play.t >= play.tl.T) { play.on = false; drawPlay(); return; }
+        play.raf = requestAnimationFrame(playTick);
+      }
+      function playStart() {
+        const sig = profSig();
+        if (!play.tl || play.sig !== sig) { play.tl = playTimeline(); play.sig = sig; play.t = 0; }
+        if (!play.tl.pieces.length) return;
+        if (play.t >= play.tl.T) play.t = 0;
+        play.on = true; play.last = performance.now();
+        cancelAnimationFrame(play.raf); play.raf = requestAnimationFrame(playTick);
+        drawPlay();
+      }
+      function playPause() { play.on = false; cancelAnimationFrame(play.raf); drawPlay(); }
+      function playStop() {
+        play.on = false; cancelAnimationFrame(play.raf); play.t = 0; play.tl = null;
+        clearInterval(play.watch);
+        if (play.marker) { playLayer.removeLayer(play.marker); play.marker = null; }
+        if (profApi) profApi(null);
+        drawPlay();
+      }
+      function drawPlay() {
+        const box = pv.querySelector('.rt-play');
+        if (!box) return;
+        const started = !!play.tl;
+        box.innerHTML = `<div class="rt-calc-row">
+            <button data-p="${play.on ? 'pause' : 'play'}" class="${play.on ? 'on' : ''}">${play.on ? '❚❚' : '▶'} <span>${esc(T(play.on ? 'Pause' : started ? 'Continue' : 'Play the route'))}</span></button>
+            ${started ? `<button data-p="stop" title="${esc(T('Stop'))}">■</button>` : ''}
+            <select class="rt-play-speed" title="${esc(T('Pace'))}">${PLAY_SPEEDS.map(v => `<option value="${v}"${v === playSpeed ? ' selected' : ''}>×${v}</option>`).join('')}</select>
+            <span class="rt-desc">${esc(T(calcValid() ? 'along the calculated route' : 'straight lines, walking pace'))}</span></div>
+          ${started ? `<input type="range" class="rt-play-bar" min="0" max="1000" value="0"><div class="rt-desc rt-play-at">&nbsp;</div>` : ''}`;
+        const on = (k, f) => { const b = box.querySelector(`[data-p=${k}]`); if (b) b.onclick = f; };
+        on('play', playStart); on('pause', playPause); on('stop', playStop);
+        const sel = box.querySelector('.rt-play-speed');
+        sel.onchange = () => { playSpeed = +sel.value; try { localStorage.setItem('gcct.playSpeed', String(playSpeed)); } catch (e) { /* ignore */ } };
+        const bar = box.querySelector('.rt-play-bar');
+        if (bar) bar.oninput = () => { play.t = play.tl.T * (+bar.value) / 1000; playShow(); };
+        if (started) playShow();
       }
       function preview(on, refit = true) {
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
         if (!on) return;
         let tot = 0;
-        const pts = routeStops();
+        const pts = routeStops(), cOn = calcOn();
         const rows = pts.map((r, i) => {
-          const leg = i ? distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0;
+          const leg = !i ? 0 : cOn ? routeCalc.legs[i - 1].d : distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng));
           tot += leg;
+          const legTxt = !i ? '' : cOn ? `${fmtDist(leg)} · ${fmtDur(routeCalc.legs[i - 1].t)}` : legText(i, pts);
           return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
-            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legText(i, pts))}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legTxt)}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
         }).join('');
-        pv.innerHTML = `<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
+        pv.innerHTML = `${route.length > 1 ? '<div class="rt-calc"></div><div class="rt-play"></div>' : ''}<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
           <p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
           <div class="rt-tbl"><table><thead><tr><th></th><th>${esc(T('Name in GPS'))} / ${esc(T('Description'))}</th><th>${esc(T('Coordinates'))}</th><th class="num">${esc(T('Leg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
-          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''}<span class="rt-climb-tot"></span> · ${esc(T('Straight-line distances; the way there is always longer.'))}</p>`;
+          <p class="hint rt-note">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''}<span class="rt-climb-tot"></span>${cOn ? ` · ${esc(fmtDur(routeCalc.legs.reduce((a, l) => a + l.t, 0)))} · ${esc(T('Along the calculated route.'))}` : ` · ${esc(T('Straight-line distances; the way there is always longer.'))}`}</p>`;
         pv.querySelectorAll('.rt-go').forEach(el => el.onclick = () => goStop(+el.closest('tr').dataset.i));
         const pb = pv.querySelector('[data-a=prof]');
         if (pb) pb.onclick = () => { profOpen = !profOpen; showProfile(); };
+        drawCalc(); drawPlay();
         if (profOpen) showProfile();
         if (route.length > 1) showLegClimbs();
         if (refit) fitRoute(d);
       }
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
-      d.querySelector('[data-a=back]').onclick = () => { clearProfMark(); preview(false); };
+      d.querySelector('[data-a=back]').onclick = () => { clearProfMark(); playStop(); preview(false); };
       function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
-      routeDlg = d; routeRefresh = () => { drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
+      routeDlg = d; routeRefresh = () => { if (play.on || play.panning) return; drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
       d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
         if (route.length < 3) return;
         const rest = route.slice(1), out = [route[0]];
