@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.52
+// @version      1.56.58
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7403,7 +7403,7 @@ ${calcTrk(stamp)}</gpx>
     // elevation profile follow it. Discarded, everything is back to straight lines.
     const OSRM = 'https://routing.openstreetmap.de/routed-';
     const CALC_KEY = 'gcct.routeCalc', MODES = { car: 1, carbike: 1, bike: 1, foot: 1 };
-    const OFF_PATH = 0.7;                          // m/s walking where there is no path
+    const OFF_PATH = 0.5;                          // m/s walking where there is no path (about 1.8 km/h)
     let routeCalc = null;
     try { routeCalc = JSON.parse(sessionStorage.getItem(CALC_KEY) || 'null'); } catch (e) { routeCalc = null; }
     const saveCalc = () => { try { if (routeCalc) sessionStorage.setItem(CALC_KEY, JSON.stringify(routeCalc)); else sessionStorage.removeItem(CALC_KEY); } catch (e) { /* full or blocked */ } };
@@ -7638,17 +7638,34 @@ ${calcTrk(stamp)}</gpx>
     // as long before going straight across pays.
     const ACROSS = 0.5;                       // m/s off the path
     const ACROSS_CHOICES = [0, 100, 250, 500, 1000, 2000];
-    let acrossMax = 250;
+    let acrossMax = 1000;
     try { const v = localStorage.getItem('gcct.routeAcross'); if (v != null && ACROSS_CHOICES.includes(+v)) acrossMax = +v; } catch (e) { /* ignore */ }
     const acrossOk = (dd, viaPathM) => dd > 2 && dd <= acrossMax && viaPathM / 1.39 > dd / ACROSS;
     async function walk(a, b) {
       const r = await along('foot', a, b), viaPath = r.segs.reduce((m, sg) => m + sg.d, 0), dd = distM(a, b);
       if (acrossOk(dd, viaPath)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
+      // The "path" way may itself be mostly straight across: the nearest path can be far from both ends, so
+      // the way goes far round to walk a few metres on it. Then the straight line is taken when it is quicker.
+      const offPath = r.segs.reduce((m, sg) => m + (sg.m === 'air' ? sg.d : 0), 0), tPath = r.segs.reduce((x, sg) => x + sg.t, 0);
+      if (dd > 2 && offPath >= Math.min(dd * 0.5, acrossMax) && dd / ACROSS < tPath) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
       return r;
     }
     // The drives are worked out one after the other (each starts where the last one parked); the walks
     // to and from the car are asked for alongside. The walk back to the car is the walk in, reversed.
     const reversed = segs => segs.slice().reverse().map(sg => Object.assign({}, sg, { pts: sg.pts.slice().reverse() }));
+    // Move the car for the next geocache, or walk on from the last one? Decided by time, with the real walks:
+    // walking straight on, against walking back to the car, driving and walking in from the new spot. The
+    // walks are asked once – later they come from memory.
+    const segT = segs => segs.reduce((x, sg) => x + sg.t, 0);
+    async function keepCar(A, B, carAt, drv, isCache) {
+      const tKeep = segT((await walk(A, B)).segs);
+      const tBack = distM(A, carAt) > 25 ? segT((await walk(A, carAt)).segs) : 0;
+      const tIn = isCache && distM(drv.end, B) > 30 ? segT((await walk(drv.end, B)).segs) : distM(drv.end, B) / OFF_PATH;
+      const tDrive = drv.segs.reduce((x, sg) => x + (sg.m === 'air' ? 0 : sg.t), 0);
+      const move = tBack + tDrive + tIn + 60;          // a minute to park and get going
+      routeDebug.push({ keepCar: tKeep <= move, walkOn: Math.round(tKeep), moveCar: Math.round(move) });
+      return tKeep <= move;
+    }
     // Car with the bike on it: drive as far as the car may go, take the bike off and cycle on as far as a bike
     // may go, walk the rest; then back – walk to the bike, cycle to the car – and on. When the car need not be
     // moved for the next one, you go on from where the bike is (or walk, when it is close).
@@ -7674,7 +7691,7 @@ ${calcTrk(stamp)}</gpx>
         const segs = [];
         let park = null, bpark = null, at = A;
         const drv = await along('car', carAt, B);
-        const moveCar = distM(drv.end, carAt) >= (last ? 25 : 300);
+        const moveCar = last ? distM(drv.end, carAt) >= 25 : distM(drv.end, carAt) >= 25 && !(await keepCar(A, B, carAt, drv, isCache));
         if (moveCar) {
           // back to the car – by way of the bike if it is out
           if (bikeAt) { segs.push(...(await walk(at, bikeAt)).segs); segs.push(...(await bikeBack(bikeAt))); bikeAt = null; }
@@ -7731,11 +7748,8 @@ ${calcTrk(stamp)}</gpx>
           // (within 300 m: walk rather than move it – but at the end of the route the car comes along, all the way)
           const last = i === stops.length - 1;
           if (distM(drv.end, carAt) < 25) drv = null;
-          else if (!last && distM(drv.end, carAt) < 300) {
-            // Parked close by: walk on – unless the walk goes a long way round and moving the car is quicker.
-            const w = await walk(A, B), wt = w.segs.reduce((x, sg) => x + sg.t, 0);
-            const viaCar = distM(A, carAt) * 1.4 / 1.2 + drv.segs.reduce((x, sg) => x + (sg.m === 'air' ? 0 : sg.t), 0) + distM(drv.end, B) * 1.4 / 1.2;
-            if (wt <= viaCar * 1.2) { jobs.push(Promise.resolve({ segs: w.segs, park: null })); lastIn = null; continue; }
+          else if (!last && await keepCar(A, B, carAt, drv, stops[i].kind === 'cache')) {
+            jobs.push(walk(A, B).then(r => ({ segs: r.segs, park: null }))); lastIn = null; continue;
           }
         }
         if (!drv) { jobs.push(walk(A, B).then(r => ({ segs: r.segs, park: null }))); lastIn = null; continue; }
@@ -7773,12 +7787,16 @@ ${calcTrk(stamp)}</gpx>
       const pts = stops.map(ll2), n = pts.length;
       const [foot, drv] = await Promise.all([osrm('foot', 'table', pts, 'annotations=duration'), mode === 'foot' ? null : osrm(mode === 'carbike' ? 'car' : mode, 'table', pts, 'annotations=duration')]);   // (distances in a table are slow to work out – not asked)
       const snap = drv ? drv.sources.map(s => s.distance || 0) : [], at = drv ? drv.sources.map(wpt) : [];
+      // the walking times leave out the bits off the path at both ends (to and from the nearest path) – add them
+      const fsnap = (foot.sources || []).map(s => s.distance || 0);
       const c = [];
       for (let i = 0; i < n; i++) {
         c.push([]);
         for (let j = 0; j < n; j++) {
           if (i === j) { c[i].push(0); continue; }
-          const fw = foot.durations[i][j], dij = distM(pts[i], pts[j]), walk = fw == null || acrossOk(dij, fw * 1.3) ? dij / ACROSS : fw;   // (≈ path metres from walking time)
+          const fw0 = foot.durations[i][j], dij = distM(pts[i], pts[j]);
+          const fw = fw0 == null ? null : fw0 + ((fsnap[i] || 0) + (fsnap[j] || 0)) / OFF_PATH;
+          const walk = fw == null || dij / ACROSS < fw && (dij <= acrossMax || (fsnap[i] || 0) + (fsnap[j] || 0) >= dij * 0.5) ? dij / ACROSS : fw;   // as walk() decides
           let v = walk;
           // by car / bike: walk back to it from i, drive, walk on to j – unless both are reached from the same spot
           if (drv) { const dv = drv.durations[i][j]; if (dv != null && distM(at[i], at[j]) >= 300) v = Math.min(v, dv + (snap[i] + snap[j]) * 1.4 / 1.2); }
