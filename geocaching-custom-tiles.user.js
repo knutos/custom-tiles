@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.61
+// @version      1.56.64
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -6986,7 +6986,18 @@
         if (first.parentElement && svg.nextSibling !== first) first.parentElement.insertBefore(svg, first);
       } catch (e) { /* keep it where it is */ }
     }
-    ['zoomend', 'moveend', 'layeradd'].forEach(ev => map.on(ev, () => { if (routeRenderer) setTimeout(tuckRouteLine, 0); }));
+    // The route's drawing layer sits among the cache tiles (below the cache icons). When the site clears the
+    // tiles it sits among, it goes with them – then a new one is made and the route drawn again.
+    function routeLineAlive() {
+      if (!routeRenderer || !route.length) return;
+      const c = routeRenderer._container;
+      if (c && c.isConnected) return;
+      try { map.removeLayer(routeRenderer); } catch (e) { /* gone already */ }
+      routeRenderer = null;
+      try { drawRoute(); } catch (e) { /* ignore */ }
+    }
+    ['zoomend', 'moveend', 'layeradd'].forEach(ev => map.on(ev, () => { if (routeRenderer) setTimeout(() => { routeLineAlive(); tuckRouteLine(); }, 0); }));
+    setInterval(routeLineAlive, 1500);
     map.on('zoomend', () => { if (route.length) try { drawRoute(); } catch (e) { /* ignore */ } });
     function drawRoute() {
       routeLayer.clearLayers();
@@ -7408,10 +7419,22 @@ ${calcTrk(stamp)}</gpx>
     try { routeCalc = JSON.parse(sessionStorage.getItem(CALC_KEY) || 'null'); } catch (e) { routeCalc = null; }
     const saveCalc = () => { try { if (routeCalc) sessionStorage.setItem(CALC_KEY, JSON.stringify(routeCalc)); else sessionStorage.removeItem(CALC_KEY); } catch (e) { /* full or blocked */ } };
     const stopsSig = () => JSON.stringify(routeStops().map(r => [+(+r.lat).toFixed(6), +(+r.lng).toFixed(6)]));
-    const calcValid = () => !!(routeCalc && routeCalc.sig === stopsSig());
+    // Still the same stops? The same number, each within 3 m of where it was (a nudge in the last decimal, a
+    // name looked up again, must not throw the calculation away).
+    const sameStops = (a, b) => { try { a = JSON.parse(a); b = JSON.parse(b); } catch (e) { return false; } return a.length === b.length && a.every((p, i) => distM({ lat: p[0], lng: p[1] }, { lat: b[i][0], lng: b[i][1] }) < 3); };
+    const calcValid = () => !!(routeCalc && (routeCalc.sig === stopsSig() || sameStops(routeCalc.sig, stopsSig())));
     const calcOn = () => calcValid() && !!routeCalc.accepted;
-    // A route that no longer fits the stops (one added, moved, removed) is dropped.
-    function checkCalc() { if (routeCalc && !calcValid()) { routeCalc = null; saveCalc(); } }
+    // A route that no longer fits the stops (one added, moved, removed) is dropped – and why is noted, for
+    // gcctRouteDebug.
+    function checkCalc() {
+      if (!routeCalc || calcValid()) return;
+      try {
+        const a = JSON.parse(routeCalc.sig), b = JSON.parse(stopsSig());
+        const k = a.findIndex((p, i) => !b[i] || distM({ lat: p[0], lng: p[1] }, { lat: b[i][0], lng: b[i][1] }) >= 3);
+        (window.gcctRouteDebug = window.gcctRouteDebug || []).push({ calcDropped: new Date().toISOString(), stopsBefore: a.length, stopsNow: b.length, firstChanged: k, movedM: k >= 0 && b[k] ? Math.round(distM({ lat: a[k][0], lng: a[k][1] }, { lat: b[k][0], lng: b[k][1] })) : null, loop: routeLoop, stack: String(new Error().stack).split('\n').slice(2, 6).map(x => x.trim().replace(/\(.*\//, '(')).join(' < ') });
+      } catch (e) { /* ignore */ }
+      routeCalc = null; saveCalc();
+    }
     // How see-through the route is drawn over the map: 0–90 %.
     let routeAlpha = 15;
     try { const v = localStorage.getItem('gcct.routeAlpha'); if (v != null && isFinite(+v)) routeAlpha = Math.max(0, Math.min(90, +v)); } catch (e) { /* ignore */ }
@@ -7888,8 +7911,12 @@ ${calcTrk(stamp)}</gpx>
       return null;
     }
     // While the route window is open, a click on a geocache or pin on the map adds it (instead of the site's popup).
+    // Only a real click: the end of a drag of the map (the pointer moved, or held a while) is not one.
+    let downAt = null;
+    window.addEventListener('pointerdown', e => { downAt = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
     window.addEventListener('click', e => {
       if (!routeOpen() || e.button !== 0) return;
+      if (downAt && (Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6 || Date.now() - downAt.t > 700)) return;
       const root = map.getContainer(), tgt = e.target;
       if (!root.contains(tgt) || (tgt.closest && tgt.closest('.leaflet-popup, .leaflet-control-container, .gcct-dock, .gcct-coord, .gcct-dlg'))) return;
       let ll;
