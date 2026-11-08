@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.31
+// @version      1.56.33
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7328,40 +7328,17 @@
     }
     function plainRouteGpx() {
       const pts = routeStops().map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
-      const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n${stopWpts(true)}  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n${calcTrk()}</gpx>\n`;
+      const stamp = gpxStamp(), name = `${T('Route')} ${stamp}`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Geocaching Map – Custom Tile Layers" xmlns="http://www.topografix.com/GPX/1/1">\n${stopWpts(true)}  <rte>\n    <name>${xmlEsc(name)}</name>\n${pts}\n  </rte>\n${calcTrk(stamp)}</gpx>\n`;
     }
-    // The calculated route (once accepted) goes into the GPX twice: as a route (<rte>,
-    // simplified to the points that matter, at most 500, for devices that navigate a route) and as a track
-    // (<trk>, every point, for devices that draw the line).
-    function calcTrk() {
+    // Date and time to the second in the names, so every route and track in the GPS has its own name.
+    const gpxStamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`; };
+    // The calculated route (once accepted) goes into the GPX as a track, every point.
+    function calcTrk(stamp) {
       if (!calcOn()) return '';                // only an accepted route
       const all = [];
       calcLegLines().forEach((line, i) => line.forEach((p, k) => { if (i && !k) return; all.push(p); }));
-      // Douglas–Peucker: keep the points more than tol metres off the straight line between their neighbours
-      const simplify = tol => {
-        const keep = new Uint8Array(all.length); keep[0] = keep[all.length - 1] = 1;
-        const k0 = Math.cos(all[0][0] * Math.PI / 180) * 111320, k1 = 110540;
-        const xy = all.map(p => [p[1] * k0, p[0] * k1]);
-        const stack = [[0, all.length - 1]];
-        while (stack.length) {
-          const [a, b] = stack.pop();
-          let best = -1, bd = tol;
-          const [ax, ay] = xy[a], [bx, by] = xy[b], dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
-          for (let i = a + 1; i < b; i++) {
-            const t = Math.max(0, Math.min(1, ((xy[i][0] - ax) * dx + (xy[i][1] - ay) * dy) / L2));
-            const d = Math.hypot(xy[i][0] - ax - t * dx, xy[i][1] - ay - t * dy);
-            if (d > bd) { bd = d; best = i; }
-          }
-          if (best > 0) { keep[best] = 1; stack.push([a, best], [best, b]); }
-        }
-        return all.filter((p, i) => keep[i]);
-      };
-      let rp = simplify(5);
-      for (let tol = 10; rp.length > 500 && tol < 2000; tol *= 2) rp = simplify(tol);
-      const name = xmlEsc(T('Calculated route'));
-      return `  <rte>\n    <name>${name}</name>\n${rp.map(p => `    <rtept lat="${p[0]}" lon="${p[1]}" />`).join('\n')}\n  </rte>\n`
-        + `  <trk>\n    <name>${name}</name>\n    <trkseg>\n${all.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}" />`).join('\n')}\n    </trkseg>\n  </trk>\n`;
+      return `  <trk>\n    <name>${xmlEsc(T('Calculated route') + ' ' + stamp)}</name>\n    <trkseg>\n${all.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}" />`).join('\n')}\n    </trkseg>\n  </trk>\n`;
     }
     async function routeGpx(progress, full) {
       if (!full) return { text: plainRouteGpx(), failed: [] };
@@ -7374,7 +7351,7 @@
         part.forEach(l => wpts.push(...l));
       }
       const pts = routeStops().map(r => `    <rtept lat="${r.lat}" lon="${r.lng}">\n      <name>${xmlEsc(r.kind === 'cache' ? r.code : r.name)}</name>${r.kind === 'cache' && r.name ? `\n      <desc>${xmlEsc(r.name)}</desc>` : ''}\n      <sym>${r.kind === 'cache' ? ((CACHE_INFO.get(r.code) || {}).found === true ? 'Geocache Found' : 'Geocache') : r.kind === 'place' ? 'Flag, Green' : 'Pin, Blue'}</sym>\n    </rtept>`).join('\n');
-      const name = `${T('Route')} ${new Date().toISOString().slice(0, 10)}`;
+      const stamp = gpxStamp(), name = `${T('Route')} ${stamp}`;
       const lats = route.map(r => r.lat), lngs = route.map(r => r.lng);
       const text = `<?xml version="1.0" encoding="utf-8"?>
 <gpx xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0" creator="Geocaching Map – Custom Tile Layers" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd http://www.groundspeak.com/cache/1/0/1 http://www.groundspeak.com/cache/1/0/1/cache.xsd" xmlns="http://www.topografix.com/GPX/1/0">
@@ -7388,7 +7365,7 @@ ${wpts.join('\n')}${wpts.length ? '\n' : ''}${stopWpts(false)}  <rte>
     <name>${xmlEsc(name)}</name>
 ${pts}
   </rte>
-${calcTrk()}</gpx>
+${calcTrk(stamp)}</gpx>
 `;
       return { text, failed };
     }
@@ -7511,15 +7488,24 @@ ${calcTrk()}</gpx>
       const bad = e => (prof === 'car' ? CAR_NO_USE.has(e.use) : BIKE_NO_USE.has(e.use)) || !!closedFor(tags.get(e.way_id));
       const uses = [];
       let stop = -1, why = 'ok';
+      // Distance along the drive at each point – a mismatch where the drive starts (the car stands by a
+      // footway or a square) or a footway crossing the road for a few metres must not stop the car: only a
+      // stretch of at least 40 m on a way it may not use counts, and not within the first 80 m.
+      const cum = [0];
+      for (let p = 1; p < idx.length; p++) cum.push(cum[p - 1] + distM({ lat: coords[idx[p - 1]][1], lng: coords[idx[p - 1]][0] }, { lat: coords[idx[p]][1], lng: coords[idx[p]][0] }));
+      const edgeAt = p => { const m = mp[p]; return m && m.type !== 'unmatched' && m.edge_index != null ? edges[m.edge_index] || null : null; };
       for (let p = 0; p < mp.length && stop < 0; p++) {
-        const m = mp[p];
-        if (!m || m.type === 'unmatched' || m.edge_index == null || !edges[m.edge_index]) continue;
-        const e = edges[m.edge_index];
+        const e = edgeAt(p);
+        if (!e) continue;
         if (uses[uses.length - 1] !== e.use) uses.push(e.use);
-        if (bad(e)) { stop = Math.max(0, p - 1); why = closedFor(tags.get(e.way_id)) || e.use; break; }
+        if (bad(e) && cum[p] >= 80) {
+          let q = p; while (q + 1 < mp.length && (!edgeAt(q + 1) || bad(edgeAt(q + 1)))) q++;
+          if (cum[q] - cum[p] >= 40 || q === mp.length - 1) { stop = Math.max(0, p - 1); why = closedFor(tags.get(e.way_id)) || e.use; break; }
+          continue;
+        }
         // a gate or bollard at the end of this piece: stop at the last point before it
         const nx = mp[p + 1];
-        if (prof === 'car' && e.end_node && CAR_NO_NODE.has(e.end_node.type) && nx && nx.edge_index != null && nx.edge_index !== m.edge_index) { stop = p; why = e.end_node.type; }
+        if (prof === 'car' && cum[p] >= 80 && e.end_node && CAR_NO_NODE.has(e.end_node.type) && nx && nx.edge_index != null && nx.edge_index !== mp[p].edge_index) { stop = p; why = e.end_node.type; }
       }
       routeDebug.push({ prof, valhallaMs: Date.now() - t0, points: idx.length, stopAt: stop, why, ways: uses.join(' > ') });
       return stop < 0 ? -1 : idx[stop];
