@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.83
+// @version      1.56.87
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4617,7 +4617,7 @@
       .gcct-route .rt-calc-k{display:inline-block;width:16px;height:0;margin:0 4px 3px 2px;vertical-align:middle;border-top:4px solid #8250df}
       .gcct-route .rt-calc-k.k-bike{border-top-color:#1a7f37}
       .gcct-route .rt-calc-k.k-foot{border-top:4px solid #f5a000}
-      .gcct-route .rt-calc-k.k-air{border-top:4px solid #cf222e}
+      .gcct-route .rt-calc-k.k-air{border-top:0;height:4px;width:20px;background:repeating-linear-gradient(90deg,#f5a000 0 5px,transparent 5px 8px)}
       .gcct-route .rt-calc-ask p{margin:6px 0}
       .gcct-route .rt-calc-ord{font-size:12px;line-height:1.7}
       .gcct-route .rt-calc-ord span{display:inline-block;min-width:16px;padding:0 3px;border-radius:8px;background:#8250df;color:#fff;font-size:11px;text-align:center;line-height:16px}
@@ -8161,7 +8161,7 @@ ${calcTrk(stamp)}</gpx>
       car: { color: '#8250df', weight: 4, opacity: 0.85 },
       bike: { color: '#1a7f37', weight: 4, opacity: 0.85 },
       foot: { color: '#f5a000', weight: 4, opacity: 0.85 },
-      air: { color: '#cf222e', weight: 4, opacity: 0.85 },
+      air: { color: '#f5a000', weight: 4, opacity: 0.85, dashArray: '10 6', lineCap: 'butt' },
     };
     let routeDlg = null, routeRefresh = null;
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
