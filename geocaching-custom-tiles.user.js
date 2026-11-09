@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.66
+// @version      1.56.79
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -229,12 +229,12 @@
     "By car from the start as far as the car may go towards each geocache – closed roads, gates, tracks and ski trails stop it – then on foot, the last bit in a straight line, and back to the car. From OpenStreetMap.": "Med bil fra start så langt bilen kan mot hver cache – stengte veger, bommer, traktorveger og skiløyper stopper den – så til fots, det siste stykket i luftlinje, og tilbake til bilen. Fra OpenStreetMap.",
     "Accepted": "Godtatt",
     "See-through": "Gjennomsiktig",
-    "of it straight across": "av det rett over terrenget",
+    "of it straight across": "av det rett på i terrenget",
     "to": "til",
     "Order": "Rekkefølge",
     "By car and bike": "Med bil og sykkel",
     "By car as far as the car may go, then by bike as far as a bike may go, the rest on foot – and back by bike to the car. From OpenStreetMap.": "Med bil så langt bilen kan kjøre, så med sykkel så langt sykkelen kan sykles, resten til fots – og tilbake med sykkel til bilen. Fra OpenStreetMap.",
-    "Straight across the terrain up to": "Rett over terrenget inntil",
+    "Straight across the terrain up to": "Rett på i terrenget inntil",
     "never": "aldri",
     "Suggest a shorter order of the stops": "Foreslå en kortere rekkefølge på stoppene",
     "road check": "vegsjekk",
@@ -4866,8 +4866,54 @@
     }
     // A pin's name: above and to the right of the pin.
     function pinLabel(ll, html) {
-      return L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-pinlbl', html: `<span class="gcct-label">${html}</span>`, iconSize: null, iconAnchor: [-6, 5] }) }).addTo(tools);
+      const m = L.marker(ll, { interactive: false, clickable: false, icon: L.divIcon({ className: 'gcct-pinlbl', html: `<span class="gcct-label">${html}</span>`, iconSize: null, iconAnchor: [-6, 5] }) }).addTo(tools);
+      pinLabels.add(m);
+      m.on('remove', () => pinLabels.delete(m));
+      setTimeout(() => { try { placePinLabel(m); } catch (e) { /* not ready */ } }, 0);
+      return m;
     }
+    // A pin's name never lies on a geocache: its icon, nor its ♥, D/T or FTF label. Tried beside the pin –
+    // right, left, above, below, then a little further out – the first free spot wins.
+    const pinLabels = new Set();
+    function placePinLabel(m) {
+      const el = m.getElement ? m.getElement() : m._icon, sp = el && el.firstElementChild;
+      if (!el || !sp || el.style.display === 'none') return;
+      let p;
+      try { p = map.latLngToLayerPoint(m.getLatLng()); } catch (e) { return; }
+      const w = sp.offsetWidth, h = sp.offsetHeight;
+      if (!w || !h) return;
+      const ICON = 13, labelsOn = map.getZoom() >= FAV_MIN_ZOOM;
+      const favS = api.favSettings ? api.favSettings() : { show: false }, dtS = api.dtSettings ? api.dtSettings() : { show: false }, ftfS = api.ftfSettings ? api.ftfSettings() : { show: false };
+      const circles = [[p, 9]], rects = [], R = 80 + w;
+      CACHE_INFO.forEach(i2 => [i2.posted, i2.solved ? i2.corrected : null].forEach(q => {
+        if (!q) return;
+        let c; try { c = map.latLngToLayerPoint(L.latLng(q.lat, q.lng)); } catch (e) { return; }
+        if (Math.abs(c.x - p.x) > R || Math.abs(c.y - p.y) > R) return;
+        circles.push([c, ICON]);
+        if (!labelsOn) return;
+        if (favS.show && i2.fav != null && i2.fav >= (favS.min ?? 10)) { const fw = 14 + 7 * String(i2.fav).length; rects.push([c.x - fw / 2, c.y - 31, c.x + fw / 2, c.y - 13]); }
+        if (dtS.show && i2.diff != null && i2.terr != null) { const dw = 7 * `${i2.diff}/${i2.terr}`.length + 4; rects.push([c.x - dw / 2, c.y + 12, c.x + dw / 2, c.y + 28]); }
+        if (ftfS.show && i2.neverFound === true && i2.found !== true) rects.push([c.x + 4, c.y - 8, c.x + 36, c.y + 8]);
+      }));
+      // the other pins' names, where already placed
+      pinLabels.forEach(o => { if (o !== m && o.__at) rects.push(o.__at); });
+      const free = (x, y) => { const r = [p.x + x, p.y + y, p.x + x + w, p.y + y + h];
+        return circles.every(([c, rad]) => Math.hypot(Math.max(r[0] - c.x, 0, c.x - r[2]), Math.max(r[1] - c.y, 0, c.y - r[3])) >= rad + 2)
+          && rects.every(q => r[2] + 2 <= q[0] || q[2] + 2 <= r[0] || r[3] + 2 <= q[1] || q[3] + 2 <= r[1]); };
+      let at = null;
+      for (let g = 0; g <= 60 && !at; g += 6) {
+        const tries = [[6 + g, -5], [6 + g, -h + 5], [6 + g, -h / 2], [-6 - w - g, -5], [-6 - w - g, -h + 5], [-6 - w - g, -h / 2],
+          [-w / 2, -h - 8 - g], [-w / 2, 8 + g], [6, -h - 4 - g], [6, 4 + g], [-w - 6, -h - 4 - g], [-w - 6, 4 + g]];
+        for (const [x, y] of tries) if (free(x, y)) { at = [x, y]; break; }
+      }
+      if (!at) at = [6, -5];
+      el.style.marginLeft = `${Math.round(at[0])}px`;
+      el.style.marginTop = `${Math.round(at[1])}px`;
+      m.__at = [p.x + at[0], p.y + at[1], p.x + at[0] + w, p.y + at[1] + h];
+    }
+    const placePinLabels = () => { pinLabels.forEach(o => (o.__at = null)); pinLabels.forEach(o => { try { placePinLabel(o); } catch (e) { /* not ready */ } }); };
+    map.on('zoomend moveend', () => setTimeout(placePinLabels, 0));
+    setInterval(() => { if (pinLabels.size) placePinLabels(); }, 2000);     // caches come in after a move
     // Circles are drawn as 180-point polygons computed on the sphere (no line simplification). That avoids L.circle,
     // whose signature differs between Leaflet 0.7 and 1.x, and is exact at any latitude.
     const circles = [];
@@ -7539,7 +7585,10 @@ ${calcTrk(stamp)}</gpx>
         const a = prof === 'car' ? (t.motor_vehicle || t.motorcar || t.vehicle || t.access) : t.bicycle;
         return a && /^(no|private|forestry|agricultural|delivery|customers|permit|emergency|military|use_sidepath)$/.test(a) ? 'access=' + a : null;
       };
-      const bad = e => (prof === 'car' ? CAR_NO_USE.has(e.use) : BIKE_NO_USE.has(e.use)) || !!closedFor(tags.get(e.way_id));
+      // Valhalla calls more than paths "path" (a forest road, a footway or bridleway may be one) – and a path
+      // marked for bikes (bicycle=designated/yes, a mountain-bike trail) may be ridden: OpenStreetMap's own tags decide.
+      const bikeOkPath = t => !!t && (/^(designated|yes|permissive)$/.test(t.bicycle || '') || !/^(path|steps)$/.test(t.highway || 'path') || /^(designated|yes)$/.test(t.mtb || ''));
+      const bad = e => (prof === 'car' ? CAR_NO_USE.has(e.use) : BIKE_NO_USE.has(e.use) && !(e.use === 'path' && bikeOkPath(tags.get(e.way_id)))) || !!closedFor(tags.get(e.way_id));
       const uses = [];
       let stop = -1, why = 'ok';
       // Distance along the drive at each point – a mismatch where the drive starts (the car stands by a
@@ -7561,7 +7610,9 @@ ${calcTrk(stamp)}</gpx>
         const nx = mp[p + 1];
         if (prof === 'car' && cum[p] >= 80 && e.end_node && CAR_NO_NODE.has(e.end_node.type) && nx && nx.edge_index != null && nx.edge_index !== mp[p].edge_index) { stop = p; why = e.end_node.type; }
       }
-      routeDebug.push({ prof, valhallaMs: Date.now() - t0, points: idx.length, stopAt: stop, why, ways: uses.join(' > ') });
+      const stopTags = stop >= 0 ? (() => { const e = edgeAt(stop + 1) || edgeAt(stop); const t = e && tags.get(e.way_id); return t ? { way: e.way_id, highway: t.highway, bicycle: t.bicycle, foot: t.foot, piste: t['piste:type'], name: t.name } : null; })() : null;
+      routeDebug.push({ prof, valhallaMs: Date.now() - t0, points: idx.length, stopAt: stop, why, ways: uses.join(' > '), stopTags });
+      vehicleStopValhalla.okAt = idx.map((ci, p) => [ci, !!edgeAt(p) && !bad(edgeAt(p))]);   // [index in coords, may go there]
       vehicleStopValhalla.bad = stop >= 0 ? coords[idx[Math.min(idx.length - 1, stop + 1)]] : null;   // [lng, lat] where it may not go on
       return stop < 0 ? -1 : idx[stop];
     }
@@ -7641,7 +7692,13 @@ ${calcTrk(stamp)}</gpx>
       // begins) only counts if none starts closer.
       const carry = c => (c.segs[0] && c.segs[0].m === 'air' ? c.segs[0].d : 0);
       const ok = c => carry(c) <= 40;
-      const best = () => { const pool = cands.some(ok) ? cands.filter(ok) : [cands.reduce((x, y) => (carry(y) < carry(x) ? y : x))]; return pool.reduce((x, y) => (distM(y.end, b) + 30 < distM(x.end, b) ? y : x)); };
+      // the one that gets closest – and of those that get about as close (30 m), the quickest
+      const rideT = c => c.segs.reduce((x, sg) => x + (sg.m === 'air' ? 0 : sg.t), 0);
+      const best = () => {
+        const pool = cands.some(ok) ? cands.filter(ok) : [cands.reduce((x, y) => (carry(y) < carry(x) ? y : x))];
+        const dmin = Math.min(...pool.map(c => distM(c.end, b)));
+        return pool.filter(c => distM(c.end, b) <= dmin + 30).reduce((x, y) => (rideT(y) < rideT(x) - 5 ? y : x));
+      };
       const exclude = cands.filter(c => c.stopped && c.bad).map(c => c.bad);
       for (let tries = 0; tries < 2 && best().stopped && distM(best().end, b) > 300 && exclude.length && valhallaFail < 3; tries++) {
         try {
@@ -7658,6 +7715,40 @@ ${calcTrk(stamp)}</gpx>
           if (!r3.stopped || !r3.bad) break;
           exclude.push(r3.bad);
         } catch (e) { routeDebug.push({ bikeRouteError: String(e) }); break; }
+      }
+      // Ride by road to where the walking route leaves the last road a bike may use, and walk the rest from
+      // there (e.g. by road to where the path begins) – when the bike routes above go far round to get closer.
+      // The walking route is checked as a bike would ride it; the road to that spot is Valhalla's bike route,
+      // kept away from the paths the other ways ran into.
+      if ((distM(best().end, b) > 300 || rideT(best()) > 600) && valhallaFail < 3) {
+        try {
+          const j = await osrm('foot', 'route', [a, b], 'overview=full&geometries=geojson&steps=false');
+          const fc = j.routes[0].geometry.coordinates;
+          await vehicleStopValhalla('bike', fc);
+          const okAt = vehicleStopValhalla.okAt || [];
+          // the last point of a stretch of at least 30 m the bike may use, not right by the start
+          let P = null, run = 0;
+          for (let k = okAt.length - 1; k > 0 && !P; k--) {
+            const [ci, ok2] = okAt[k], prev = okAt[k - 1];
+            if (!ok2 || !prev[1]) { run = 0; continue; }
+            run += distM({ lat: fc[prev[0]][1], lng: fc[prev[0]][0] }, { lat: fc[ci][1], lng: fc[ci][0] });
+            if (run >= 30) { const q = { lat: fc[ci][1], lng: fc[ci][0] }; if (distM(q, a) > 300) P = q; }
+          }
+          if (P) {
+            const ex = exclude.slice();
+            for (let tries = 0; tries < 3; tries++) {
+              const body = { locations: [{ lat: a.lat, lon: a.lng }, { lat: P.lat, lon: P.lng }], costing: 'bicycle',
+                costing_options: { bicycle: { bicycle_type: 'Hybrid', ignore_access: true, use_roads: 0.6 } },
+                exclude_locations: ex.map(p => ({ lat: p[1], lon: p[0] })), directions_type: 'none' };
+              const r = await fetch('https://valhalla1.openstreetmap.de/route', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
+              if (!r.ok) throw new Error('Valhalla route ' + r.status);
+              const r5 = await rideLine(decode6((await r.json()).trip.legs[0].shape), a, b);
+              if (!r5) break;
+              if (distM(r5.end, P) < 100 || !r5.stopped || !r5.bad) { r5.toPath = true; cands.push(r5); routeDebug.push({ bike: 'by road to where the path begins', reachesWithin: Math.round(distM(r5.end, b)) }); break; }
+              ex.push(r5.bad);
+            }
+          }
+        } catch (e) { routeDebug.push({ bikeToPathError: String(e) }); }
       }
       // Every way would start with the bike carried a long way (the bike stands on a way the bike route does
       // not know – where the last ride ended): ride back the way it came first, then on from there.
@@ -7685,7 +7776,42 @@ ${calcTrk(stamp)}</gpx>
           }
         } catch (e) { /* ignore */ }
       }
-      const pick = best();
+      // Back the same way it came, all of it, and on from there – often quicker than a new way round.
+      if (cands.some(ok) && back && back.length) {
+        try {
+          const line = [];
+          reversed(back).forEach(sg => sg.pts.forEach(p => { const q = line[line.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) line.push(p); }));
+          if (line.length > 1 && distM({ lat: line[0][0], lng: line[0][1] }, a) <= 40) {
+            const p = line[line.length - 1], on = await along('bike', { lat: p[0], lng: p[1] }, b);
+            const lead = on.segs[0] && on.segs[0].m === 'air' ? on.segs[0].d : 0;
+            if (lead <= 40) {
+              let dd = 0; for (let i = 1; i < line.length; i++) dd += distM({ lat: line[i - 1][0], lng: line[i - 1][1] }, { lat: line[i][0], lng: line[i][1] });
+              const segs = [{ m: 'bike', pts: line, d: dd, t: dd / 4 }].concat(on.segs.filter((sg, i) => !(i === 0 && sg.m === 'air')));
+              cands.push({ segs, end: on.end, stopped: on.stopped, bad: null, sameWay: true });
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+      // Of the ways that get about as close, the quickest (best()) – and then any that stops further off but
+      // is quicker all in all, riding and walking the rest (riding far round to get a little closer does not pay).
+      let pick = best();
+      try {
+        // (ways that stop at the same spot: only the quickest; a way that cannot win even walking the rest at
+        // path speed in a straight line is not walked out)
+        const pool = [];
+        (cands.some(ok) ? cands.filter(ok) : [pick]).forEach(c => {
+          const k2 = pool.findIndex(o => distM(o.end, c.end) < 30);
+          if (k2 < 0) pool.push(c); else if (c === pick || (pool[k2] !== pick && rideT(c) < rideT(pool[k2]))) pool[k2] = c;
+        });
+        const low = c => rideT(c) + carry(c) / OFF_PATH + distM(c.end, b) / 1.39;
+        const total = async c => rideT(c) + carry(c) / OFF_PATH + (distM(c.end, b) > 25 ? (await walk(c.end, b)).segs.reduce((x, sg) => x + sg.t, 0) : 0);
+        const tp = await total(pick);
+        const ts = await Promise.all(pool.map(c => (c === pick ? tp : low(c) >= tp - 60 ? Infinity : total(c))));
+        let k = ts.indexOf(Math.min(...ts));
+        routeDebug.push({ bikeWays: pool.map((c, i) => ({ to: Math.round(distM(c.end, b)), ride: Math.round(rideT(c)), all: Math.round(ts[i]), toPath: !!c.toPath })) });
+        if (pool[k] !== pick && ts[k] < tp - 60) { routeDebug.push({ bike: 'quicker to stop sooner and walk', saves: Math.round(tp - ts[k]) }); pick = pool[k]; }
+      } catch (e) { /* the closest, then */ }
+      if (pick.sameWay) routeDebug.push({ bike: 'back the same way' });
       if (pick !== r1) routeDebug.push({ bike: 'another way ridden', closer: Math.round(distM(r1.end, b) - distM(pick.end, b)) });
       return pick;
     }
@@ -7697,14 +7823,115 @@ ${calcTrk(stamp)}</gpx>
     let acrossMax = 1000;
     try { const v = localStorage.getItem('gcct.routeAcross'); if (v != null && ACROSS_CHOICES.includes(+v)) acrossMax = +v; } catch (e) { /* ignore */ }
     const acrossOk = (dd, viaPathM) => dd > 2 && dd <= acrossMax && viaPathM / 1.39 > dd / ACROSS;
+    // A straight line never goes across water – that would need a boat. Water is read from the map itself:
+    // the even light blue of lakes and rivers in Kartverket's topographic map (Norway) or OpenStreetMap's map
+    // (elsewhere), zoom 15. The tiles are read once and kept; if the browser will not let them be read, lines are
+    // not checked.
+    const WATER_Z = 15, waterTiles = new Map();
+    let waterOff = null;
+    const waterSrc = ll => (ll.lat > 57.8 && ll.lat < 71.5 && ll.lng > 4 && ll.lng < 31.5)
+      ? { key: 'kv', url: (z, x, y) => `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`, water: (r, g, b) => b >= 226 && g >= 226 && b - r >= 10 && g - r >= 6 && g - b <= 8 }
+      : { key: 'osm', url: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`, water: (r, g, b) => Math.abs(r - 170) <= 8 && Math.abs(g - 211) <= 8 && Math.abs(b - 223) <= 8 };
+    function waterTile(src, x, y) {
+      const k = `${src.key}/${x}/${y}`;
+      if (!waterTiles.has(k)) waterTiles.set(k, new Promise(res => {
+        const im = new Image(), tm = setTimeout(() => res(null), 15000);
+        im.crossOrigin = 'anonymous';
+        im.onload = () => {
+          clearTimeout(tm);
+          try { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, 256, 256); res(g.getImageData(0, 0, 256, 256).data); }
+          catch (e) { if (!waterOff) { waterOff = String(e); routeDebug.push({ waterOff }); } res(null); }
+        };
+        im.onerror = () => { clearTimeout(tm); if (!waterTile.err++) routeDebug.push({ waterTileError: `${src.key} ${WATER_Z}/${x}/${y}` }); res(null); };
+        im.src = src.url(WATER_Z, x, y);
+      }));
+      return waterTiles.get(k);
+    }
+    waterTile.err = 0;
+    const merc = (lat, lng) => { const n = 256 * 2 ** WATER_Z, sn = Math.sin(lat * Math.PI / 180); return { x: (lng + 180) / 360 * n, y: (0.5 - Math.log((1 + sn) / (1 - sn)) / (4 * Math.PI)) * n }; };
+    // How much of the straight line from a to b is on water, in metres (the first and last 10 m left out: a
+    // geocache may be right at the shore). A point is water when it and its neighbours 2 px away have the
+    // water's colour – so the hatching of a bog, a stream or a name in blue does not count.
+    async function wetM(a, b, step = 8) {
+      if (waterOff) return 0;
+      const d = distM(a, b);
+      if (d < 25) return 0;
+      const src = waterSrc(a), pts = [];
+      for (let x = 10; x <= d - 10; x += step) { const t = x / d; pts.push(merc(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)); }
+      const tiles = new Map(), keys = new Set();
+      pts.forEach(p => [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]].forEach(([dx, dy]) => keys.add(`${Math.floor((p.x + dx) / 256)},${Math.floor((p.y + dy) / 256)}`)));
+      await Promise.all([...keys].map(async k => { const [tx, ty] = k.split(',').map(Number); tiles.set(k, await waterTile(src, tx, ty)); }));
+      const isW = (px, py) => {
+        const tx = Math.floor(px / 256), ty = Math.floor(py / 256), dt = tiles.get(`${tx},${ty}`);
+        if (!dt) return false;
+        const i = ((Math.floor(py) - ty * 256) * 256 + (Math.floor(px) - tx * 256)) * 4;
+        return src.water(dt[i], dt[i + 1], dt[i + 2]);
+      };
+      let wet = 0;
+      pts.forEach(p => { if (isW(p.x, p.y) && isW(p.x + 2, p.y) && isW(p.x - 2, p.y) && isW(p.x, p.y + 2) && isW(p.x, p.y - 2)) wet += step; });
+      return wet;
+    }
+    const dry = async (a, b, step) => (await wetM(a, b, step)) <= 20;
     async function walk(a, b) {
       const r = await along('foot', a, b), viaPath = r.segs.reduce((m, sg) => m + sg.d, 0), dd = distM(a, b);
-      if (acrossOk(dd, viaPath)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
+      if (acrossOk(dd, viaPath) && await dry(a, b)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
       // The "path" way may itself be mostly straight across: the nearest path can be far from both ends, so
       // the way goes far round to walk a few metres on it. Then the straight line is taken when it is quicker.
       const offPath = r.segs.reduce((m, sg) => m + (sg.m === 'air' ? sg.d : 0), 0), tPath = r.segs.reduce((x, sg) => x + sg.t, 0);
-      if (dd > 2 && offPath >= Math.min(dd * 0.5, acrossMax) && dd / ACROSS < tPath) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
-      return r;
+      if (dd > 2 && offPath >= Math.min(dd * 0.5, acrossMax) && dd / ACROSS < tPath && await dry(a, b)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
+      return await cutCorners(a, b, await dryEnds(a, b, r));
+    }
+    // The bit straight across to the nearest path (and from the last one) may cross a lake – the path nearest
+    // is on the other side. Then the nearest path that can be reached on dry land is used instead.
+    async function dryEnds(a, b, r) {
+      if (waterOff || !r.segs.length) return r;
+      const f = r.segs[0], l = r.segs[r.segs.length - 1], P = q => ({ lat: q[0], lng: q[1] });
+      const wetA = f.m === 'air' && r.segs.length > 1 && !(await dry(a, P(f.pts[1])));
+      const wetB = l.m === 'air' && r.segs.length > 1 && !(await dry(P(l.pts[0]), b));
+      if (!wetA && !wetB) return r;
+      const alt = async (p, cur) => {
+        let j; try { j = await osrm('foot', 'nearest', [p], 'number=25'); } catch (e) { return null; }
+        for (const w of j.waypoints || []) {
+          const q = wpt(w);
+          if (distM(q, cur) < 15 || distM(q, p) > Math.max(acrossMax, 2000)) continue;
+          if (await dry(p, q)) return q;
+        }
+        return null;
+      };
+      const A2 = wetA ? await alt(a, P(f.pts[1])) : null, B2 = wetB ? await alt(b, P(l.pts[0])) : null;
+      routeDebug.push({ dryEnds: [wetA ? !!A2 : null, wetB ? !!B2 : null] });
+      if (!A2 && !B2) return r;
+      const r2 = await along('foot', A2 || a, B2 || b), segs = [];
+      const air = (p, q) => { const x = distM(p, q); if (x > 2) segs.push({ m: 'air', pts: [[p.lat, p.lng], [q.lat, q.lng]], d: x, t: x / ACROSS }); };
+      if (A2) air(a, A2);
+      segs.push(...r2.segs);
+      if (B2) air(B2, b);
+      return { segs, end: b };
+    }
+    // The way to the path goes to its nearest point – even when the path then goes on the way you came from,
+    // or comes nearer to where you are going further on. So the point where you join the path (and where
+    // you leave it) is chosen by time: straight across to it, and along the path from there.
+    async function cutCorners(a, b, r) {
+      const k = r.segs.findIndex(sg => sg.m === 'foot');
+      if (k < 0 || r.segs.some((sg, i) => i !== k && sg.m !== 'air')) return r;
+      const P = r.segs[k].pts.map(q => ({ lat: q[0], lng: q[1] })), n = P.length;
+      if (n < 2) return r;
+      const cum = [0];
+      for (let i = 1; i < n; i++) cum.push(cum[i - 1] + distM(P[i - 1], P[i]));
+      const D = cum[n - 1], v = D > 0 ? r.segs[k].t / D : 1 / 1.39;       // seconds per metre on the path
+      const a0 = distM(a, P[0]), b0 = distM(P[n - 1], b);
+      let i0 = 0, best = a0 / ACROSS;
+      for (let i = 1; i < n; i++) { const x = distM(a, P[i]); if (x > Math.max(a0, acrossMax)) continue; const c = x / ACROSS - cum[i] * v; if (c < best - 1 && await dry(a, P[i])) { best = c; i0 = i; } }
+      let j0 = n - 1; best = b0 / ACROSS;
+      for (let j = n - 2; j > i0; j--) { const x = distM(P[j], b); if (x > Math.max(b0, acrossMax)) continue; const c = x / ACROSS - (D - cum[j]) * v; if (c < best - 1 && await dry(P[j], b)) { best = c; j0 = j; } }
+      if (i0 === 0 && j0 === n - 1) return r;
+      routeDebug.push({ cutCorners: [Math.round(cum[i0]), Math.round(D - cum[j0])] });
+      const segs = [], air = (p, q) => { const x = distM(p, q); if (x > 2) segs.push({ m: 'air', pts: [[p.lat, p.lng], [q.lat, q.lng]], d: x, t: x / ACROSS }); };
+      air(a, P[i0]);
+      const d = cum[j0] - cum[i0];
+      if (j0 > i0 && d > 0) segs.push({ m: 'foot', pts: r.segs[k].pts.slice(i0, j0 + 1), d, t: d * v });
+      air(P[j0], b);
+      return { segs, end: b };
     }
     // The drives are worked out one after the other (each starts where the last one parked); the walks
     // to and from the car are asked for alongside. The walk back to the car is the walk in, reversed.
@@ -7714,11 +7941,15 @@ ${calcTrk(stamp)}</gpx>
     // walks are asked once – later they come from memory.
     const segT = segs => segs.reduce((x, sg) => x + sg.t, 0);
     async function keepCar(A, B, carAt, drv, isCache) {
-      const tKeep = segT((await walk(A, B)).segs);
-      const tBack = distM(A, carAt) > 25 ? segT((await walk(A, carAt)).segs) : 0;
-      const tIn = isCache && distM(drv.end, B) > 30 ? segT((await walk(drv.end, B)).segs) : distM(drv.end, B) / OFF_PATH;
+      // Sooner or later you go back to the car / bike, so the walk back from B counts too: left where it is,
+      // that is the walk from B to it; moved, it is the walk in, reversed.
+      const [kw, bw, iw, rw] = await Promise.all([walk(A, B), distM(A, carAt) > 25 ? walk(A, carAt) : null,
+        isCache && distM(drv.end, B) > 30 ? walk(drv.end, B) : null, distM(B, carAt) > 25 ? walk(B, carAt) : null]);
+      const tKeep = segT(kw.segs) + (rw ? segT(rw.segs) : 0);
+      const tBack = bw ? segT(bw.segs) : 0;
+      const tIn = iw ? segT(iw.segs) : distM(drv.end, B) / OFF_PATH;
       const tDrive = drv.segs.reduce((x, sg) => x + (sg.m === 'air' ? 0 : sg.t), 0);
-      const move = tBack + tDrive + tIn + 60;          // a minute to park and get going
+      const move = tBack + tDrive + 2 * tIn + 60;          // a minute to park and get going
       routeDebug.push({ keepCar: tKeep <= move, walkOn: Math.round(tKeep), moveCar: Math.round(move) });
       return tKeep <= move;
     }
@@ -7846,6 +8077,10 @@ ${calcTrk(stamp)}</gpx>
       const snap = drv ? drv.sources.map(s => s.distance || 0) : [], at = drv ? drv.sources.map(wpt) : [];
       // the walking times leave out the bits off the path at both ends (to and from the nearest path) – add them
       const fsnap = (foot.sources || []).map(s => s.distance || 0);
+      // which straight lines would cross water (looked at only where a straight line could be chosen)
+      const wetPair = new Set(), chk = [];
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (distM(pts[i], pts[j]) <= Math.max(acrossMax, 3000)) chk.push([i, j]);
+      await Promise.all(chk.map(async ([i, j]) => { if (!(await dry(pts[i], pts[j], 20))) { wetPair.add(i * n + j); wetPair.add(j * n + i); } }));
       const c = [];
       for (let i = 0; i < n; i++) {
         c.push([]);
@@ -7853,7 +8088,7 @@ ${calcTrk(stamp)}</gpx>
           if (i === j) { c[i].push(0); continue; }
           const fw0 = foot.durations[i][j], dij = distM(pts[i], pts[j]);
           const fw = fw0 == null ? null : fw0 + ((fsnap[i] || 0) + (fsnap[j] || 0)) / OFF_PATH;
-          const walk = fw == null || dij / ACROSS < fw && (dij <= acrossMax || (fsnap[i] || 0) + (fsnap[j] || 0) >= dij * 0.5) ? dij / ACROSS : fw;   // as walk() decides
+          const walk = !wetPair.has(i * n + j) && (fw == null || dij / ACROSS < fw && (dij <= acrossMax || (fsnap[i] || 0) + (fsnap[j] || 0) >= dij * 0.5)) ? dij / ACROSS : fw;   // as walk() decides
           let v = walk;
           // by car / bike: walk back to it from i, drive, walk on to j – unless both are reached from the same spot
           if (drv) { const dv = drv.durations[i][j]; if (dv != null && distM(at[i], at[j]) >= 300) v = Math.min(v, dv + (snap[i] + snap[j]) * 1.4 / 1.2); }
