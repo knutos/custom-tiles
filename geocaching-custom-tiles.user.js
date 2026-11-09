@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.79
+// @version      1.56.83
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7830,8 +7830,11 @@ ${calcTrk(stamp)}</gpx>
     const WATER_Z = 15, waterTiles = new Map();
     let waterOff = null;
     const waterSrc = ll => (ll.lat > 57.8 && ll.lat < 71.5 && ll.lng > 4 && ll.lng < 31.5)
-      ? { key: 'kv', url: (z, x, y) => `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`, water: (r, g, b) => b >= 226 && g >= 226 && b - r >= 10 && g - r >= 6 && g - b <= 8 }
-      : { key: 'osm', url: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`, water: (r, g, b) => Math.abs(r - 170) <= 8 && Math.abs(g - 211) <= 8 && Math.abs(b - 223) <= 8 };
+      ? { key: 'kv', url: (z, x, y) => `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`, water: (r, g, b) => b >= 226 && g >= 226 && b - r >= 10 && g - r >= 6 && g - b <= 8,
+          // built-up area (light pinkish beige) and buildings (brown)
+          built: (r, g, b) => (r >= 205 && r - g >= 12 && r - g <= 34 && g - b >= 12 && g - b <= 34) || (r >= 225 && b >= 195 && r - b >= 8 && r - b <= 36 && g - b <= 22 && r >= g) || (r - b >= 50 && r >= 140 && r <= 200 && g >= 110 && g <= 165 && r - g >= 10) }
+      : { key: 'osm', url: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`, water: (r, g, b) => Math.abs(r - 170) <= 8 && Math.abs(g - 211) <= 8 && Math.abs(b - 223) <= 8,
+          built: (r, g, b) => (Math.abs(r - 224) <= 5 && Math.abs(g - 223) <= 5 && Math.abs(b - 223) <= 5) || (Math.abs(r - 217) <= 6 && Math.abs(g - 208) <= 6 && Math.abs(b - 201) <= 6) };
     function waterTile(src, x, y) {
       const k = `${src.key}/${x}/${y}`;
       if (!waterTiles.has(k)) waterTiles.set(k, new Promise(res => {
@@ -7853,9 +7856,9 @@ ${calcTrk(stamp)}</gpx>
     // geocache may be right at the shore). A point is water when it and its neighbours 2 px away have the
     // water's colour – so the hatching of a bog, a stream or a name in blue does not count.
     async function wetM(a, b, step = 8) {
-      if (waterOff) return 0;
+      if (waterOff) return { wet: 0, built: 0 };
       const d = distM(a, b);
-      if (d < 25) return 0;
+      if (d < 25) return { wet: 0, built: 0 };
       const src = waterSrc(a), pts = [];
       for (let x = 10; x <= d - 10; x += step) { const t = x / d; pts.push(merc(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)); }
       const tiles = new Map(), keys = new Set();
@@ -7867,11 +7870,21 @@ ${calcTrk(stamp)}</gpx>
         const i = ((Math.floor(py) - ty * 256) * 256 + (Math.floor(px) - tx * 256)) * 4;
         return src.water(dt[i], dt[i + 1], dt[i + 2]);
       };
-      let wet = 0;
-      pts.forEach(p => { if (isW(p.x, p.y) && isW(p.x + 2, p.y) && isW(p.x - 2, p.y) && isW(p.x, p.y + 2) && isW(p.x, p.y - 2)) wet += step; });
-      return wet;
+      const isB = (px, py) => {
+        const tx = Math.floor(px / 256), ty = Math.floor(py / 256), dt = tiles.get(`${tx},${ty}`);
+        if (!dt) return false;
+        const i = ((Math.floor(py) - ty * 256) * 256 + (Math.floor(px) - tx * 256)) * 4;
+        return src.built(dt[i], dt[i + 1], dt[i + 2]);
+      };
+      let wet = 0, built = 0;
+      pts.forEach(p => {
+        if (isW(p.x, p.y) && isW(p.x + 2, p.y) && isW(p.x - 2, p.y) && isW(p.x, p.y + 2) && isW(p.x, p.y - 2)) wet += step;
+        else if (isB(p.x, p.y)) built += step;
+      });
+      return { wet, built };
     }
-    const dry = async (a, b, step) => (await wetM(a, b, step)) <= 20;
+    // A straight line goes neither across water nor through built-up areas (there you walk the streets).
+    const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= 40; };
     async function walk(a, b) {
       const r = await along('foot', a, b), viaPath = r.segs.reduce((m, sg) => m + sg.d, 0), dd = distM(a, b);
       if (acrossOk(dd, viaPath) && await dry(a, b)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
