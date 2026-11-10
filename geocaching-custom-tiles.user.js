@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.94
+// @version      1.56.95
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -230,7 +230,7 @@
     "By car from the start as far as the car may go towards each geocache – closed roads, gates, tracks and ski trails stop it – then on foot, the last bit in a straight line, and back to the car. From OpenStreetMap.": "Med bil fra start så langt bilen kan mot hver cache – stengte veger, bommer, traktorveger og skiløyper stopper den – så til fots, det siste stykket i luftlinje, og tilbake til bilen. Fra OpenStreetMap.",
     "Accepted": "Godtatt",
     "See-through": "Gjennomsiktig",
-    "of it straight across": "av det rett på i terrenget",
+    "of it {d} straight across": "av det {d} rett på i terrenget",
     "to": "til",
     "Order": "Rekkefølge",
     "By car and bike": "Med bil og sykkel",
@@ -8701,9 +8701,9 @@ ${calcTrk(stamp)}</gpx>
         } else if (calcValid()) {
           const L0 = routeCalc.legs, D = L0.reduce((a, l) => a + l.d, 0), Tt = L0.reduce((a, l) => a + l.t, 0), by = {};
           L0.forEach(l => Object.keys(l.by).forEach(k => { const kk = k === 'air' ? 'foot' : k; by[kk] = (by[kk] || 0) + l.by[k]; }));   // straight across is on foot too
-          const hasAir = L0.some(l => l.segs.some(sg => sg.m === 'air' && sg.d > 5));
+          const hasAir = L0.some(l => l.segs.some(sg => sg.m === 'air' && sg.d > 5)), airD = L0.reduce((a, l) => a + (l.by.air || 0), 0);
           const parts = ['car', 'bike', 'foot'].filter(k => by[k] > 0).map(k => `<span class="rt-calc-p"><span class="rt-calc-k k-${k}"></span>${esc(T({ car: 'by car', bike: 'by bike', foot: 'on foot' }[k]))} ${esc(fmtDist(by[k]))}</span>`).join(' · ')
-            + (hasAir ? ` · <span class="rt-calc-p"><span class="rt-calc-k k-air"></span>${esc(T('of it straight across'))}</span>` : '');
+            + (hasAir ? ` · <span class="rt-calc-p"><span class="rt-calc-k k-air"></span>${esc(T('of it {d} straight across', { d: fmtDist(airD) }))}</span>` : '');
           html = `<div class="rt-calc-row">${icon(MODE_ICON[routeCalc.mode] || 'route', 15)}<b>${esc(T(routeCalc.accepted ? 'Calculated route' : 'Calculated route – shown on the map'))}</b>${routeCalc.accepted ? `<span class="rt-ok">${icon('check', 13)}${esc(T('Accepted'))}</span>` : ''}</div>
             <div class="rt-calc-sum">${esc(fmtDist(D))} · ${esc(T('about {t}', { t: fmtDur(Tt) }))}<br><span class="rt-desc">${parts}${L0.some(l => l.park) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${routeCalc.mode === 'bike' ? icon('bike', 11) : '<b>P</b>'}</span>${esc(T(routeCalc.mode === 'bike' ? 'where the bike is left' : 'where the car is left'))}</span>` : ''}${L0.some(l => l.bpark) ? ` · <span class="rt-calc-p"><span class="gcct-park rt-calc-pk">${icon('bike', 11)}</span>${esc(T('where the bike is left'))}</span>` : ''}</span></div>
             ${routeCalc.unchecked ? `<p class="hint rt-calc-err">${esc(T('The roads could not be checked (the road service did not answer), so the car may be shown on tracks and trails. Discard and try again in a minute.'))}</p>` : ''}
