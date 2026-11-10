@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.87
+// @version      1.56.94
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -207,6 +207,7 @@
     "No stops yet.": "Ingen stopp ennå.",
     "Sort by nearest": "Sorter etter nærmeste",
     "Clear route": "Glem ruten",
+    "Route from here": "Rute herfra",
     "{n} stops · {d}": "{n} stopp · {d}",
     "Solved": "Løst",
     "Found": "Funnet",
@@ -5014,11 +5015,18 @@
         if (snap.marker.__pin) btn('download', T('Download GPX'), () => downloadGpx([snap.marker.__pin], safeName(snap.marker.__pin.name) + '.gpx'));
       } else btn('pin', T('Pin'), () => namedPin(ll, snap && snap.code ? snap.code + (snap.name ? ' ' + String(snap.name).replace(snap.code, '').replace(/^[\s·:–-]+/, '').trim() : '') : null));
       if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${fileStamp()}.gpx`));
-      if (route.length || routeOpen()) {
-        const st = snap && snap.kind === 'pin' && snap.marker && snap.marker.__pin ? { key: 'p:' + snap.marker.__pin.id, kind: 'pin', name: snap.marker.__pin.name, lat: snap.marker.__pin.lat, lng: snap.marker.__pin.lng }
-          : snap && snap.code ? { key: 'c:' + snap.code, kind: 'cache', code: snap.code, name: (CACHE_INFO.get(snap.code) || {}).name || snap.name || '', lat: ll.lat, lng: ll.lng } : null;
-        if (st && !route.some(r => r.key === st.key)) btn('route', T('Add to route'), () => addStop(st));
-      }
+      const st = snap && snap.kind === 'pin' && snap.marker && snap.marker.__pin ? { key: 'p:' + snap.marker.__pin.id, kind: 'pin', name: snap.marker.__pin.name, lat: snap.marker.__pin.lat, lng: snap.marker.__pin.lng }
+        : snap && snap.code ? { key: 'c:' + snap.code, kind: 'cache', code: snap.code, name: (CACHE_INFO.get(snap.code) || {}).name || snap.name || '', lat: ll.lat, lng: ll.lng } : null;
+      // a new route starting at this pin or geocache – or at a new pin here – with the route window open to add the rest
+      btn('route', T('Route from here'), () => {
+        let first = st;
+        if (!first) { const m = namedPin(ll, null), r = m.__pin; first = { key: 'p:' + r.id, kind: 'pin', name: r.name, lat: r.lat, lng: r.lng }; }
+        if (routeOpen()) api.closeDialog();
+        route = [];
+        addStop(first);
+        openRoute();
+      });
+      if ((route.length || routeOpen()) && st && !route.some(r => r.key === st.key)) btn('route', T('Add to route'), () => addStop(st));
       btn('compass', T('Project…'), () => projectFrom(ll));
       if (circles.some(o => o.c.distanceTo(ll) <= 161)) btn('x', T('Remove circle'), () => removeCircleAt(ll));
       else btn('ring', T('161 m circle'), () => circle161(ll));
@@ -7016,6 +7024,20 @@
     // The route line is drawn below the cache icons: on /map the icons are tiles, so the line goes into the
     // tile pane just below the site's cache tiles; on /play/map the icons are markers, above it anyway.
     let routeRenderer = null;
+    // The dashes of a straight bit fit its length on screen: always a few of them, also zoomed out, where a
+    // short line would otherwise be one dash – solid.
+    function airDash() {
+      try {
+        routeLayer.eachLayer(pl => {
+          if (!pl.__air) return;
+          let px = 0;
+          for (let i = 1; i < pl.__air.length; i++) px += map.latLngToLayerPoint(L.latLng(pl.__air[i - 1])).distanceTo(map.latLngToLayerPoint(L.latLng(pl.__air[i])));
+          const d = Math.max(2, Math.min(10, px / 5)), g = Math.max(2, d * 0.6);
+          pl.setStyle({ dashArray: `${d.toFixed(1)} ${g.toFixed(1)}` });
+        });
+      } catch (e) { /* keep the dashes as they are */ }
+    }
+    map.on('zoomend', airDash);
     function routeLineOpts() {
       const o = { color: '#8250df', weight: 3, opacity: 0.85, dashArray: '6 6', interactive: false };
       if (PLAY_MAP || !L.svg) return o;
@@ -7056,9 +7078,11 @@
         routeCalc.legs.forEach(l => l.segs.forEach(sg => {
           const pl = L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air, { opacity: 1 - routeAlpha / 100 }));
           pl.__calcLine = true;
+          if (sg.m === 'air') pl.__air = sg.pts;
           routeLayer.addLayer(pl);
           calcLines.push(sg.pts);
         }));
+        airDash();
         tuckRouteLine();
       } else if (lls.length > 1) { const pl = L.polyline(lls, Object.assign(routeLineOpts(), { opacity: 1 - routeAlpha / 100 })); pl.__calcLine = true; routeLayer.addLayer(pl); tuckRouteLine(); }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
@@ -7831,8 +7855,8 @@ ${calcTrk(stamp)}</gpx>
     let waterOff = null;
     const waterSrc = ll => (ll.lat > 57.8 && ll.lat < 71.5 && ll.lng > 4 && ll.lng < 31.5)
       ? { key: 'kv', url: (z, x, y) => `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`, water: (r, g, b) => b >= 226 && g >= 226 && b - r >= 10 && g - r >= 6 && g - b <= 8,
-          // built-up area (light pinkish beige) and buildings (brown)
-          built: (r, g, b) => (r >= 205 && r - g >= 12 && r - g <= 34 && g - b >= 12 && g - b <= 34) || (r >= 225 && b >= 195 && r - b >= 8 && r - b <= 36 && g - b <= 22 && r >= g) || (r - b >= 50 && r >= 140 && r <= 200 && g >= 110 && g <= 165 && r - g >= 10) }
+          // built-up area (light pinkish beige), buildings (brown) and farmland (light yellow)
+          built: (r, g, b) => (r >= 220 && r - g >= 0 && r - g <= 12 && g - b >= 40 && g - b <= 75) || (r >= 205 && r - g >= 12 && r - g <= 34 && g - b >= 12 && g - b <= 34) || (r >= 225 && b >= 195 && r - b >= 8 && r - b <= 36 && g - b <= 22 && r >= g) || (r - b >= 50 && r >= 140 && r <= 200 && g >= 110 && g <= 165 && r - g >= 10) }
       : { key: 'osm', url: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`, water: (r, g, b) => Math.abs(r - 170) <= 8 && Math.abs(g - 211) <= 8 && Math.abs(b - 223) <= 8,
           built: (r, g, b) => (Math.abs(r - 224) <= 5 && Math.abs(g - 223) <= 5 && Math.abs(b - 223) <= 5) || (Math.abs(r - 217) <= 6 && Math.abs(g - 208) <= 6 && Math.abs(b - 201) <= 6) };
     function waterTile(src, x, y) {
@@ -7883,8 +7907,8 @@ ${calcTrk(stamp)}</gpx>
       });
       return { wet, built };
     }
-    // A straight line goes neither across water nor through built-up areas (there you walk the streets).
-    const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= 40; };
+    // A straight line goes neither across water nor through built-up areas or farmland (walk the streets and roads).
+    const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= Math.max(16, step || 8); };
     async function walk(a, b) {
       const r = await along('foot', a, b), viaPath = r.segs.reduce((m, sg) => m + sg.d, 0), dd = distM(a, b);
       if (acrossOk(dd, viaPath) && await dry(a, b)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
