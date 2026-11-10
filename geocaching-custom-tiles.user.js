@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.95
+// @version      1.56.97
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -280,6 +280,7 @@
     "Calculate route": "Beregn rute",
     "Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.": "Langs veger og stier, og i luftlinje fra nærmeste punkt på stien til hver cache. Fra OpenStreetMap.",
     "Could not calculate the route: {e}": "Kunne ikke beregne ruten: {e}",
+    "stop {n} ({name}) cannot be reached without crossing water": "stopp {n} ({name}) kan ikke nås uten å krysse vann",
     "Checking the order of the stops …": "Sjekker rekkefølgen på stoppene …",
     "Calculating the route …": "Beregner ruten …",
     "Calculating the route … leg {i} of {n}": "Beregner ruten … etappe {i} av {n}",
@@ -7032,7 +7033,7 @@
           if (!pl.__air) return;
           let px = 0;
           for (let i = 1; i < pl.__air.length; i++) px += map.latLngToLayerPoint(L.latLng(pl.__air[i - 1])).distanceTo(map.latLngToLayerPoint(L.latLng(pl.__air[i])));
-          const d = Math.max(2, Math.min(10, px / 5)), g = Math.max(2, d * 0.6);
+          const d = Math.max(5, Math.min(10, px / 4)), g = Math.max(4, d * 0.6);
           pl.setStyle({ dashArray: `${d.toFixed(1)} ${g.toFixed(1)}` });
         });
       } catch (e) { /* keep the dashes as they are */ }
@@ -8770,6 +8771,23 @@ ${calcTrk(stamp)}</gpx>
           calcBusy = { msg: T('Calculating the route …') }; drawCalc();
           const legs = await calcLegs(stops, mode, (i, n) => { if (tok === calcToken) { calcBusy = { msg: i ? T('Calculating the route … leg {i} of {n}', { i, n }) : T('Fetching the roads from OpenStreetMap …') }; drawCalc(); } });
           if (tok !== calcToken) return;
+          // A stop that can only be reached across water (a geocache on an island, say): no route.
+          // (also on foot or by bike along a long straight stretch – a ferry line in OpenStreetMap; a bridge is
+          // drawn over the water in the map, so it does not count)
+          const wetLeg = async sg => {
+            if (sg.m === 'car' || sg.d < 30) return false;
+            for (let j = 1; j < sg.pts.length; j++) {
+              const p0 = { lat: sg.pts[j - 1][0], lng: sg.pts[j - 1][1] }, p1 = { lat: sg.pts[j][0], lng: sg.pts[j][1] };
+              if ((sg.m === 'air' || distM(p0, p1) > 60) && (await wetM(p0, p1)).wet > 20) return true;
+            }
+            return false;
+          };
+          for (let i = 0; i < legs.length; i++) for (const sg of legs[i].segs) {
+            if (await wetLeg(sg)) {
+              const k = routeLoop && i === legs.length - 1 ? 0 : i + 1;
+              throw new Error(T('stop {n} ({name}) cannot be reached without crossing water', { n: k + 1, name: stopName(stops[i + 1]) }));
+            }
+          }
           const ms = k => { const x = routeDebug.find(e => e[k] != null); return x ? x[k] : null; }, op = routeDebug.find(e => e.overpass);
           const sec = v => (v == null ? '–' : (v / 1000).toFixed(1) + ' s');
           const vh = routeDebug.filter(e => e.valhallaMs != null).map(e => e.valhallaMs);
