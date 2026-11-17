@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.106
+// @version      1.56.107
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -8307,7 +8307,8 @@ ${calcTrk(stamp)}</gpx>
       if (c && c.code) { const i = CACHE_INFO.get(c.code) || {}; return { key: 'c:' + c.code, kind: 'cache', code: c.code, name: i.name || c.name || '', lat: c.ll.lat, lng: c.ll.lng }; }
       return null;
     }
-    // While the route window is open, a click on a geocache or pin on the map adds it (instead of the site's popup).
+    // While the route window is open, a click on a geocache or pin on the map adds it (instead of the site's popup);
+    // one that is in the route already opens the site's popup as usual.
     // Only a real click: the end of a drag of the map (the pointer moved, or held a while) is not one.
     let downAt = null;
     window.addEventListener('pointerdown', e => { downAt = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
@@ -8320,6 +8321,7 @@ ${calcTrk(stamp)}</gpx>
       try { ll = map.mouseEventToLatLng(e); } catch (err) { return; }
       const x = stopAt(ll);
       if (!x) return;
+      if (route.some(r => r.key === x.key)) return;      // already in the route: the site's own popup, as usual
       e.preventDefault(); e.stopImmediatePropagation();
       if (addStop(x)) toast(T('Added to the route: {name}', { name: x.kind === 'cache' ? x.code : x.name }));
     }, true);
