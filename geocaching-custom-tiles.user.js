@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.97
+// @version      1.56.100
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -290,6 +290,9 @@
     "Copy the coordinates": "Kopier koordinatene",
     "Copy the coordinates under the cross": "Kopier koordinatene under krysset",
     "Copy the coordinates – turn on the crosshair first": "Kopier koordinatene – slå på trådkorset først",
+    "The right-click menu here": "Høyreklikkmenyen her",
+    "The right-click menu at the cross": "Høyreklikkmenyen ved trådkorset",
+    "The right-click menu – turn on the crosshair first": "Høyreklikkmenyen – slå på trådkorset først",
     "Crosshair on/off – the coordinates are those under the cross": "Trådkors av/på – koordinatene er punktet under krysset",
     "A cross in the middle of the map; the coordinates at the bottom are those under it": "Et kryss midt på kartet; koordinatene nederst er punktet under det",
     "Previous view ({n} back)": "Forrige utsnitt ({n} tilbake)",
@@ -582,6 +585,7 @@
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4"/>',
     person: '<circle cx="12" cy="4.8" r="2.3"/><path d="M9 21v-6.5H7.5V10a2.5 2.5 0 0 1 2.5-2.5h4a2.5 2.5 0 0 1 2.5 2.5v4.5H15V21Z"/>',
+    menu: '<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
     copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
     pencil: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/>',
@@ -4381,6 +4385,9 @@
       .gcct-coord .xc:hover{background:var(--hover);color:var(--ink)}
       .gcct-coord .xc.ok{color:#1f7a34;background:#dafbe1}
       .gcct-coord .xc.off{color:#c4cad1;cursor:default;background:none}
+      .gcct-coord .xm{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin:-2px 0 0 0;border-radius:5px;color:var(--muted);cursor:pointer}
+      .gcct-coord .xm:hover{background:var(--hover);color:var(--ink)}
+      .gcct-coord .xm.off{color:#c4cad1;cursor:default;background:none}
       .gcct-bar{display:flex;flex-direction:column;background:#fff;border:0;border-radius:var(--r);overflow:hidden;
         box-shadow:var(--shadow-s);clear:both}
       .gcct-bar a{display:flex;align-items:center;justify-content:center;width:42px;height:42px;margin:0;padding:0;
@@ -4721,6 +4728,7 @@
         d.innerHTML = `<div class="zrow"><label class="zlab"><span class="zl">${T('Zoom')}</span><input class="zin" type="number" step="1" inputmode="numeric"></label>`
  + `<span class="xh" role="button" title="${esc(T('Crosshair on/off – the coordinates are those under the cross'))}">${icon('cross', 13)}</span>`
           + `<span class="xc" role="button" title="${esc(T('Copy the coordinates'))}">${icon('copy', 13)}</span>`
+          + `<span class="xm" role="button" title="${esc(T('The right-click menu here'))}">${icon('menu', 13)}</span>`
           + `<span class="cx" role="button" title="${esc(T('Hide the zoom and coordinates (show them again in Settings)'))}">${icon('x', 13)}</span></div><div class="ctext"></div>`;
         d.querySelector('.xh').onclick = e => { e.stopPropagation(); setCross(!crossOn); };
         // Copies the coordinates as shown (in the chosen format, without the format's name).
@@ -4732,6 +4740,8 @@
           const fallback = () => { const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ } t.remove(); };
           try { navigator.clipboard.writeText(text).then(done, fallback); } catch (err) { fallback(); }
         };
+        // The right-click menu at the cross – set a point exactly with the crosshair, then open the menu.
+        d.querySelector('.xm').onclick = e => { e.stopPropagation(); if (!crossOn) return; openCoordPopup(crossLL()); };
         d.querySelector('.cx').onclick = e => { e.stopPropagation(); if (api.setCoordsVisible) api.setCoordsVisible(false); };
         L.DomEvent.disableClickPropagation(d);
         L.DomEvent.disableScrollPropagation(d);
@@ -4784,19 +4794,32 @@
         const cc = coordCtl.getContainer(), xb = cc.querySelector('.xh'), xc = cc.querySelector('.xc');
         if (xb) xb.classList.toggle('on', crossOn);
         if (xc) { xc.classList.toggle('off', !crossOn); xc.title = T(crossOn ? 'Copy the coordinates under the cross' : 'Copy the coordinates – turn on the crosshair first'); }
+        const xm = cc.querySelector('.xm');
+        if (xm) { xm.classList.toggle('off', !crossOn); xm.title = T(crossOn ? 'The right-click menu at the cross' : 'The right-click menu – turn on the crosshair first'); }
       } catch (e) { /* not there yet */ }
       if (typeof syncShowBtn === 'function') try { syncShowBtn(); } catch (e) { /* not ready */ }
-      if (crossOn) { lastPt = null; try { lastLL = map.getCenter(); updCoord(); } catch (e) { /* not ready */ } }
+      if (crossOn) { lastPt = null; try { lastLL = crossLL(); updCoord(); } catch (e) { /* not ready */ } }
     }
     function setCross(on) { crossOn = !!on; save('gcct.cross', crossOn); applyCross(); }
     applyCross();
     window.__gcctCrossSync = () => { try { applyCross(); } catch (e) { /* ignore */ } };
     const crossShown = () => crossOn && !!crossEl && crossEl.style.display !== 'none';
+    // The point exactly under the cross, from where it is on the screen – the map's middle as Leaflet knows
+    // it can be off when the page has changed the map's size without telling Leaflet.
+    function crossLL() {
+      try {
+        if (crossEl && crossEl.style.display !== 'none') {
+          const r = crossEl.getBoundingClientRect(), m = map.getContainer().getBoundingClientRect();
+          if (r.width) return map.containerPointToLatLng(L.point(r.left + r.width / 2 - m.left, r.top + r.height / 2 - m.top));
+        }
+      } catch (e) { /* the middle, then */ }
+      return map.getCenter();
+    }
     map.on('mousemove', e => { if (crossShown()) return; lastLL = e.latlng; lastPt = e.containerPoint || null; updCoord(); });
     map.on('mouseout', () => { lastPt = null; });
     map.on('zoomend', () => { const zi = coordCtl.getContainer().querySelector('.zin'); if (zi && document.activeElement === zi) zi.blur(); });
     const followView = () => {
-      try { lastLL = lastPt && !crossShown() ? map.containerPointToLatLng(lastPt) : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
+      try { lastLL = lastPt && !crossShown() ? map.containerPointToLatLng(lastPt) : crossShown() ? crossLL() : map.getCenter(); updCoord(); } catch (e) { /* not ready */ }
       try { updZoom(); } catch (e) { /* not ready */ }
     };
     ['zoom', 'move', 'zoomend', 'moveend'].forEach(ev => map.on(ev, followView));
@@ -7186,7 +7209,7 @@
     }
     const fmtDist = m => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
     // Distance and bearing from the previous stop, e.g. "1.2 km 045°".
-    const legText = (i, pts = routeStops()) => { const a = L.latLng(pts[i - 1].lat, pts[i - 1].lng), b = L.latLng(pts[i].lat, pts[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
+    const legTextStraight = (i, pts = routeStops()) => { const a = L.latLng(pts[i - 1].lat, pts[i - 1].lng), b = L.latLng(pts[i].lat, pts[i].lng); return `${fmtDist(distM(a, b))} ${String(Math.round(bearing(a, b)) % 360).padStart(3, '0')}°`; };
     // Zoom to the whole route in the part of the map the dialog leaves free (the widest free side).
     // The part of the map nothing lies on: right of the site's side panel, beside the open dialog (on its
     // widest free side), and clear of the toolbar, the zoom and coordinate box and the site's buttons.
@@ -8499,6 +8522,8 @@ ${calcTrk(stamp)}</gpx>
         });
       }
       function drawRouteList() {
+        // with an accepted calculated route: each leg's distance along it and the time it takes
+        const legText = (i, pts) => (calcOn() && routeCalc.legs[i - 1] ? `${fmtDist(routeCalc.legs[i - 1].d)} · ${fmtDur(routeCalc.legs[i - 1].t)}` : legTextStraight(i, pts));
         ol.innerHTML = route.length ? route.map((r, i) => `<li data-i="${i}"><span class="rt-n">${i + 1}</span><span class="rt-t rt-go" title="${esc(T('Show on the map'))}">${typeIcon(r)}${title(r)}${i ? ` <small class="rt-leg">+${legText(i)}</small>` : ''}</span>
             <button data-m="up" title="${esc(T('Move up'))}" ${i ? '' : 'disabled'}>${icon('up', 14)}</button><button data-m="down" title="${esc(T('Move down'))}" ${i < route.length - 1 ? '' : 'disabled'}>${icon('down', 14)}</button><button data-m="del" title="${esc(T('Remove'))}">${icon('x', 14)}</button></li>`).join('')
           : `<li class="gm">${esc(T('No stops yet.'))}</li>`;
@@ -8737,8 +8762,8 @@ ${calcTrk(stamp)}</gpx>
           route = order.map(i => route[i]); saveRoute(); drawRoute(); drawRouteList(); drawList();
           runLegs(tok);
         });
-        on('accept', () => { routeCalc.accepted = true; saveCalc(); preview(true, false); });
-        on('discard', () => { routeCalc = null; saveCalc(); drawRoute(); preview(true, false); });
+        on('accept', () => { routeCalc.accepted = true; saveCalc(); preview(true, false); drawRouteList(); });
+        on('discard', () => { routeCalc = null; saveCalc(); drawRoute(); preview(true, false); drawRouteList(); });
       }
       const calcFail = e => { calcBusy = null; calcErr = T('Could not calculate the route: {e}', { e: (e && e.message) || String(e) }); drawCalc(); };
       async function startCalc() {
@@ -8914,14 +8939,14 @@ ${calcTrk(stamp)}</gpx>
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
         pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
         if (!on) return;
-        let tot = 0;
+        let tot = 0, totT = 0;
         const pts = routeStops(), cOn = calcOn();
         const rows = pts.map((r, i) => {
           const leg = !i ? 0 : cOn ? routeCalc.legs[i - 1].d : distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng));
-          tot += leg;
-          const legTxt = !i ? '' : cOn ? `${fmtDist(leg)} · ${fmtDur(routeCalc.legs[i - 1].t)}` : legText(i, pts);
+          tot += leg; if (i && cOn) totT += routeCalc.legs[i - 1].t;
+          const legTxt = !i ? '' : cOn ? `${fmtDist(leg)} · ${fmtDur(routeCalc.legs[i - 1].t)}` : legTextStraight(i, pts);
           return `<tr data-i="${i % route.length}"><td><span class="rt-n">${i < route.length ? i + 1 : 1}</span></td><td class="rt-go">${typeIcon(r)}<b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div class="rt-desc">${esc(r.name)}</div>` : ''}</td>
-            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legTxt)}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}</div>` : '–'}</td></tr>`;
+            <td class="mono">${esc(fmtDMM(r.lat, r.lng)).replace(/[\s\u00a0]+([EW])[\s\u00a0]/, '<br>$1 ')}</td><td class="num">${i ? `${esc(legTxt)}<div class="rt-desc rt-climb" data-leg="${i}"></div><div class="rt-desc">${esc(T('Total'))} ${esc(fmtDist(tot))}${cOn ? ' · ' + esc(fmtDur(totT)) : ''}</div>` : '–'}</td></tr>`;
         }).join('');
         pv.innerHTML = `${route.length > 1 ? '<div class="rt-calc"></div><div class="rt-play"></div>' : ''}<div class="rt-prof">${route.length > 1 ? `<button data-a="prof">${icon('dt', 15)}<span>${esc(T('Elevation profile'))}</span></button>` : ''}<div class="rt-prof-body"></div></div>
           <p class="hint">${esc(T('This is what the GPX file will contain – the map shows the whole route.'))}</p>
