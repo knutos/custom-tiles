@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.100
+// @version      1.56.106
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -41,6 +41,32 @@
 
 (function () {
   'use strict';
+  // gcctPerf() in the console: where the time goes – the browser's long tasks, time spent in the script's
+  // busiest parts, and requests by host and path (no query strings, nothing personal).
+  const PERF = { t0: performance.now(), long: { n: 0, ms: 0, max: 0 }, fn: {}, req: {} };
+  const timed = (name, f) => function () {
+    const t = performance.now();
+    try { return f.apply(this, arguments); } finally {
+      const d = performance.now() - t, o = PERF.fn[name] || (PERF.fn[name] = { n: 0, ms: 0, max: 0 });
+      o.n++; o.ms += d; if (d > o.max) o.max = d;
+    }
+  };
+  try {
+    new PerformanceObserver(l => l.getEntries().forEach(e => { PERF.long.n++; PERF.long.ms += e.duration; PERF.long.max = Math.max(PERF.long.max, e.duration); })).observe({ type: 'longtask', buffered: true });
+  } catch (e) { /* not supported */ }
+  try {
+    new PerformanceObserver(l => l.getEntries().forEach(e => {
+      try {
+        const u = new URL(e.name), k = u.host + u.pathname.replace(/\/\d+\/\d+\/\d+(\.\w+)?$/, '/{z}/{x}/{y}').replace(/GC[0-9A-Z]+/gi, 'GC…').replace(/\d{4,}/g, '…');
+        const o = PERF.req[k] || (PERF.req[k] = { n: 0, ms: 0, max: 0 }); o.n++; o.ms += e.duration; o.max = Math.max(o.max, e.duration);
+      } catch (err) { /* ignore */ }
+    })).observe({ type: 'resource', buffered: true });
+  } catch (e) { /* not supported */ }
+  window.gcctPerf = () => {
+    const r1 = o => Object.fromEntries(Object.entries(o).sort((a, b) => b[1].ms - a[1].ms).slice(0, 25).map(([k, v]) => [k, `${v.n}× ${Math.round(v.ms)} ms (max ${Math.round(v.max)})`]));
+    const out = { secondsSinceStart: Math.round((performance.now() - PERF.t0) / 1000), longTasks: `${PERF.long.n}× ${Math.round(PERF.long.ms)} ms (max ${Math.round(PERF.long.max)})`, script: r1(PERF.fn), requests: r1(PERF.req) };
+    console.log(JSON.stringify(out, null, 1)); return out;
+  };
 
   const STORE_LAYERS = 'gcct.customLayers';
   const STORE_STATE = 'gcct.state';
@@ -1030,6 +1056,7 @@
       if (window.__gcctInfoChanged) setTimeout(() => window.__gcctInfoChanged(), 0);
     } catch (e) { /* ignore */ }
   }
+  sniffed = timed('sniffed', sniffed);
   function sniffed(url, json) {
     noteSiteSearch(url, json);
     try {
@@ -1173,7 +1200,7 @@
         const box = (f === 'nwse' ? [n, w, so, e] : [so, w, n, e]).map(v => v.toFixed(5)).join(',');
         const url = `/api/proxy/web/search/v2?skip=0&take=500&asc=true&sort=distance&box=${box}`;
         ownSearchUrls.add(url);
-        const get = auth => fetch(url, { credentials: 'same-origin', headers: Object.assign({ Accept: 'application/json' }, auth ? { Authorization: auth } : {}) });
+        const get = auth => bgFetch(url, { credentials: 'same-origin', headers: Object.assign({ Accept: 'application/json' }, auth ? { Authorization: auth } : {}) });
         searchState.requests++;
         let r = await get(siteAuth);
         if (r.status === 401 || r.status === 403) { const a = await siteToken(); if (a) { searchState.authUsed = true; r = await get(a); } }
@@ -1201,15 +1228,45 @@
     if (window.__gcctFavKick) window.__gcctFavKick();     // favourite points have arrived
     if (window.__gcctInfoChanged) window.__gcctInfoChanged();
   }
+  // Our own background requests to geocaching.com (cache lookups, cache pages) go one at a time, and step
+  // aside for the site: they wait until the page has loaded, and when you click or press on the map, the one
+  // under way is stopped and the rest wait a few seconds – the site's server answers one request of yours at
+  // a time, so ours would otherwise hold up its popup. A stopped request is simply made again later.
+  const bgQ = [];
+  let bgRun = null, bgPauseUntil = 0, bgLoaded = document.readyState === 'complete';
+  if (!bgLoaded) window.addEventListener('load', () => { bgPauseUntil = Math.max(bgPauseUntil, Date.now() + 2000); bgLoaded = true; setTimeout(bgPump, 2100); });
+  function bgPump() {
+    if (bgRun || !bgQ.length || !bgLoaded) return;
+    const wait = bgPauseUntil - Date.now();
+    if (wait > 0) { clearTimeout(bgPump.t); bgPump.t = setTimeout(bgPump, wait + 20); return; }
+    const job = bgQ.shift(), ctl = new AbortController();
+    bgRun = { ctl, job };
+    fetch(job.url, Object.assign({}, job.opts, { signal: ctl.signal }))
+      .then(r => { bgRun = null; job.res(r); }, e => {
+        bgRun = null;
+        if (ctl.__pause) bgQ.unshift(job); else job.rej(e);        // stopped for the site: again later
+      })
+      .finally(() => setTimeout(bgPump, 60));
+  }
+  window.gcctBgDebug = () => { const o = { queued: bgQ.length, running: bgRun ? new URL(bgRun.job.url, location.href).pathname : null, pausedFor: Math.max(0, bgPauseUntil - Date.now()), pageLoaded: bgLoaded }; console.log(JSON.stringify(o)); return o; };
+  function bgFetch(url, opts) { return new Promise((res, rej) => { bgQ.push({ url, opts, res, rej }); bgPump(); }); }
+  function bgPause(ms) {
+    bgPauseUntil = Math.max(bgPauseUntil, Date.now() + ms);
+    if (bgRun) { bgRun.ctl.__pause = true; try { bgRun.ctl.abort(); } catch (e) { /* ignore */ } }
+  }
+  document.addEventListener('pointerdown', e => {
+    const t = e.target;
+    if (t && t.closest && t.closest('.leaflet-container') && !t.closest('.gcct-dock, .gcct-dlg, .gcct-coord, .gcct-toast')) bgPause(6000);
+  }, true);
   // Old browse map: look up codes the page has not told us about, a few at a time.
   const lookupQueue = [], lookupBusy = new Set(), lookupDone = new Set();
   function lookupTypes(codes) {
     codes.forEach(c => { if (!lookupDone.has(c) && !lookupBusy.has(c) && !lookupQueue.includes(c)) lookupQueue.push(c); });
-    while (lookupBusy.size < 3 && lookupQueue.length) {
+    while (lookupBusy.size < 1 && lookupQueue.length) {
       const c = lookupQueue.shift();
       lookupBusy.add(c);
       infoStats.lookups++;
-      fetch('/map/map.details?i=' + encodeURIComponent(c), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      bgFetch('/map/map.details?i=' + encodeURIComponent(c), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
         .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
         .then(j => { harvest(j); (j && j.data || []).forEach(d => d && !d.gc && !d.code && recordCache(c, d, 'lookup')); })
         .catch(e => { infoStats.lookupFails++; infoStats.lastLookupError = String(e); })
@@ -1334,7 +1391,7 @@
   function fetchPageCoords(code) {
     if (pageCoordsTried.has(code)) return Promise.resolve(false);
     pageCoordsTried.add(code);
-    return fetch('/geocache/' + encodeURIComponent(code), { credentials: 'same-origin' })
+    return bgFetch('/geocache/' + encodeURIComponent(code), { credentials: 'same-origin' })
       .then(r => (r.ok ? r.text() : Promise.reject('HTTP ' + r.status)))
       .then(html => { const ok = applyPageCoords(code, html); if (ok && window.__gcctInfoChanged) window.__gcctInfoChanged(); return ok; })
       .catch(() => false);
@@ -1361,11 +1418,11 @@
   };
   function fetchStages(codes) {
     codes.forEach(c => { if (!stagesOf(c) && !stageBusy.has(c) && !stageQueue.includes(c)) stageQueue.push(c); });
-    while (stageBusy.size < 2 && stageQueue.length) {
+    while (stageBusy.size < 1 && stageQueue.length) {
       const c = stageQueue.shift();
       stageBusy.add(c);
       stageStats.pages++;
-      fetch('/geocache/' + encodeURIComponent(c), { credentials: 'same-origin' })
+      bgFetch('/geocache/' + encodeURIComponent(c), { credentials: 'same-origin' })
         .then(r => (r.ok ? r.text() : Promise.reject('HTTP ' + r.status)))
         .then(html => { pageCoordsTried.add(c); applyPageCoords(c, html); const st = parseStages(html); stageStore[c] = { t: Date.now(), s: st }; if (st.length) stageStats.withStages++; saveStages(); })
         .catch(e => { stageStats.fails++; stageStats.lastError = String(e); stageStore[c] = { t: Date.now() - STAGE_TTL + 36e5, s: [] }; })  // try again in an hour
@@ -4105,6 +4162,7 @@
     // size, panel open/closed), plus a few times while the page is loading.
     const t0 = Date.now();
     let layoutSig = '';
+    layoutIfChanged = timed('layoutIfChanged', layoutIfChanged);
     function layoutIfChanged() {
       const scope = map.getContainer().parentElement || map.getContainer();
       const sig = [scope.getElementsByTagName('button').length, scope.querySelectorAll('[role="button"], .leaflet-control').length,
@@ -4936,7 +4994,7 @@
       el.style.marginTop = `${Math.round(at[1])}px`;
       m.__at = [p.x + at[0], p.y + at[1], p.x + at[0] + w, p.y + at[1] + h];
     }
-    const placePinLabels = () => { pinLabels.forEach(o => (o.__at = null)); pinLabels.forEach(o => { try { placePinLabel(o); } catch (e) { /* not ready */ } }); };
+    const placePinLabels = timed('placePinLabels', () => { pinLabels.forEach(o => (o.__at = null)); pinLabels.forEach(o => { try { placePinLabel(o); } catch (e) { /* not ready */ } }); });
     map.on('zoomend moveend', () => setTimeout(placePinLabels, 0));
     setInterval(() => { if (pinLabels.size) placePinLabels(); }, 2000);     // caches come in after a move
     // Circles are drawn as 180-point polygons computed on the sphere (no line simplification). That avoids L.circle,
@@ -5320,6 +5378,7 @@
     ftfLayer.__gcct = true;
     let ftfLive = new Map(), ftfSig = '';
     const EVENT_TYPES = new Set([6, 13, 453, 1304, 3653, 3773, 3774, 4738, 7005]);   // events: attended, not found
+    refreshFav = timed('refreshFav', refreshFav);
     function refreshFav(force, askGrid) {
       try {
         if (favMoving && !force) return;
@@ -5508,12 +5567,21 @@
         const q = k => (img.src.match(new RegExp('[?&]' + k + '=(\\d+)')) || [])[1];
         const x = q('x'), y = q('y'), z = q('z');
         if (x == null || y == null || z == null) return;
-        const cur = grid._cache[`${z}_${x}_${y}`];
-        if (!Object.prototype.hasOwnProperty.call(grid._cache, `${z}_${x}_${y}`)) {
-          try { grid._loadTile(z, x, y); } catch (e) { /* the site's loader may differ; ignore */ }
-        }
+        const key = `${z}_${x}_${y}`;
+        if (Object.prototype.hasOwnProperty.call(grid._cache, key)) return;
+        // Ask for each tile once (again only after half a minute, if the answer never came), and only a few at
+        // a time: the site doesn't note a tile as asked for until its answer is in, and asking again and again
+        // piled up hundreds of requests that held up the site's own (its popup among them).
+        const now = Date.now(), t = gridAsked.get(key);
+        if (t && now - t < 30000) return;
+        let pending = 0;
+        gridAsked.forEach((tt, k) => { if (now - tt < 8000 && !Object.prototype.hasOwnProperty.call(grid._cache, k)) pending++; });
+        if (pending >= 4) return;
+        gridAsked.set(key, now);
+        try { grid._loadTile(z, x, y); } catch (e) { /* the site's loader may differ; ignore */ }
       });
     }
+    const gridAsked = new Map();
     // code -> { lat, lng, z }
     // The site's hidden cache list can be emptied and slowly reloaded (e.g. after a filter change), but
     // cache positions don't change: remember every position seen this visit and keep using it, so
@@ -6250,7 +6318,7 @@
     window.__gcctLikelyOwn = code => likelyOwn(code, knownPos.get(code) || (CACHE_INFO.get(code) || {}).posted);
     // React the moment a filter button changes state (the site may change it only after asking its server).
     let lastFilterSig = siteFilter().sig;
-    new MutationObserver(muts => {
+    new MutationObserver(timed('filterWatch', muts => {
       if (!muts.some(m => m.target.matches && m.target.matches('.ct_toggle, .pt_toggle, .ct_mf, .ct_mo, .ct_mdnf'))) return;
       const s = siteFilter().sig;
       if (s !== lastFilterSig) {
@@ -6261,7 +6329,7 @@
         if (window.__gcctClRefresh) window.__gcctClRefresh();      // the cache list follows the filters at once
       }
       lastFilterSig = s;
-    }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+    })).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
     // Does the site leave this cache out right now (its sidebar filters)? Only answered where we can
     // tell: on /map, where the site's cache list for that spot is loaded at this zoom but lacks the
     // cache; on /play/map, from the caches its WebGL map has drawn in view. Otherwise "no".
@@ -6324,6 +6392,7 @@
         solvedMarksHeldBack: syncSkipped.length, siteSearches: Object.assign({}, siteSearchLog, { recent: (siteSearchLog.recent || []).slice() }), pressedAgain: window.__gcctAutoSearchTest, zoom: map.getZoom() };
       console.log(JSON.stringify(o, null, 1)); return o;
     };
+    refreshAuto = timed('refreshAuto', refreshAuto);
     function refreshAuto(force) {
       try {
         if (!(autoOn || marksOn || (api.typeBadgeOn && api.typeBadgeOn())) || map.getZoom() < MARK_MIN_ZOOM) {
@@ -7080,6 +7149,7 @@
     }
     // The route's drawing layer sits among the cache tiles (below the cache icons). When the site clears the
     // tiles it sits among, it goes with them – then a new one is made and the route drawn again.
+    routeLineAlive = timed('routeLineAlive', routeLineAlive);
     function routeLineAlive() {
       if (!routeRenderer || !route.length) return;
       const c = routeRenderer._container;
