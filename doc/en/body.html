@@ -1,0 +1,470 @@
+<!--TOC-->
+<h2><b>1. What the script does</b></h2>
+<p>The script adds a single toolbar to the geocaching.com maps and turns them into a flexible map workbench:</p>
+<ul>
+ <li><b>Any background map</b> – Kartverket topographic maps, OpenStreetMap, aerial photos and more, or any map service you add yourself (XYZ/TMS tiles, WMTS, WMS, ArcGIS).</li>
+ <li><b>Overlays</b> on top of the map – hiking and ski routes, property boundaries and hillshade.</li>
+ <li><b>Dimming</b> – fade the background map towards white so caches stand out.</li>
+ <li><b>Search</b> for Norwegian place names and addresses (Kartverket), places abroad (OpenStreetMap data via Photon), or coordinates – in one list.</li>
+ <li><b>Coordinates</b> under the mouse in DMM, DD, DMS and UTM (the local zone), with copy buttons.</li>
+ <li><b>Measuring</b> distance and bearing, and <b>projecting waypoints</b>.</li>
+ <li><b>Routes</b> – pick geocaches and pins from a searchable list or straight on the map, put them in order, preview the route and download it as a <b>GPX route for your GPS</b>. <span class="new">NEW</span></li>
+ <li>A <b>cache list</b> of the geocaches on the map you see, that follows the map (/map). <span class="new">NEW</span></li>
+ <li><b>Favourite points</b>, <b>D/T</b> and an <b>FTF</b> badge right on the map, and <b>named pins</b> you can export as GPX.</li>
+ <li><b>161 m circles</b> around traditional caches, solved caches and visible physical stages, or a single circle anywhere.</li>
+ <li><b>My location</b>, a <b>home button</b> that takes you to your home address, and <b>fullscreen</b>.</li>
+ <li>A button that <b>hides all geocaches</b> for a clean map, and shows them again.</li>
+ <li>Your chosen map also appears on the small map on <b>cache pages</b>.</li>
+ <li>The whole interface is available in <b>English and Norwegian</b>.</li>
+</ul>
+<p>The site's own zoom, location and map buttons are folded into the same toolbar, so there are no duplicate buttons.</p>
+<h2><b>2. Installation</b></h2>
+<ol>
+ <li>Install a userscript manager in your browser: <b>Tampermonkey</b> or <b>Violentmonkey</b> (Chrome, Edge, Firefox, Safari).</li>
+ <li>Open the file <code>geocaching-custom-tiles.user.js</code> in the browser, or create a new script in the manager and paste the file's content. Save it.</li>
+ <li>Open a geocaching.com map. The toolbar appears at the right edge of the map.</li>
+</ol>
+<table>
+<tr><th><b>Page</b></th><th><b>What you get</b></th></tr>
+<tr><td><code>www.geocaching.com/map/…</code></td><td>Everything: toolbar, layers, search, tools.</td></tr>
+<tr><td><code>www.geocaching.com/play/map…</code></td><td>Everything (the new search map).</td></tr>
+<tr><td><code>www.geocaching.com/geocache/…</code> <code>…/seek/cache_details.aspx…</code></td><td>Only your chosen background map and overlays on the small map – no controls.</td></tr>
+</table>
+<p class="small">The toolbar finds a free place at the right edge by itself, below site buttons such as “Create Route”; site buttons it does not replace are moved to its bottom and keep working. The script needs no special permissions (<code>@grant</code> <code>none</code>). All settings are stored in the browser for geocaching.com, so they are shared between the map pages and cache pages.</p>
+<h2><b>3. The toolbar</b></h2>
+<figure class="fig" style="--w:23px"><img src="img/en-4_2.png" alt=""><figcaption>The toolbar.</figcaption></figure>
+<table>
+<tr><th><b>Button</b></th><th><b>What it does</b></th></tr>
+<tr><td></td><td><b>Map layers</b> – opens the layer panel; click again to close.</td></tr>
+<tr><td><img class="ic" src="img/en-4-0.png" alt=""></td><td><b>Zoom in / out</b>. Greyed out at the map's limits.</td></tr>
+<tr><td><img class="ic" src="img/en-4-1.png" alt=""></td><td><b>Previous view</b> – back one step at a time to where you were, up to 10 steps (every zoom step and pan counts). Greyed out when there is nothing to go back to.</td></tr>
+<tr class="sub"><td colspan="2"><b>Find your way</b></td></tr>
+<tr><td><img class="ic" src="img/en-4-2.png" alt=""></td><td><b>Find a place</b> – place names, addresses, coordinates or GC codes. Shortcut <kbd>/</kbd>.</td></tr>
+<tr><td><img class="ic" src="img/en-4-3.png" alt=""></td><td><b>Go home</b>. Right-click the button to change the address.</td></tr>
+<tr><td><img class="ic" src="img/en-4-4.png" alt=""></td><td><b>Show my location</b>, with an accuracy circle.</td></tr>
+<tr><td><img class="ic" src="img/en-4-5.png" alt=""></td><td><b>Fullscreen</b> map. Click again to leave.</td></tr>
+<tr class="sub"><td colspan="2"><b>Tools</b></td></tr>
+<tr><td><img class="ic" src="img/en-4-6.png" alt=""></td><td><b>Measure</b> distance and bearing. Click points on the map; a click on a geocache snaps to its coordinates.</td></tr>
+<tr><td><img class="ic" src="img/en-4-7.png" alt=""></td><td><b>Route</b> – build a route of geocaches and pins and download it as GPX (section 11). Green edge while the window is open.</td></tr>
+<tr><td><img class="ic" src="img/en-4-8.png" alt=""></td><td><b>Geocaches on the map</b> – a list that follows the map (/map only, section 11). Green edge while the list is open.</td></tr>
+<tr class="sub"><td colspan="2"><b>What is shown</b></td></tr>
+<tr><td><img class="ic" src="img/en-4-9.png" alt=""></td><td><b>Show on map</b> – 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons (below). Green edge while the panel is open.</td></tr>
+<tr><td></td><td><b>Hide all geocaches</b>; click again ( ) to show them.</td></tr>
+<tr class="sub"><td colspan="2"><b>The rest</b></td></tr>
+<tr><td><img class="ic" src="img/en-4-10.png" alt=""></td><td><b>Clear all drawings</b> – pins, measurements, projections and single circles.</td></tr>
+<tr><td><img class="ic" src="img/en-4-11.png" alt=""></td><td><b>Settings</b> – layout, language and how the script behaves.</td></tr>
+<tr><td><img class="ic" src="img/en-4-12.png" alt=""></td><td><b>Help</b> – a one-page overview, with a link to this guide.</td></tr>
+</table>
+<h3><b>Placing the toolbar</b></h3>
+<aside class="side" style="--w:260px"><figure class="fig in" style="--w:163px"><img src="img/en-5_2.png" alt=""><figcaption>Settings.</figcaption></figure>
+<h3><b>Settings</b></h3>
+<p>In three sections:</p>
+<ul>
+<li><b>Layout</b> – <b>Toolbar</b> right, left, top or bottom; <b>Buttons in</b> one or two rows; <b>Cache list and</b> <b>route</b> at the top right (default) or top left; <b>Language</b> English or Norsk; <b>Zoom and</b> <b>coordinates</b> at the bottom (on by default; also hidden with its ✕).</li>
+<li><b>On the map</b> – points to <img class="ic" src="img/en-5-4.png" alt=""> <b>Show on map</b>.</li>
+<li><b>Behaviour</b> – <b>geocaching.com's own map</b> <b>buttons</b> (location and map style; its zoom buttons are always hidden); <b>Fold the site's</b> <b>side panel away when the map opens</b> (off by default – the point is to see <b>as much map</b> <b>as possible</b> from the start; after the first time nothing is seen opening or closing); <b>Right-click on /play/map</b> opens the site's own menu instead of ours (off by default).</li>
+</ul></aside>
+<p>The toolbar can sit on the <b>right</b> (default) or <b>left</b> side of the map, or at the <b>top</b> or <b>bottom</b> – in <b>one</b> <b>or two rows</b>. It is <b>centred</b> along its edge (vertically on the sides, sideways at the top and bottom) in the visible part of the map, and moves to the nearest free spot if another control is in the way. In full screen it sits right at the screen edge. When one row doesn't fit – a narrow window, or beside the site's open sidebar – the toolbar uses two rows by itself, and goes back to one when there is room (Settings then shows <b>Two lines (automatic)</b>). Choose in <img class="ic" src="img/en-5-0.png" alt=""> <b>Settings</b>, or <b>drag</b> the toolbar by its grip (the dots at its top or left end): a dashed blue area shows the edge it will snap to. The choice is remembered – separately for /map and /play/map. At the top or bottom the toolbar always stays centred; a site button in the way (like <b>Search this area</b>) makes it move just below (or above) it.</p>
+<ul>
+ <li>On the left, top and bottom the toolbar keeps clear of the site's <b>Search for</b> <b>geocaches</b> panel and follows it as it opens and closes.</li>
+ <li>At the bottom, when the toolbar would cover the zoom and coordinate readout, the readout moves to the top left – and back when the toolbar moves elsewhere. The scale bar may be covered.</li>
+ <li>The layer panel and all dialogs open <b>beside</b> <b>the toolbar</b>, never on top of it or other controls: to its left or right, below it at the top, above it at the bottom. At the bottom they grow upwards, so search results stay visible.</li>
+ <li>Drag the layer panel, the dialogs and <b>Show</b> <b>on map</b> by their title bar to any place in the window. They open where you last left them, also in a later session.</li>
+ <li>Site buttons the toolbar takes in are laid out in the same row or column.</li>
+</ul>
+<h3><b>Show on map</b></h3>
+<figure class="fig" style="--w:148px"><img src="img/en-6_2.png" alt=""><figcaption>Show on map.</figcaption></figure>
+<p><img class="ic" src="img/en-6-0.png" alt=""> <b>Show on map</b> opens a small panel with a switch for everything the script draws on top of the caches:</p>
+<ul>
+ <li><b>161 m circles</b> (red) – traditional caches, solved caches and physical stages, from zoom 15 (section 13).</li>
+ <li><b>Marks at solved caches</b> – a smiley when found, a blue ? when the icon is elsewhere, from zoom 10.</li>
+ <li><b>Favourite points</b> – ♥ and the number above caches, from a lowest number (10 by default), from zoom 15.</li>
+ <li><b>D/T</b> – difficulty/terrain below the caches, from zoom 15.</li>
+ <li><b>FTF</b> – a red badge on active caches nobody has found yet, from zoom 15.</li>
+ <li><b>Hide the site's icon at the posted</b> <b>coordinates</b> (/play/map only) – for solved caches you have found, only our smiley at the solved spot is left; the site's icon at the posted coordinates is never drawn. Works while the marks are on; off by default. (On /map the icons are part of the map images and can't be hidden one by one.)</li>
+ <li><b>Type icon on solved caches</b> – the site's “solved” icon doesn't show the type, so a small type icon is added at its bottom right, from zoom 15; off by default.</li>
+</ul>
+<p>Each switch says which zoom it shows from; when one is on but you are zoomed out too far, it says <b>Zoom in to 15 to see it</b>. Drag the panel by its title bar; Esc or a click outside closes it.</p>
+<h3><b>Help, touch screens and keys</b></h3>
+<figure class="fig" style="--w:148px"><img src="img/en-7_2.png" alt=""><figcaption>Help.</figcaption></figure>
+<p><img class="ic" src="img/en-7-0.png" alt=""> <b>Help</b> gives a one-page overview of the buttons, the right-click menu, the keys and the differences between /map and /play/map, with a link to this guide in your language.</p>
+<p>On a <b>touch screen</b> (iPad, phone), <b>press and</b> <b>hold</b> the map for half a second to open the same menu as a right-click – coordinates, pin, single circle, projection, measuring and Street View, snapped to a nearby cache.</p>
+<p>Keys: <kbd>/</kbd> search, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>Esc</kbd> stops measuring and closes dialogs and panels.</p>
+<h3><b>Switching between /map and /play/map</b></h3>
+<p>When you go from one map to the other (within 5 minutes), the map you arrive at opens with the <b>same view</b> – centre and zoom (half zoom levels from /play/map are rounded on /map) – and the site's <b>side panel folded or open</b> as on the map you came from. The map stays invisible for a moment until it stands at that view, so you never see the site's own first view. Reloading the same map, or arriving later, works as before.</p>
+<h3><b>Search this area on /play/map</b></h3>
+<p>/play/map only shows the caches the site has searched for. From <b>zoom 15</b> the script presses <i>Search this area</i> for you when you have moved the map and it has stood still for a moment – sparingly, since the site only allows a few searches a minute: only when at least a third of the view is new, and at most one press every 8 seconds. If a search comes back without any cache icons (the site has had too many searches), the script waits 30 seconds – longer if it happens again, up to 10 minutes – and then presses once more, so the icons come back by themselves. Below zoom 15 you press the button yourself.</p>
+<h2><b>4. Choosing map layers</b></h2>
+<figure class="fig" style="--w:226px"><img src="img/en-8_2.png" alt=""><figcaption>The layer panel's Background maps tab with Kartverket Topo selected; one overlay is on and two built-in maps have been removed. Drag the handle at the left of a row to change the order.</figcaption></figure>
+<p>Click <img class="ic" src="img/en-8-0.png" alt=""> to open the panel. The maps are sorted into three tabs:</p>
+<ul>
+ <li><b>Geocaching</b> – geocaching.com's own maps (for example Google Maps or the site's map styles), its own overlays, and <b>Geocaching.com map styles…</b> on pages where the site has that menu.</li>
+ <li><b>Background maps</b> – the built-in background maps and your own.</li>
+ <li><b>Overlays</b> – the built-in overlays and your own.</li>
+</ul>
+<p>A blue dot shows which tab holds the background map in use, and the Overlays tab shows how many overlays are switched on. The panel opens on the tab you used last.</p>
+<h3><b>Background map</b></h3>
+<p>Choose one background, in either of the two background tabs.</p>
+<h3><b>Dimming the background</b></h3>
+<p>The <b>Dimming</b> slider (in both background tabs) dims the selected background map: drag it left and the map fades towards <b>white</b>, by at most 50 %. The value is shown in per cent. It follows you when you switch maps, and also works on geocaching.com's own maps. Your background map is always drawn fully opaque, so the geocaching.com map never shines through. Cache icons and overlays are never dimmed.</p>
+<h3><b>Overlays</b></h3>
+<p>Tick any number of overlays. The <b>Opacity</b> slider sets the opacity of all selected overlays (50–100 %); a layer with its own default keeps it relative to the slider (hillshade stays at 60 % of the slider's value). Overlays are always drawn above the background and below the caches – and among themselves <b>in the order of the list</b>: the one at the top is drawn on top.</p>
+<h3><b>Changing the order</b></h3>
+<p>Every row has a handle at the left. Drag it up or down to move the map; or click the handle and use <kbd>↑</kbd> <kbd>↓</kbd>. The order is remembered for each tab.</p>
+<h3><b>Editing and tidying the lists</b></h3>
+<ul>
+ <li><img class="ic" src="img/en-9-0.png" alt=""> on a built-in layer makes an editable copy.</li>
+ <li><img class="ic" src="img/en-9-2.png" alt=""> edits and deletes one of your own layers.</li>
+ <li><img class="ic" src="img/en-9-4.png" alt=""> on a built-in map – or on one of geocaching.com's own maps – removes it from the list. A geocaching.com overlay that is switched on is switched off. <b>Restore removed maps (n)</b> brings them all back.</li>
+ <li>The box at the top adds a layer straight from a pasted address.</li>
+</ul>
+<p>The selected map and overlays are highlighted in blue. The buttons appear when you point at a row. Deleting or removing a map asks first, in a small dialog with a red button to confirm.</p>
+<h3><b>Bottom of the panel</b></h3>
+<ul>
+ <li><b>Restore removed maps (n)</b> – shown when you have removed maps.</li>
+ <li>＋ <b>New layer</b>, <b>Import</b>, <b>Export</b>.</li>
+</ul>
+<p>Your choices are remembered and also used on cache pages.</p>
+<h2><b>5. Built-in layers</b></h2>
+<table>
+<tr><th><b>Name</b></th><th><b>Type</b></th><th><b>Source and notes</b></th></tr>
+<tr><td>Kartverket Topo</td><td>Background Kartverket's topographic map (WMTS cache, Web</td><td>Mercator).</td></tr>
+<tr><td>Kartverket Gråtone</td><td>Background Greyscale topographic map – caches stand out well.</td><td></td></tr>
+<tr><td>Kartverket Toporaster</td><td>Background Classic raster topographic map.</td><td></td></tr>
+<tr><td>OpenTopoMap</td><td>Background Worldwide topographic map from OpenStreetMap</td><td>data and SRTM.</td></tr>
+<tr><td>Esri World Imagery / <i>Esri flyfoto</i></td><td>Background Aerial and satellite photos, worldwide.</td><td></td></tr>
+<tr><td>OpenStreetMap</td><td>Background Standard OSM map.</td><td></td></tr>
+<tr><td>Esri World Topo</td><td>Background Worldwide topographic map.</td><td></td></tr>
+<tr><td>Turruter (Kartverket)</td><td>Overlay · WMS</td><td>Official hiking, ski, cycling and other routes (layer <code>Ruter</code> in the Tur- og friluftsruter service).</td></tr>
+<tr><td>Eiendomsgrenser (Kartverket)</td><td>Overlay · WMS</td><td>Property boundaries and gnr/bnr from the open cadastre service (CC BY 4.0). Shown from zoom 14.</td></tr>
+<tr><td>Hillshade (Esri) / <i>Terrengskygge</i></td><td>Overlay</td><td>Terrain relief, blended into the map (60 % by default).</td></tr>
+</table>
+<div class="note"><p>Norge i bilder aerial imagery is not included: Kartverket is closing its open tile service, and access is limited to Norge digitalt partners. Use Esri World Imagery for aerial photos.</p></div>
+<h2><b>6. Adding your own layers</b></h2>
+<figure class="fig" style="--w:193px"><img src="img/en-10_2.png" alt=""><figcaption>Adding Kartverket's Tur- og friluftsruter WMS: the layer list was read automatically.</figcaption></figure>
+<p>Use ＋ <b>New layer</b>, or paste an address into the box at the top of the panel. Press <b>Detect</b>, or simply paste – the editor recognises:</p>
+<ul>
+ <li><b>Tile templates</b> with <code>{z}</code>, <code>{x}</code>, <code>{y}</code>, also <code>{-</code> <code>y}</code> (TMS), <code>{s}</code> (subdomains) and <code>{q}</code> (Bing-style quadkeys).</li>
+ <li><b>A single tile</b> copied from the browser's developer tools (Network tab), e.g. <code>…/12/1196/2164.png</code>. It is turned into a template; the x/y order is guessed from the area you are viewing.</li>
+ <li><b>WMTS</b>: a <code>WMTSCapabilities.xml</code> address, a service address, or a template with <code>{TileMatrix}</code>. Layers in a Web Mercator tile set are listed for you to pick.</li>
+ <li><b>WMS</b>: a GetMap address (layer names are taken from it), a service address or a GetCapabilities address. Layers are listed; hold <kbd>Ctrl</kbd> to combine several.</li>
+ <li><b>ArcGIS</b> addresses ending in <code>/MapServer</code> (cached, Web Mercator).</li>
+</ul>
+<p>After detection the layer is <b>previewed</b> on the map with a count of tiles loaded and failed. Choose <b>Background map</b> or <b>Overlay on top</b>, give it a name and press <b>Save layer</b>.</p>
+<h3><b>More settings</b></h3>
+<ul>
+ <li><b>Highest zoom with real tiles</b> – beyond this, tiles are enlarged instead of requested.</li>
+ <li><b>Subdomains for {s}</b>, <b>Flip the Y axis (TMS)</b>.</li>
+ <li>WMS: <b>image format</b>, <b>version</b>, <b>styles</b>, <b>transparent background</b>.</li>
+ <li><b>Show from zoom level</b>, <b>Credit text</b>.</li>
+</ul>
+<div class="note"><p>If a server does not allow the script to read its layer list (cross-site restrictions), the editor shows a link to the list. Open it, copy everything and paste it into the editor.</p></div>
+<h2><b>7. Import and export</b></h2>
+<p><b>Export</b> shows your own layers as text (JSON) that you can copy or save as a file. <b>Import</b> accepts such text or a <code>.json</code> file – for example to move your layers to another computer or share them. Layers that already exist are skipped. Pasting a single map address into Import opens it in the editor.</p>
+<h2><b>8. Finding a place</b></h2>
+<figure class="fig" style="--w:226px"><img src="img/en-11_2.png" alt=""><figcaption>Search results for “lier”.</figcaption></figure>
+<p>Click <img class="ic" src="img/en-11-0.png" alt=""> or press <kbd>/</kbd>.</p>
+<ul>
+ <li>All hits appear <b>in one list</b> as you type, each marked with what it is: <b>Place</b> (Kartverket place names), <b>Address</b> (Kartverket addresses) or <b>Abroad</b> (places outside Norway from OpenStreetMap, via Photon). The best matches come first, whatever the source: exact names, then names starting with what you typed, then names containing it. Type a house number and addresses come first.</li>
+ <li>The map zooms to a level suited to the hit: county, municipality, village, address – or the whole area of a place abroad.</li>
+ <li><b>Coordinates</b> in DMM, DD, DMS or UTM (e.g. <code>32V 597980 6643119</code>) are recognised and shown in other formats at the top of the list.</li>
+ <li>A <b>GC code</b> (e.g. <code>GC1AAA</code>) finds the geocache: its posted coordinates, and your solved coordinates first when you have them. Unknown caches are looked up on their cache page.</li>
+</ul>
+<p>Use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> to choose. The chosen place gets a pin with its name.</p>
+<h3><b>Home address</b></h3>
+<p>The <img class="ic" src="img/en-12-0.png" alt=""> button takes you to your home address. The first time, it opens <b>Set home address</b> – the same search box: type your address and pick it. After that a click goes straight home and marks the spot with a pin named <b>Home</b> – the address itself is never shown on the map. To change or remove the address, right-click the button, or right-click anywhere on the map and choose <img class="ic" src="img/en-12-1.png" alt=""> <b>Set as home</b>. The address is stored only in your browser. In <b>Find a place</b> your home address comes first when you type “home” or “hjem” (from two letters) or part of its name. In the route window it is listed like a pin named <b>Home</b>, among the others by distance, and found the same way.</p>
+<h2><b>9. Coordinates</b></h2>
+<h3><b>Readout</b></h3>
+<p>The coordinates under the mouse are shown at the bottom right on /map and at the bottom left on /play/map (beside the side panel, following it as it opens and closes), with the <b>zoom level</b> above them. Click the coordinates to cycle formats; the choice is remembered. Type a number in the zoom field and press <kbd>Enter</kbd> (or use its arrows) to zoom; numbers outside the map's range are adjusted to the nearest level. The ✕ in the readout hides it; show it again in <img class="ic" src="img/en-12-2.png" alt=""> <b>Settings</b>.</p>
+<p><img class="ic" src="img/en-12-3.png" alt=""> in the readout turns on a <b>crosshair</b> in the middle of the map (off by default). The coordinates are then those under the cross: move the map to read them – handy on a touch screen. With the crosshair on, <img class="ic" src="img/en-12-4.png" alt=""> <b>copies</b> the coordinates under the cross to the clipboard, in the format shown. The <img class="ic" src="img/menu.svg" alt=""> button opens the <b>right-click menu at the cross</b> – set a point exactly with the crosshair, then open the menu, for example to drop a pin right there. The point is taken from where the cross actually is on the screen. Closing the readout hides the cross too; it comes back when the readout is shown again.</p>
+<table>
+<tr><th><b>Format</b></th><th><b>Example (Oslo)</b></th><th><b>Notes</b></th></tr>
+<tr><td>DMM</td><td><code>N 59° 54.834 E 010° 45.132</code></td><td>Geocaching standard.</td></tr>
+<tr><td>DD</td><td><code>59.913900, 10.752200</code></td><td>Decimal degrees.</td></tr>
+<tr><td>DMS</td><td><code>N 59° 54′ 50.0″ E 10° 45′ 07.9″</code></td><td>Degrees, minutes, seconds.</td></tr>
+<tr><td>UTM</td><td><code>32V 597980 6643119</code></td><td>Zone chosen automatically.</td></tr>
+</table>
+<p>All coordinates are WGS84 (identical to EUREF89 for map use). UTM uses the Krüger series to 6th order (the method used by PROJ), accurate to about a millimetre even far outside a zone. Far west of a zone the easting can become negative – this is correct.</p>
+<h3><b>Right-click menu</b></h3>
+<p>Right-click anywhere on the map for a popup with the position on one line. It always opens in <b>DMM</b>; click the line to switch to DD, DMS, and UTM (the local zone). The button copies the coordinates in the format shown. The popup also offers:</p>
+<figure class="fig" style="--w:249px"><img src="img/en-13_2.png" alt=""><figcaption>The right-click popup: one coordinate line – click it to switch format.</figcaption></figure>
+<ul>
+ <li><img class="ic" src="img/en-12-5.png" alt=""> <b>Pin</b> – drop a named pin (Pin 1, Pin 2 …, or the cache's GC code and name). Right-click or click a pin to remove it or <b>Download GPX</b>, and click its name in the popup to rename it; <b>All pins</b> <b>as GPX</b> saves every pin in one file for your GPS. Pins are kept while the browser tab is open, and shown from zoom 12.</li>
+ <li><img class="ic" src="img/en-13-0.png" alt=""> <b>Route from here</b> – starts a new route at the pin or cache you clicked (or at a new pin here) and opens the route window, so you can add the rest.</li>
+ <li><img class="ic" src="img/en-13-2.png" alt=""> <b>Project…</b> – project a waypoint (see below).</li>
+ <li><img class="ic" src="img/en-13-4.png" alt=""> <b>161 m circle</b> – a single circle here (or <img class="ic" src="img/en-13-5.png" alt=""> <b>Remove circle</b> inside one).</li>
+ <li><img class="ic" src="img/en-13-7.png" alt=""> <b>Measure from here</b>.</li>
+ <li><img class="ic" src="img/en-13-9.png" alt=""> <b>Google Street View</b> – opens Street View at this point (or the cache) in a new tab.</li>
+ <li><img class="ic" src="img/en-13-11.png" alt=""> <b>Set as home</b> – save this point as your home address.</li>
+</ul>
+<h3><b>Snapping to a geocache</b></h3>
+<figure class="fig" style="--w:227px"><img src="img/en-13_4.png" alt=""><figcaption>The popup snapped to a geocache – click the GC code to open the cache page.</figcaption></figure>
+<p>Right-click on a geocache, or within a few pixels of it (about the size of its icon), and the popup <b>snaps to the cache</b>. A blue line at the top shows the cache's <b>GC code</b>, name and <b>favourite</b> <b>points</b> (<span class="blue">♥</span> 42), and the coordinates and all the tools in the popup – pin, projection, measuring, 161 m circle – use the cache position. Your own <b>pins</b> work the same way: right-click one and the popup snaps to it, with <b>Remove pin</b> instead of Pin.</p>
+<ul>
+ <li>Click the <b>GC code</b> to open the cache page in a new tab (a middle-click works too). The map stays as it is.</li>
+ <li><b>Use clicked point</b> switches to the exact point you clicked.</li>
+ <li>On <code>/play/map</code> the caches are drawn by the site's WebGL map; the script asks it which cache lies under the pointer, which gives the GC code and the exact position. Right-click there opens our popup, not the site's own menu (unless chosen in Settings). On both maps the exact coordinates come from geocaching.com's cache search once it has answered for the area – posted coordinates, or your corrected ones for solved caches. Caches the search leaves out, such as your own, are read from their cache page in the background from zoom 15, or the first time you right-click them (the popup waits up to 0.7 s for it). Until then the position is estimated from the cache icon, shown by <b>≈</b> after the name.</li>
+ <li>Right-clicking the marks at solved caches and physical stages snaps to them too.</li>
+ <li>Right-click further away and you get the clicked point, as before.</li>
+</ul>
+<h2><b>10. Measuring and projecting</b></h2>
+<figure class="fig" style="--w:215px"><img src="img/en-14_2.png" alt=""><figcaption>Projecting 250 m at bearing 45°.</figcaption></figure>
+<p><b>Measure</b> <img class="ic" src="img/en-14-2.png" alt="">: click points on the map. The label shows the total distance and the length and bearing of the last leg. Double-click to start a new line, <kbd>Esc</kbd> to stop. While measuring, clicks do not open cache pop-ups.</p>
+<p><b>Project a waypoint</b>: right-click the start point and choose <img class="ic" src="img/en-14-3.png" alt=""> <b>Project…</b>. The dialog <b>Project a</b> <b>waypoint</b> opens:</p>
+<ul>
+ <li><b>From</b> – filled in with the point you clicked (DMM). Any coordinate format works, so you can also project from another point.</li>
+ <li><b>Bearing</b> in degrees (0–360), <b>Distance</b> and <b>Unit</b> (m, km or ft – the last unit is remembered). A decimal comma works, e.g. <code>1,5</code>.</li>
+ <li>As you type, the <b>waypoint</b> is shown in DMM with a copy button, and a dashed line previews it on the map. Invalid values give a clear message, and <b>Project</b> stays greyed out.</li>
+ <li><b>Enter</b> or <b>Project</b> places the point: a dashed line from the start, a pin with all coordinate formats and a label with bearing and distance. <b>Cancel</b> removes the preview.</li>
+</ul>
+<p class="small">Distances and projections use a spherical earth model – the error is well under a metre at geocaching distances.</p>
+<h2><b>11. Routes, cache list and GPX</b> <span class="new">NEW</span></h2>
+<figure class="fig" style="--w:168px"><img src="img/en-15_2.png" alt=""><figcaption>Building a route.</figcaption></figure>
+<p>Plan a caching trip on the map and take it with you on your GPS. Click <img class="ic" src="img/en-15-0.png" alt=""> <b>Route</b> in the toolbar.</p>
+<h3><b>Pick the stops</b></h3>
+<ul>
+ <li>The window lists the <b>geocaches on the map</b> <b>you see and your pins</b>, nearest the middle first, each with its type icon, D/T, distance and whether it is <b>solved</b>, <b>found</b> or <b>owned</b>. Solved caches are at their solved position. The list follows the map.</li>
+ <li><b>Search</b> by GC code or name. A full GC code is found <b>anywhere in the world</b>, also caches the script hasn't seen yet. Place names and <b>addresses</b> are found too, like in Find a place, and can be added as stops without setting a pin.</li>
+ <li>Click a line – or <b>click a cache or pin on the</b> <b>map</b> while the window is open – to add it. The right-click popup also has <b>Add to route</b>.</li>
+</ul>
+<h3><b>Put them in order</b></h3>
+<figure class="fig" style="--w:168px"><img src="img/en-16_2.png" alt=""><figcaption>The preview before downloading.</figcaption></figure>
+<ul>
+ <li>Move stops with ↑ ↓, remove them with ✕, or <b>Sort by nearest</b> from the first stop.</li>
+ <li>Tick <b>Back to the start</b> for a <b>round trip</b>: the route ends at the first stop again – on the map, in the lengths, in the preview and in the GPX file.</li>
+ <li>Each stop shows the leg from the previous one (distance and bearing), and the route's total length. With an accepted calculated route, each stop shows the distance along it and <b>the time the leg takes</b> instead. Click a stop to see it on the map.</li>
+ <li>The route is drawn on the map as a dashed purple line with numbered stops, and is kept while the browser tab is open.</li>
+</ul>
+<h3><b>Preview and download</b></h3>
+<p><b>Preview</b> zooms the map to the whole route – in the part of the map that the window, the toolbar, the side panel and other controls leave free – and shows exactly what goes into the GPX file: each stop's name in the GPS (the GC code or the pin's name), the cache name as description, the coordinates, the leg and the running total. Then click <b>Download GPX route</b>.</p>
+<ul>
+ <li>The file is a standard <b>GPX 1.1 route</b> that Garmin and most GPS units can import.</li>
+ <li>Tick <b>Full cache data</b> (off by default) to include every geocache as a full <b>paperless</b> geocache, in the same format as the GPX file on the cache page (GPX 1.0 with Groundspeak's extension): description, hint, attributes, size, D/T, logs and the cache's additional waypoints, followed by the route. With Premium the cache page's own GPX file is used; otherwise the same is read from the cache page (with the logs shown there). Solved caches get the solved coordinates. It takes a moment, as each cache page is fetched.</li>
+ <li>Geocaches get Garmin's <b>Geocache</b> symbol (<b>Geocache Found</b> when you have found them), pins the <b>blue pin</b>.</li>
+ <li>The file is named with the date and time, e.g. <code>route-2026-10-28-121305.gpx</code>, so several routes on one day don't overwrite each other.</li>
+ <li>Distances are in a straight line – the way there is always longer – until you accept a <b>calculated route</b> (below); then they are measured along it.</li>
+</ul>
+<figure class="fig" style="--w:90px"><img src="img/en-17_2.png" alt=""><figcaption>The elevation profile of a round trip.</figcaption></figure>
+<p>The window – like all dialogs – can be made taller or shorter by dragging its top or bottom edge, and it fits small screens.</p>
+<p>In the preview,</p>
+<h3><b>Elevation profile</b></h3>
+<p><b>Elevation profile</b> shows the heights along the whole route, with the stops marked by their numbers (a round trip back to the start included). Below it: the total <b>climb ↑</b> and <b>descent ↓</b>, the lowest and highest point, and the length. Changes under 2 m don't count, so small bumps don't add up.</p>
+<p>Without opening the profile, the preview table shows the <b>climb</b> <b>and descent of every</b> <b>leg</b> (e.g. ↑ 43 m ↓ 12 m), and the total for the route below the table – as soon as the heights have come.</p>
+<p>Move the mouse along the profile to see the distance and height there – a purple dot shows the same spot on the map.</p>
+<p>Heights in Norway come from <b>Kartverket</b>'s national elevation model; elsewhere from <b>Open-</b> <b>Meteo</b> (Copernicus, 90 m). The profile follows the <b>straight</b> <b>lines</b> between the stops – or, once a route is calculated, the <b>calculated route</b>.</p>
+<h3><b>Route calculation</b> <span class="new">NEW</span></h3>
+<figure class="fig" style="--w:196px"><img src="img/en-18_2.png" alt=""><figcaption>Before calculating.</figcaption></figure>
+<p>In the preview, <b>Calculate route</b> works out the way along roads and paths – from OpenStreetMap data. Choose how you travel:</p>
+<figure class="fig" style="--w:196px"><img src="img/en-18_4.png" alt=""><figcaption>A calculated route, being played back.</figcaption></figure>
+<ul>
+ <li><b>By car</b> – driving from the start as far as the roads go towards each geocache, then on foot along paths, the last bit in a straight line from the nearest point on the path, and back to the car. The car never goes onto tracks, paths or ski trails, nor past a gate or onto a road closed to cars; that is where it is left, marked <b>P</b> on the map. Two caches reached from the same spot are walked between; the car is always driven to the end of the route.</li>
+ <li><b>By bike</b> – the same, but the bike also goes on closed roads, tracks, cycleways, footways and bridleways – not on paths (unless they are marked for bikes), steps or ski trails. Where the bike route would go far round, the bike may instead be left where the walking route leaves the last road, if that is quicker all in all.</li>
+ <li><b>By car and bike</b> – the bike rides on the car: drive as far as the car may go, take the bike off and cycle on as far as a bike may go, walk the rest – and back by bike to the car.</li>
+ <li><b>On foot</b> – along roads and paths all the way.</li>
+</ul>
+<p><b>Straight across the terrain up to</b> (never, 100 m … 2 km) sets how far you are willing to leave the path where it goes the long way round; it is only used where going straight across is quicker (off the path at about 1.8 km/h, on it about 5 km/h). The point where you join or leave a path is chosen by time, not just the nearest one. A straight line <b>never crosses water</b> and does not go through built-up areas or farmland – there you walk the streets and roads: the script reads the colours of the map – the even light blue of lakes and rivers, the built-up areas, buildings and farmland – in Kartverket's topographic map (OpenStreetMap's map outside Norway), and goes round instead. If a stop can only be reached across water – a geocache on an island, say – there is no route.</p>
+<p>With <b>Suggest a shorter order of the stops</b> on, the script checks whether another order is quicker (the first stop stays first; the last stays last on a round trip or when it is not a geocache). If so, it shows the new order and the time saved, and asks: <b>Change the order</b> or <b>Keep my order</b>.</p>
+<p>The calculated route is first only <b>shown on the</b> <b>map</b> – purple by car, green by bike, orange on foot and dashed orange straight across – with the total, the time and how much is driven, cycled and walked; the elevation profile follows it at once. <b>See-through</b> (0–90 %) lets the map show through the route. <b>Accept</b> it (it is then marked <b>✓ Accepted</b>) to measure the legs and the total along it – with the time of each leg and the running time in the table – and to put it in the GPX file as a track – for any app that follows a GPX track, such as OsmAnd or Locus. The route and the track are named with the date and time to the second, so each has its own name in the GPS. <b>Discard</b> brings back the straight lines; changing the stops discards it too.</p>
+<p><b>Play the route</b> moves you along the route on the map – a car, a bike or a walker – at ×10 … ×600 real time, with pause, stop and a slider to jump; the map follows, and so does the cursor in the elevation profile.</p>
+<p><b>Speeds.</b> The times on roads and paths come from the routing service (OSRM), and the script adds them up:</p>
+<ul>
+ <li><b>Car</b> – by road type and speed limit in OpenStreetMap, like an ordinary car navigator.</li>
+ <li><b>Bike</b> – about 15 km/h on roads, slower on gravel, tracks and poor surfaces. Where the script itself rides along the walking route, about 14 km/h.</li>
+ <li><b>On foot on paths and roads</b> – about 5 km/h.</li>
+ <li><b>On foot straight across the terrain</b> – 1.8 km/h, set by the script.</li>
+</ul>
+<p>Differences in height are not taken into account, so cycling in hilly terrain is probably reckoned a little too fast. When the script weighs whether to move the car or bike, it adds a minute for parking; that minute is not in the time shown.</p>
+<div class="note"><p><b>Paths are often missing.</b> The route calculation only knows the roads and paths in OpenStreetMap, and in many places most of the paths are not there – the dotted paths on the Norwegian maps come from Kartverket and are often not in OpenStreetMap. Where they are missing, the route can take odd ways: long detours round by the paths it does know, or long stretches straight across. Then raise <b>Straight across the terrain up to</b>, or add a pin where you want the route to go, and calculate again.</p></div>
+<figure class="fig" style="--w:168px"><img src="img/en-20_2.png" alt=""><figcaption>The cache list.</figcaption></figure>
+<p class="small">Roads and paths: OSRM (routing.openstreetmap.de); the check of road types, gates and ski trails: Valhalla (valhalla1.openstreetmap.de) and the OpenStreetMap API – all run by FOSSGIS / OpenStreetMap. Water: the map tiles of Kartverket (cache.kartverket.no) or OpenStreetMap (tile.openstreetmap.org).</p>
+<h3><b>Cache list</b> <span class="new">NEW</span></h3>
+<p>On <code>/map</code> <img class="ic" src="img/en-20-0.png" alt=""> <b>Geocaches on the map</b> opens a list of the geocaches on the map you see, nearest the middle first. (<code>/play/map</code> has a list of its own.)</p>
+<ul>
+ <li>Each line has the type icon, GC code and name, <b>Solved</b>, <b>Found</b> and <b>Owned</b> tags, D/T, ♥ favourite points and the distance.</li>
+ <li>The list <b>follows the map</b> – it changes as you move or zoom, and as the site's cache search answers. It also follows the site's <b>sidebar filters</b> (cache types, My Finds, My Hides, My DNFs) and the <img class="ic" src="img/en-20-3.png" alt=""> button that hides all geocaches. Type in the box to filter by code or name.</li>
+ <li>Name, D/T, favourite points and tags are fetched from the site's cache search at any zoom while the list is open.</li>
+ <li><b>Point at a cache on the map</b> and its line is highlighted in the list.</li>
+ <li><b>Click a line</b> to zoom all the way in to the cache, beside the list. It gets a soft yellow glow on the map, and a solved cache you have found gets its mark at the solved spot. Click the same line again to let go of it and return to the map view you had.</li>
+ <li>The button at the right of each line opens the <b>cache page in a new tab</b>.</li>
+</ul>
+<p>The cache list and the route window sit at the <b>top right</b> (default) or <b>top left</b> of the map – choose in Settings – as tall as the map allows. They keep clear of the site's side panel and follow it as it opens and closes, and the two buttons switch between them.</p>
+<h2><b>12. 161 m circles</b></h2>
+<p>Turn on <b>161 m circles</b> in <img class="ic" src="img/en-21-3.png" alt=""> <b>Show on map</b> to draw a 161 m (0.1 mile) circle – the minimum distance between caches in the guidelines – around every place where something is placed:</p>
+<figure class="fig" style="--w:119px"><img src="img/en-21_2.png" alt=""></figure>
+<ul>
+ <li><b>Traditional caches</b>, at their exact posted coordinates.</li>
+ <li><b>Caches with solved (corrected) coordinates</b>, at the solved position.</li>
+ <li><b>Physical stages and final locations</b> of multis, mysteries, Wherigos and letterboxes that the owner has made visible on the cache page.</li>
+</ul>
+<p>Where no cache icon shows the spot, a small clickable mark is drawn in the middle of the circle. The marks at solved caches are turned on and off on their own in <img class="ic" src="img/en-21-7.png" alt=""> <b>Show on map</b>; stage and final marks only appear with the circles.</p>
+<p class="small">The mark at a solved cache you have found.</p>
+<ul>
+ <li><b>Yellow smiley with a green tick</b> (bottom left), the size of the site's own “found” icon – a solved cache you have found (and don't own): its icon has gone back to the posted coordinates.</li>
+ <li><b>Blue round mark with ?</b> – a solved cache whose icon is not on the map right now.</li>
+ <li><b>Small blue dot</b> – a physical stage; <b>small</b> <b>green dot</b> – a final location.</li>
+</ul>
+<p>Point at a mark to see the GC code, name and <b>Final location</b>; click it to open the cache page in a new tab. Right-clicking it gives the exact coordinates. With favourite points and D/T on, the mark gets them too.</p>
+<p>Solved caches are <b>remembered</b> in your browser (60 days), so the mark also appears when the posted coordinates are far outside the map – typical for Wherigos and puzzles. The script learns a cache the first time its posted coordinates are in view from zoom 15.</p>
+<p>Solved caches whose icon already sits on the corrected coordinates – your own, and those you haven't found yet – keep the site's icon. An invisible mark on top of it gives the same hover text (<b>Final location</b>) instead of the site's, and clicks still open the site's own popup. The site's “solved” icon doesn't tell the cache type, so a <b>small type icon</b> – the same as in the cache list – can be shown at its bottom right, and on our marks at solved caches you have found (Settings, off by default).</p>
+<ul>
+ <li>Circles are shown from <b>zoom level 15</b>; the marks at solved caches already from zoom 10 – as blue dots at 10–11, small at 12–13 and full size from 14 (favourite points and D/T from 15). They follow the map as you pan and zoom, a circle is drawn as soon as any part of it can be in view, and they never block clicks on caches.</li>
+ <li>Single circles anywhere: right-click → <img class="ic" src="img/en-22-1.png" alt=""> <b>161 m circle</b>.</li>
+ <li><b>Filters:</b> caches you leave out in the site's sidebar on /map – <b>My Finds</b>, <b>My Hides</b> or cache types – lose their circles, marks and favourite points too, and get them back when the filter is turned on again. Your own caches are recognised by their owner name (compared in your browser only). <img class="ic" src="img/en-22-4.png" alt=""> <b>Hide all geocaches</b> hides the circles as well.</li>
+</ul>
+<p><b>How the cache types are found</b>: the map itself only tells the GC code, so the script asks geocaching.com's own cache search (the one /play/map uses) once for each area you look at, during each visit. The answer gives each cache's type, its exact posted coordinates, whether you have found it, and any coordinates you have corrected. If the search needs your login, the site's own short-lived access token is used – it is kept in memory only. Cache types are remembered in the browser; solved coordinates are fetched again on each visit, since you can change them.</p>
+<p><b>How the stages are found</b>: the map does not show additional waypoints, so the script reads the <i>Additional Waypoints</i> list on the cache page of each multi, mystery, Wherigo and letterbox in view – two pages at a time, from zoom 15, and each result is remembered for 14 days. Stages whose coordinates the owner has hidden (???) cannot be found. A physical stage listed without coordinates is taken to be at the posted coordinates; a final without coordinates is not shown.</p>
+<p><b>How the positions are found</b>: on the old browse map the caches are drawn as images, but the site also loads a hidden grid telling which cache covers each 4×4 pixel cell. Until the cache search has answered for an area, the centre of each cache's cells is used – accurate to a few metres. On /play/map the caches are ordinary map markers, and their exact positions are used.</p>
+<h2><b>13. Cache pages</b></h2>
+<p>On cache pages the small map shows your chosen background map and overlays, with the same dimming and opacity. The map keeps the site's own extent and zoom. Nothing else is added, and the cache page never changes your saved choice.</p>
+<h2><b>14. Language</b></h2>
+<p>The interface is available in <b>English</b> and <b>Norwegian (bokmål)</b>. By default the language follows geocaching.com and the browser (Norwegian if either is bokmål, nynorsk or “no”). Change it with <b>Language / Språk</b> in <img class="ic" src="img/en-23-0.png" alt=""> <b>Settings</b>; the change takes effect immediately and is remembered.</p>
+<h2><b>15. Keyboard and mouse</b></h2>
+<table>
+<tr><th><b>Key / action</b></th><th><b>Effect</b></th></tr>
+<tr><td><kbd>/</kbd></td><td>Open the search (when not typing in a field).</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Close a dialog; stop measuring.</td></tr>
+<tr><td>Drag a dialog's title bar</td><td>Move the dialog.</td></tr>
+<tr><td><kbd>Enter</kbd> in the projection dialog</td><td>Place the projected point.</td></tr>
+<tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></td><td>Choose a search result.</td></tr>
+<tr><td><kbd>+</kbd> <kbd>−</kbd>, mouse wheel</td><td>Zoom (Leaflet's own keys).</td></tr>
+<tr><td>Right-click on the map</td><td>Coordinates and point tools.</td></tr>
+<tr><td>Right-click the <img class="ic" src="img/en-23-1.png" alt=""> button</td><td>Change or remove your home address.</td></tr>
+<tr><td>Double-click while measuring Start a new measuring line.</td><td></td></tr>
+<tr><td>Click the coordinate readout</td><td>Switch coordinate format.</td></tr>
+<tr><td>Type in the zoom field, <kbd>Enter</kbd></td><td>Zoom to that level (<kbd>Esc</kbd> undoes).</td></tr>
+<tr><td>Click a mark in a 161 m circle</td><td>Open that cache page in a new tab.</td></tr>
+<tr><td>Click the GC code in the popup</td><td>Open the cache page in a new tab.</td></tr>
+<tr><td>Drag in the layer panel, or <kbd>↑</kbd> <kbd>↓</kbd> on it</td><td>Change the order of the maps.</td></tr>
+</table>
+<h2><b>16. Troubleshooting</b></h2>
+<table>
+<tr><th><b>Problem</b></th><th><b>What to do</b></th></tr>
+<tr><td>A layer shows nothing</td><td>Open it with and press <b>Preview on map</b>: the tile counter shows whether tiles load. Check the zoom range and, for WMS, the layer name. Many services only cover certain areas.</td></tr>
+<tr><td>“No geocache positions found”</td><td>The site may have changed how caches are drawn. Run <code>gcctReport()</code> (below) and send the result.</td></tr>
+<tr><td>Right-click does not snap to a cache, or shows ≈</td><td>Right-click the cache, then run <code>gcctSnapTest('GC…')</code> with its code: it shows what the script knows about the cache (posted and corrected coordinates, whether the search returned it) and where it can snap.</td></tr>
+<tr><td>No circles at a multi's physical stages</td><td>Run <code>gcctStageTest('GC…')</code> with the cache's code: it shows the waypoint list the script found on the cache page and the stages it picked out.</td></tr>
+<tr><td>No 161 m circles, or “cache types are not known yet”</td><td>Run <code>gcctCacheDebug()</code> in the console. It shows whether the cache search answered and which fields it contained – field names and counts only, no values or personal data.</td></tr>
+<tr><td>Duplicate or overlapping buttons</td><td>Run <code>gcctReport()</code>; its <i>siteButtons</i> list shows how each site button was recognised.</td></tr>
+<tr><td>Want the site's own buttons back</td><td>Tick <b>Show geocaching.com's own map buttons too</b> in <img class="ic" src="img/en-24-0.png" alt=""> <b>Settings</b>.</td></tr>
+<tr><td>Search says a service did not answer</td><td>A temporary problem at Kartverket or OpenStreetMap; try again shortly.</td></tr>
+</table>
+<h3><b>Diagnostic report</b></h3>
+<p>Open the browser console (<kbd>F12</kbd> → Console) on the map page and type <code>gcctReport()</code>. A compact report is printed and copied to the clipboard. It contains the page, Leaflet version, script version, the site buttons found (with status), a summary of the map's layers and the map panes – no personal data. Errors from the script are logged with the prefix <code>[gcct]</code>.</p>
+<h2><b>17. How it works</b></h2>
+<h3><b>Finding the map</b></h3>
+<p>The script starts before the page and catches Leaflet the moment the page defines it. It then recognises the site's map when it is created, or – if the map already exists – the next time the map fires any event. If the app replaces its map (single-page navigation), the script follows. Its own setup only runs after the site has finished its own, and errors never reach the site's code.</p>
+<h3><b>Layer stacking</b></h3>
+<p>Both the geocaching.com background and the cache icons can be drawn as tiles in the same Leaflet pane. The script never removes the site's layers. It identifies the site's background – from the site's layer switcher, or otherwise as the site's lowest tile layer plus any layer from a well-known map provider – and stacks: site background → your background → your overlays → preview → all other site tile layers, such as the cache tiles (raised to the top). Your background is always fully opaque, and while one of your backgrounds is selected the site's own background is hidden (on /play/map its WebGL map layers are switched off one by one, leaving any cache layers alone), so it cannot show through while your tiles load. Dimming uses a colour filter (invert, darken, invert), which fades the map towards white exactly; no extra elements are added.</p>
+<h3><b>Tile seams</b></h3>
+<p>With display scaling such as 110 % or 125 % and during zoom animations, browsers can leave hairline gaps between map tiles. The script's own tiles are therefore drawn 1 px larger than the size Leaflet gives them (so neighbours overlap) and with normal blending – Leaflet 1.9's own blend mode would add the overlapping strips up to bright lines. The site's own layers are left exactly as they are.</p>
+<h3><b>Site buttons</b></h3>
+<p>Small buttons floating over the map are found by what is actually drawn along the map's edges and by real buttons and icons. They are recognised by their text, labels, ids, class names and icon names. Zoom and locate buttons are hidden (the toolbar has them); the site's map-style button is made invisible but stays in place, and the panel opens its menu. Buttons in sidebars or list panels are never touched. As safety rules, only elements near the map's left or right edge are considered, never an element among many similar ones (such as cache icons), and if more than two elements look like the same kind of button, none of them is touched. The search for site buttons only runs while the page loads and when its controls change.</p>
+<h3><b>Page form</b></h3>
+<p>The /map page is wrapped in one large ASP.NET form. All of the script's buttons are non-submitting, and any form submission started from the script's controls is cancelled, so the page never reloads.</p>
+<h3><b>Stored settings</b></h3>
+<table>
+<tr><th><b>Key (localStorage)</b></th><th><b>Content</b></th></tr>
+<tr><td><code>gcct.state</code></td><td>Chosen background and overlays, dimming of the background, opacity of the overlays, site-button visibility, removed built-in maps, toolbar position, favourite-point settings, whether the zoom and coordinates are shown, right-click choice on /play/map, the side of the cache list and route window.</td></tr>
+<tr><td><code>gcct.customLayers</code></td><td>Your own layers.</td></tr>
+<tr><td><code>gcct.fmt</code></td><td>Coordinate format of the coordinate readout (the popup always opens in DMM).</td></tr>
+<tr><td><code>gcct.autoCircles</code></td><td>161 m circles on/off.</td></tr>
+<tr><td><code>gcct.marks</code></td><td>Marks at solved caches on/off (without circles).</td></tr>
+<tr><td><code>gcct.cacheTypes</code></td><td>Cache type for each GC code seen (so it need not be looked up again).</td></tr>
+<tr><td><code>gcct.tab</code></td><td>The layer panel's last tab.</td></tr>
+<tr><td><code>gcct.stages</code></td><td>Physical stages and finals read from cache pages (kept for 14 days).</td></tr>
+<tr><td><code>gcct.solvedCaches</code></td><td>Your solved caches: corrected position, found or not, name, favourite points and D/T (kept for 60 days).</td></tr>
+<tr><td><code>gcct.handoff</code></td><td>The last map's view and whether its side panel was folded, for switching between /map and /play/map (used for 5 minutes).</td></tr>
+<tr><td><code>gcct.dlgPos</code></td><td>Where you last dragged the map layers panel, Find a place, Settings, Help and Show on map.</td></tr>
+<tr><td><code>gcct.panelSels</code></td><td>What the script has learnt about the site's side panel on /map and /play/map (which element and button, and how far it folds), for starting with it folded.</td></tr>
+<tr><td><code>gcct.route</code></td><td>Your route – only for this browser tab (sessionStorage), forgotten when it is closed. <code>gcct.routeLoop</code> and <code>gcct.gpxFull</code> keep the <i>Back to</i> <i>the start</i> and <i>Full cache data</i> choices the same way.</td></tr>
+<tr><td><code>gcct.pins</code></td><td>Your named pins – only for this browser tab (sessionStorage), forgotten when it is closed.</td></tr>
+<tr><td><code>gcct.lang</code></td><td>Language (en / no).</td></tr>
+<tr><td><code>gcct.home</code></td><td>Your home address (name and position).</td></tr>
+<tr><td><code>gcct.projUnit</code></td><td>Last distance unit used for projection (m / km / ft).</td></tr>
+</table>
+<h2><b>18. Privacy and network use</b></h2>
+<p>The script does not collect or send any personal data, and talks to no server of its own. It only contacts:</p>
+<ul>
+ <li>the <b>tile and map servers</b> of the layers you switch on (or preview);</li>
+ <li><b>ws.geonorge.no</b> (Kartverket) for place-name and address search, as you type;</li>
+ <li><b>photon.komoot.io</b> (OpenStreetMap data) for places abroad, as you type (from three letters);</li>
+ <li>a map service's <b>capabilities</b> address when you add a WMS/WMTS layer;</li>
+ <li><b>geocaching.com</b>'s own cache search for the area in view, when the 161 m circles, the marks or the favourite points are on (to find the cache types, exact positions, favourite points and your solved coordinates);</li>
+ <li>the <b>cache pages</b> of multis, mysteries, Wherigos and letterboxes in view, from zoom 15 with the circles on, to read their visible physical stages;</li>
+ <li>the <b>cache page</b> of a single cache when you right-click it and its exact coordinates are not yet known (once per visit);</li>
+ <li>from zoom 15, the <b>cache pages</b> of caches in view that the cache search left out (typically your own) – two at a time, at most 20 per view, once per visit – to read their exact posted and corrected coordinates;</li>
+ <li>the <b>cache pages</b> (and, with Premium, their GPX files) of the geocaches in your route, only when you download the route with <b>Full cache data</b> on – three at a time;</li>
+ <li><b>routing.openstreetmap.de</b>, <b>valhalla1.openstreetmap.de</b> and <b>api.openstreetmap.org</b> when you calculate a route – only the coordinates of the route are sent – and map tiles from <b>cache.kartverket.no</b> or <b>tile.openstreetmap.org</b> along the straight lines, to see whether they cross water, built-up areas or farmland.</li>
+</ul>
+<p>Your location is only requested when you click <img class="ic" src="img/en-27-5.png" alt="">, by the browser's normal permission prompt. <b>Google Street View</b> is only opened when you click it in the right-click menu.</p>
+<h2><b>19. Known limitations</b></h2>
+<ul>
+ <li>Only map services in Web Mercator (EPSG:3857) can be shown, as geocaching.com's map uses that projection. WMTS layers in UTM tile sets are therefore not listed.</li>
+ <li>Recognising the site's own buttons and cache positions depends on how geocaching.com builds its pages; a site redesign may require an update (<code>gcctReport()</code> helps).</li>
+ <li>Physical stages whose coordinates the owner has hidden cannot be found, and the cache page does not say whether something is placed at the posted coordinates of a multi or mystery – use a single circle (right-click) there.</li>
+ <li>Which caches get a 161 m circle depends on geocaching.com's cache search; if the site changes it, <code>gcctCacheDebug()</code> shows what it sends.</li>
+ <li>The UTM search box does not accept negative eastings; use degrees for points far outside a zone.</li>
+ <li>The home address is not read from your geocaching.com profile; you set it once in the script.</li>
+ <li>Strava heatmaps and mobile-coverage maps are not available as open services.</li>
+</ul>
+<h2><b>20. Version history</b></h2>
+<table>
+<tr><th><b>Version</b></th><th><b>Changes</b></th></tr>
+<tr><td>1.0</td><td>Custom XYZ tile layers on the browse map; Kartverket and other presets.</td></tr>
+<tr><td>1.1</td><td>Coordinate readout (DMM/DD/DMS/UTM), go to coordinates, measuring, 161 m circles, projection, location, fullscreen.</td></tr>
+<tr><td>1.2</td><td>Layer editor: URL detection, WMS/WMTS capabilities browser, live preview, edit/copy, import/export.</td></tr>
+<tr><td>1.3–1.4</td><td>Layers stacked under the cache tiles; site layers never removed; Leaflet 0.7 compatibility; reliable tool clicks; dialogs above the sidebar; no form submits.</td></tr>
+<tr><td>1.5</td><td>Place, address and coordinate search (Kartverket, OpenStreetMap).</td></tr>
+<tr><td>1.6–1.7</td><td>More layers (OSM, CyclOSM, Esri Topo, Kartverket routes and property boundaries, hillshade, Waymarked, OpenSeaMap); clearer, more readable dialogs.</td></tr>
+<tr><td>1.8</td><td>Automatic 161 m circles around every geocache.</td></tr>
+<tr><td>1.9</td><td>Support for <code>/play/map</code>; diagnostic report.</td></tr>
+<tr><td>1.10–1.13</td><td>Line icons; one toolbar holding all controls; site buttons folded in without duplicates; collision-free placement.</td></tr>
+<tr><td>1.14</td><td>Norwegian (bokmål) interface.</td></tr>
+<tr><td>1.15</td><td>Chosen map on cache pages.</td></tr>
+<tr><td>1.16</td><td>UTM zone 35; exact UTM conversion (Krüger series).</td></tr>
+<tr><td>1.17</td><td>Dimming fades to white; the geocaching.com map no longer shines through.</td></tr>
+<tr><td>1.18</td><td>Search results in one combined list (places, addresses, abroad); places abroad as you type via Photon.</td></tr>
+<tr><td>1.19</td><td>Remove built-in maps (and restore them); home button; cache tiles at unknown addresses always kept above your map; dimming with a colour filter; safer recognition of the site's buttons and much less scanning; no grid lines between tiles.</td></tr>
+<tr><td>1.20</td><td>Kartverket Sjøkart, CyclOSM and the Waymarked route overlays removed; one slider per group (dims the selected background, at most 50 %; opacity of the selected overlays); right-click popup with one coordinate line that opens in DMM; no tile seams at display scaling; the site's own locate button on /play/map hidden.</td></tr>
+<tr><td>1.21</td><td>New, unified look: the same colours, buttons and fields in the panel, dialogs, popup and toolbar; dialogs with a title bar you can drag; projection in its own dialog with live preview, units and copy button; confirmation dialogs instead of the browser's boxes; selected maps highlighted and slider values in per cent; Sea marks (OpenSeaMap) removed.</td></tr>
+<tr><td>1.22</td><td>The same simple black-and-white line icons everywhere – also in the right-click menu, the layer panel, copy buttons and dialogs – instead of emoji.</td></tr>
+<tr><td>1.23</td><td>Right-click popup snaps to a nearby geocache, showing its GC code and name (exact on /play/map, estimated on /map); the GC code opens the cache page; the popup is wide enough for every coordinate format, with more room around the copy and close buttons.</td></tr>
+<tr><td>1.24</td><td>Automatic 161 m circles only around traditional caches and caches with solved coordinates (cache types and corrected coordinates from geocaching.com's cache search); <code>gcctCacheDebug()</code> diagnostic; MIT licence.</td></tr>
+<tr><td>1.25</td><td>geocaching.com's own maps can be removed from the list too.</td></tr>
+<tr><td>1.26</td><td>Layer panel in three tabs: Geocaching, Background maps, Overlays.</td></tr>
+<tr><td>1.27</td><td>Drag maps up and down to change the order; overlays are drawn in the order of the list.</td></tr>
+<tr><td>1.27.1–2</td><td>geocaching.com's own map is hidden while your background is selected, also on /play/map – it no longer shows through while tiles load.</td></tr>
+<tr><td>1.28</td><td>Clickable mark at the solved position of caches you have found (their icon is back at the posted coordinates); circles kept when you zoom in.</td></tr>
+<tr><td>1.29</td><td>Exact posted coordinates from the cache search for right-click snapping and circles on /map; round blue marks.</td></tr>
+<tr><td>1.30</td><td>161 m circles and marks for visible physical stages and finals, read from the cache pages; <code>gcctStageTest()</code>.</td></tr>
+<tr><td>1.31</td><td><b>Physical here (161 m)</b> in the right-click menu; circles from zoom 15.</td></tr>
+<tr><td>1.32</td><td>The zoom level above the coordinates – type a number to zoom. 1.32.2: smoother 161 m circles. 1.32.3: the small map on cache pages keeps the site's extent. 1.32.4: Google Street View in the right-click menu. 1.33.0: button to hide all geocaches.</td></tr>
+<tr><td>1.33</td><td><b>Physical here (161 m)</b> removed. Later: overlay slider 50–100 %; exact right-click coordinates for all caches, including your own (read from the cache page); “Final location” when hovering solved caches; finals without coordinates are not shown; <code>gcctSnapTest()</code>.</td></tr>
+<tr><td>1.34</td><td>Toolbar button for the marks at solved caches without circles; stage marks only with the circles.</td></tr>
+<tr><td>1.35–1.38</td><td>Toolbar on the right, left, top or bottom, in one or two rows, and draggable to another edge; kept clear of the site's search panel; <b>Settings</b> dialog (toolbar, language, site buttons); dialogs and the layer panel open beside the toolbar; the site's zoom buttons are always hidden; toolbar icons in the site's green; toolbar centred along its edge and clear of other controls; dialogs and the layer panel clear of other controls and draggable.</td></tr>
+<tr><td>1.39</td><td><b>Favourite points</b>: <span class="red">♥</span> and the number in the right-click popup and above caches on the map (from zoom 15, only caches the site shows, from a minimum you choose); zoom and coordinate readout can be hidden; right-click on /play/map opens our popup and snaps to the site's WebGL caches. 1.39.14–25: the sidebar filters on /map (My Finds, My Hides, cache types) also hide circles, marks and favourite points.</td></tr>
+<tr><td>1.40</td><td>Toolbar button <img class="ic" src="img/en-29-0.png" alt=""> for the favourite points on the map.</td></tr>
+<tr><td>1.41</td><td>GC codes in <b>Find a place</b>. 1.41.1–9: the toolbar stays centred beside the site's sidebar and wraps to two rows when needed; rounded right end; blue heart in the right-click popup.</td></tr>
+<tr><td>1.42</td><td><b>D/T</b> (difficulty/terrain) below the caches on the map, with a toolbar button <img class="ic" src="img/en-29-1.png" alt=""> and a setting; dialog buttons stay in view.</td></tr>
+<tr><td>1.43</td><td><b>FTF</b> badge on caches nobody has found yet (Settings).</td></tr>
+<tr><td>1.44</td><td>Right-click snaps to your pins too, with <b>Remove pin</b> in the popup; lighter favourite and D/T numbers.</td></tr>
+<tr><td>1.45</td><td>Favourite points and D/T at the marks of solved caches you have found; smaller mark; solved caches remembered, so their mark shows even when the posted coordinates are off the map.</td></tr>
+<tr><td>1.46</td><td>Marks at solved caches from zoom 10: blue dots at 10–11, small marks at 12–13, full marks from 14.</td></tr>
+<tr><td>1.47</td><td>Named pins, remembered in the browser tab and exported as <b>GPX</b> – one pin or all of them; rename by clicking the name; pins from zoom 12.</td></tr>
+<tr><td>1.48–1.50</td><td><b>Routes</b>: a searchable list of geocaches and pins (worldwide by GC code), picking on the map, ordering, preview and download as a <b>GPX route</b> with Garmin symbols; dialogs can be resized by dragging; the layer panel opens beside a centred toolbar.</td></tr>
+<tr><td>1.51</td><td>Routes: <b>Back to the start</b> (round trip), and <b>Full cache data</b> – the geocaches in the GPX file as full paperless caches in Groundspeak's format.</td></tr>
+<tr><td>1.51.1–1.51.9</td><td>Route: preview and stops shown beside the window; renamed pins renamed in the route; the window as tall as the screen; time in GPX file names (routes and all pins); <b>Owned</b> tag; the list follows the map.</td></tr>
+<tr><td>1.52–1.53</td><td><b>Cache list</b> (/map): the geocaches on the map, following it, with hover highlight, zoom with glow and back again, and a button for the cache page. Cache list and route at the top right or left (Settings), clear of the side panel; route window as narrow as the list; the list follows the sidebar filters and the hide button; the route preview keeps clear of every control.</td></tr>
+<tr><td>1.54</td><td>Setting to start with the site's <b>side panel folded away</b> – drawn folded from the first moment, without movement; a toolbar on the left sits beside the folded panel's tab and stays centred. Later: 161 m circles for your own caches on /play/map too; extras follow the site's own icons; the cache search is throttled so the site's own search doesn't fail; the layer panel, search and settings open where you left them; a type icon on solved caches (Settings); a smiley mark at solved caches you have found; the marks button independent of the circles; green edge on Route and the cache list while open.</td></tr>
+<tr><td>1.55</td><td>A tidier interface: the toolbar in groups; <b>Show on map</b> – one panel for circles, marks, favourite points, D/T, FTF and type icons, with the zoom each shows from; Settings in sections; <b>Help</b>; <b>press and hold</b> on touch screens for the right-click menu; measuring snaps to geocaches; <b>Previous view</b> – up to 10 steps back; a <b>crosshair</b> and a <b>copy</b> button in the coordinate readout; UTM as zone, easting and northing (e.g. 32V 597980 6643119), local zone only; the toolbar position remembered separately for /map and /play/map; on /play/map, the site's icon at the posted coordinates of solved caches you have found can be hidden; the coordinate readout at the bottom left on /play/map; a toolbar at the top or bottom always centred; switching between /map and /play/map keeps the view and the side panel; your home address in the searches; an <b>elevation profile</b> for routes, with the climb and descent of every leg in the preview; «Clear route» closes the window; from zoom 15 <b>Search this area</b> on /play/map is pressed for you when you move the map; going home marks the spot with a pin named <b>Home</b>, never the address, and home is listed like a pin in the route window.</td></tr>
+<tr><td>1.56</td><td><b>Route calculation</b> along roads and paths – by car, by car and bike, by bike or on foot, with the car (or bike) left where the road ends; a shorter order suggested; preview on the map with parking spots, playback of the route, and – once accepted – legs, total, elevation profile and a GPX track along it. Straight lines never cross water nor go through built-up areas or farmland. Straight bits are drawn dashed. No route to a stop that can only be reached across water. <b>Route from here</b> in the right-click popup. A pin's name never covers a geocache. Time per leg in the route list and running time in the preview. A button in the coordinate readout that opens the right-click menu at the crosshair.</td></tr>
+</table>
+<h2><b>21. Data sources and credits</b></h2>
+<ul>
+ <li><b>Kartverket</b> – topographic maps, Tur- og friluftsruter, Matrikkelen (CC BY 4.0), place-name and address search (Geonorge).</li>
+ <li><b>OpenStreetMap contributors</b> – OpenStreetMap, OpenTopoMap (with SRTM); place search abroad via <b>Photon</b> by komoot.</li>
+ <li><b>Esri</b> – World Imagery, World Topo Map, World Hillshade.</li>
+ <li><b>FOSSGIS</b> – route calculation with <b>OSRM</b> and <b>Valhalla</b> on OpenStreetMap data.</li>
+ <li><b>Leaflet</b> – the map library used by geocaching.com.</li>
+</ul>
+<p class="small">Each map service has its own terms of use; the credit for the layers in view is shown in the map's attribution line. Geocaching and geocaching.com are trademarks of Groundspeak, Inc. This script is an independent add-on and not affiliated with Groundspeak. The script is released under the MIT licence.</p>

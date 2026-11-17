@@ -1,0 +1,472 @@
+<!--TOC-->
+<h2><b>1. Hva skriptet gjør</b></h2>
+<p>Skriptet legger én verktøylinje på geocaching.com-kartene og gjør dem til et fleksibelt kartverktøy:</p>
+<ul>
+ <li><b>Valgfritt bakgrunnskart</b> – Kartverkets topografiske kart, OpenStreetMap, flyfoto med mer, eller hvilken som helst karttjeneste du legger til selv (XYZ/TMS-fliser, WMTS, WMS, ArcGIS).</li>
+ <li><b>Overlegg</b> oppå kartet – turruter og skiløyper, eiendomsgrenser og terrengskygge.</li>
+ <li><b>Demping</b> – bleke bakgrunnskartet mot hvitt slik at cachene trer tydelig fram.</li>
+ <li><b>Søk</b> etter norske stedsnavn og adresser (Kartverket), steder i utlandet (OpenStreetMap-data via Photon) eller koordinater – i én liste.</li>
+ <li><b>Koordinater</b> under musepekeren i DMM, DD, DMS og UTM (lokal sone), med kopieringsknapper.</li>
+ <li><b>Måling</b> av avstand og retning, og <b>projisering av veipunkter</b>.</li>
+ <li><b>Ruter</b> – velg geocacher og merkenåler fra en søkbar liste eller rett på kartet, sett dem i rekkefølge, forhåndsvis ruten og last den ned som <b>GPX-rute til GPS'en</b>. <span class="new">NYHET</span></li>
+ <li>En <b>cacheliste</b> over geocachene i kartutsnittet, som følger kartet (/map). <span class="new">NYHET</span></li>
+ <li><b>Favorittpoeng</b>, <b>D/T</b> og et <b>FTF</b>-merke rett på kartet, og <b>merkenåler med navn</b> som kan eksporteres som GPX.</li>
+ <li><b>161 m-sirkler</b> rundt tradisjonelle cacher, løste cacher og synlige fysiske steg, eller én sirkel hvor som helst.</li>
+ <li><b>Min posisjon</b>, en <b>hjemknapp</b> som tar deg til hjemadressen din, og <b>fullskjerm</b>.</li>
+ <li>En knapp som <b>skjuler alle geocacher</b> for et rent kart, og viser dem igjen.</li>
+ <li>Kartet du har valgt, vises også på det lille kartet på <b>cachesidene</b>.</li>
+ <li>Hele grensesnittet finnes på <b>norsk og engelsk</b>.</li>
+</ul>
+<p>Nettstedets egne knapper for zoom, posisjon og kart samles i den samme verktøylinjen, så du slipper doble knapper.</p>
+<h2><b>2. Installasjon</b></h2>
+<ol>
+ <li>Installer en skriptbehandler i nettleseren: <b>Tampermonkey</b> eller <b>Violentmonkey</b> (Chrome, Edge, Firefox, Safari).</li>
+ <li>Åpne filen <code>geocaching-custom-tiles.user.js</code> i nettleseren, eller lag et nytt skript i skriptbehandleren og lim inn innholdet i filen. Lagre.</li>
+ <li>Åpne et geocaching.com-kart. Verktøylinjen vises ved høyre kant av kartet.</li>
+</ol>
+<table>
+<tr><th><b>Side</b></th><th><b>Hva du får</b></th></tr>
+<tr><td><code>www.geocaching.com/map/…</code></td><td>Alt: verktøylinje, kartlag, søk og verktøy.</td></tr>
+<tr><td><code>www.geocaching.com/play/map…</code></td><td>Alt (det nye søkekartet).</td></tr>
+<tr><td><code>www.geocaching.com/geocache/…</code> <code>…/seek/cache_details.aspx…</code></td><td>Bare bakgrunnskartet og overleggene du har valgt, på det lille kartet – ingen knapper.</td></tr>
+</table>
+<p class="small">Skriptet trenger ingen spesielle tillatelser (<code>@grant none</code>). Alle innstillinger lagres i nettleseren for geocaching.com og deles derfor mellom kartsidene og cachesidene.</p>
+<h2><b>3. Verktøylinjen</b></h2>
+<figure class="fig" style="--w:23px"><img src="img/no-3_2.png" alt=""><figcaption>Verktøylinjen.</figcaption></figure>
+<table>
+<tr><th><b>Knapp</b></th><th><b>Hva den gjør</b></th></tr>
+<tr><td><img class="ic" src="img/no-3-0.png" alt=""></td><td><b>Kartlag</b> – åpner kartlagpanelet ved siden av verktøylinjen. Klikk igjen for å lukke.</td></tr>
+<tr><td><img class="ic" src="img/no-3-1.png" alt=""></td><td><b>Zoom inn / ut</b>. Gråtonet når kartet ikke kan zoome lenger.</td></tr>
+<tr><td><img class="ic" src="img/no-3-2.png" alt=""></td><td><b>Forrige utsnitt</b> – tilbake ett steg om gangen dit du var, opptil 10 steg (hvert zoomsteg og hver flytting teller). Gråtonet når det ikke er noe å gå tilbake til.</td></tr>
+<tr class="sub"><td colspan="2"><b>Finn fram</b></td></tr>
+<tr><td><img class="ic" src="img/no-3-3.png" alt=""></td><td><b>Finn et sted</b> – stedsnavn, adresser, koordinater eller GC-koder. Hurtigtast <kbd>/</kbd>.</td></tr>
+<tr><td><img class="ic" src="img/no-3-4.png" alt=""></td><td><b>Gå hjem</b> – til hjemadressen du har lagret. Første klikk spør etter adressen; høyreklikk på knappen for å endre eller fjerne den.</td></tr>
+<tr><td></td><td><b>Vis min posisjon</b>, med nøyaktighetssirkel.</td></tr>
+<tr><td><img class="ic" src="img/no-3-5.png" alt=""> <img class="ic" src="img/no-3-6.png" alt=""></td><td><b>Fullskjerm</b>. Klikk igjen for å avslutte.</td></tr>
+<tr class="sub"><td colspan="2"><b>Verktøy</b></td></tr>
+<tr><td><img class="ic" src="img/no-3-7.png" alt=""></td><td><b>Mål</b> avstand og retning. Klikk punkter på kartet; klikk på en geocache festes til koordinatene.</td></tr>
+<tr><td><img class="ic" src="img/no-3-8.png" alt=""></td><td><b>Rute</b> – sett sammen en rute av geocacher og merkenåler og last den ned som GPX (avsnitt 11). Grønn kant mens vinduet er åpent.</td></tr>
+<tr><td><img class="ic" src="img/no-4-0.png" alt=""></td><td><b>Geocacher på kartet</b> – en liste som følger kartet (bare /map, avsnitt 11). Grønn kant mens lista er åpen.</td></tr>
+<tr class="sub"><td colspan="2"><b>Hva som vises</b></td></tr>
+<tr><td><img class="ic" src="img/no-4-1.png" alt=""></td><td><b>Vis på kartet</b> – 161 m-sirkler, merker ved løste cacher, favorittpoeng, D/T, FTF og typeikoner (se under). Grønn kant mens panelet er åpent.</td></tr>
+<tr><td><img class="ic" src="img/no-4-2.png" alt=""></td><td><b>Skjul alle geocacher</b> – nettstedets cacheikoner, skriptets egne merker og 161 m-sirklene forsvinner; nåler, enkeltsirkler og målinger blir værende. Klikk igjen (<img class="ic" src="img/no-4-3.png" alt="">) for å vise dem. Huskes ikke: cachene er tilbake etter ny innlasting.</td></tr>
+<tr class="sub"><td colspan="2"><b>Resten</b></td></tr>
+<tr><td><img class="ic" src="img/no-4-4.png" alt=""></td><td><b>Fjern alle tegninger</b> – merker, målinger, projiseringer og enkeltsirkler.</td></tr>
+<tr><td><img class="ic" src="img/no-4-5.png" alt=""></td><td><b>Innstillinger</b> – utseende, språk og hvordan skriptet oppfører seg.</td></tr>
+<tr><td><img class="ic" src="img/no-4-6.png" alt=""></td><td><b>Hjelp</b> – en oversikt på én side, med lenke til denne veiledningen.</td></tr>
+</table>
+<p>Nettstedets knapper som verktøylinjen ikke erstatter, flyttes til en egen del nederst i verktøylinjen og virker som før.</p>
+<p>Verktøylinjen finner selv en ledig plass: den står ved høyre kant, flytter seg ned under knapper som «Create Route» / «Browse Map», og til siden hvis noe annet er i veien. Koordinatvisningen står nederst til høyre.</p>
+<h3><b>Plassering av verktøylinjen</b></h3>
+<figure class="fig" style="--w:163px"><img src="img/no-4_2.png" alt=""><figcaption>Innstillinger.</figcaption></figure>
+<p>Verktøylinjen kan stå på <b>høyre</b> (standard) eller <b>venstre</b> side av kartet, eller <b>øverst</b> eller <b>nederst</b> – i <b>én eller to rekker</b>. Den <b>sentreres</b> langs kanten (loddrett på sidene, vannrett øverst og nederst) i den synlige delen av kartet, og flytter seg til nærmeste ledige plass hvis en annen knapp er i veien. I fullskjerm står den helt ute ved skjermkanten. Når én rekke ikke får plass – i et smalt vindu, eller ved siden av nettstedets åpne sidepanel – bruker verktøylinjen to rekker av seg selv, og går tilbake til én når det er plass (Innstillinger viser da <b>To rekker (automatisk)</b>). Velg i <img class="ic" src="img/no-4-7.png" alt=""> <b>Innstillinger</b>, eller <b>dra</b> verktøylinjen etter håndtaket (prikkene i toppen eller venstre ende): et stiplet blått felt viser kanten den legger seg mot. Valget huskes – for /map og /play/map hver for seg. Øverst og nederst står verktøylinjen alltid sentrert; er en av nettstedets knapper i veien (som <b>Search this area</b>), flytter den seg rett under (eller over) den.</p>
+<aside class="side" style="--w:300px"><h3><b>Innstillinger</b></h3>
+<p>I tre deler:</p>
+<ul>
+<li><b>Utseende</b> – <b>Verktøylinje</b> høyre, venstre, øverst eller nederst; <b>Knapper i</b> én eller to rekker; <b>Cacheliste og rute</b> øverst til høyre (standard) eller venstre; <b>Språk</b> norsk eller engelsk; <b>Vis</b> <b>zoom og koordinater nederst</b> (på som standard; kan også skjules med ✕).</li>
+<li><b>På kartet</b> – viser til <img class="ic" src="img/no-5-3.png" alt=""> <b>Vis på kartet</b>.</li>
+<li><b>Oppførsel</b> – <b>Vis også geocaching.coms egne</b> <b>kartknapper</b> (posisjon og kartstil; zoomknappene er alltid skjult); <b>Fell sammen</b> <b>nettstedets sidepanel når kartet åpnes</b> (av som standard – hensikten er å se <b>så mye kart</b> <b>som mulig</b> fra start; etter første gang ser du ikke at noe åpnes eller lukkes); <b>Høyreklikk på</b> <b>/play/map åpner nettstedets egen meny</b> i stedet for vår (av som standard).</li>
+</ul></aside>
+<ul>
+ <li>Til venstre, øverst og nederst holder verktøylinjen seg klar av nettstedets panel <b>Search for geocaches</b> og følger det når det åpnes og lukkes.</li>
+ <li>Nederst, når verktøylinjen ville dekket zoom-og koordinatvisningen, flyttes visningen øverst til venstre – og tilbake når verktøylinjen flyttes. Målestokken kan bli dekket.</li>
+ <li>Kartlagpanelet og alle dialogene åpnes <b>ved</b> <b>siden av verktøylinjen</b>, aldri over den eller andre knapper: til venstre eller høyre for den, under den øverst og over den nederst. Nederst vokser de oppover, så søketreffene vises.</li>
+ <li>Dra kartlagpanelet, dialogene og <b>Vis på kartet</b> etter tittellinjen til hvor som helst i vinduet. De åpnes der du sist la dem, også neste gang.</li>
+ <li>Nettstedets knapper som verktøylinjen tar inn, legges i samme rekke eller kolonne.</li>
+</ul>
+<h3><b>Vis på kartet</b></h3>
+<figure class="fig" style="--w:148px"><img src="img/no-5_2.png" alt=""><figcaption>Vis på kartet.</figcaption></figure>
+<p><img class="ic" src="img/no-5-8.png" alt=""> <b>Vis på kartet</b> åpner et lite panel med en bryter for alt skriptet tegner oppå cachene:</p>
+<ul>
+ <li><b>161 m-sirkler</b> (røde) – tradisjonelle cacher, løste cacher og fysiske steg, fra zoom 15 (avsnitt 13).</li>
+ <li><b>Merker ved løste cacher</b> – smilefjes når funnet, blått ? når ikonet er et annet sted, fra zoom 10.</li>
+ <li><b>Favorittpoeng</b> – ♥ og antallet over cachene, fra et minste antall (10 som standard), fra zoom 15.</li>
+ <li><b>D/T</b> – vanskelighet/terreng under cachene, fra zoom 15.</li>
+ <li><b>FTF</b> – et rødt merke på aktive cacher ingen har funnet ennå, fra zoom 15.</li>
+ <li><b>Skjul nettstedets ikon ved oppgitte</b> <b>koordinater</b> (bare /play/map) – for løste cacher du har funnet blir bare smilefjeset vårt ved den løste plassen igjen; nettstedets ikon ved de oppgitte koordinatene tegnes aldri. Virker når merkene er på; av som standard. (På /map er ikonene en del av kartbildene og kan ikke skjules enkeltvis.)</li>
+ <li><b>Typeikon på løste cacher</b> – nettstedets «løst»- ikon viser ikke typen, så et lite typeikon legges nede til høyre på det, fra zoom 15; av som standard.</li>
+</ul>
+<p>Hver bryter sier hvilket zoomnivå den vises fra; er en på mens du har zoomet for langt ut, står det <b>Zoom inn til 15 for å se det</b>. Dra panelet etter tittellinjen; Esc eller et klikk utenfor lukker det.</p>
+<h3><b>Hjelp, berøringsskjermer og taster</b></h3>
+<figure class="fig" style="--w:148px"><img src="img/no-6_2.png" alt=""><figcaption>Hjelp.</figcaption></figure>
+<p><img class="ic" src="img/no-6-0.png" alt=""> <b>Hjelp</b> gir en oversikt på én side over knappene, høyreklikkmenyen, tastene og forskjellene mellom /map og /play/map, med lenke til denne veiledningen på ditt språk.</p>
+<p>På en <b>berøringsskjerm</b> (iPad, mobil): <b>trykk og</b> <b>hold</b> på kartet et halvt sekund for å åpne den samme menyen som ved høyreklikk – koordinater, merkenål, enkeltsirkel, projisering, måling og Street View, festet til en cache i nærheten.</p>
+<p>Taster: <kbd>/</kbd> søk, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>Esc</kbd> stopper måling og lukker dialoger og paneler.</p>
+<h3><b>Bytte mellom /map og /play/map</b></h3>
+<p>Når du går fra det ene kartet til det andre (innen 5 minutter), åpnes kartet du kommer til med <b>samme</b> <b>utsnitt</b> – midtpunkt og zoom (halve zoomnivåer fra /play/map rundes av på /map) – og nettstedets <b>sidepanel sammenfelt eller åpent</b> slik det var på kartet du kom fra. Kartet er usynlig et øyeblikk til det står på utsnittet, så du ser aldri nettstedets eget første utsnitt. Laster du inn samme kart på nytt, eller kommer senere, virker alt som før.</p>
+<h3><b>Søk i dette området på /play/map</b></h3>
+<p>/play/map viser bare cachene nettstedet har søkt etter. Fra <b>zoom 15</b> trykker skriptet <i>Søk i dette området</i> for deg når du har flyttet kartet og det har stått stille et øyeblikk – sparsomt, siden nettstedet bare tillater noen få søk i minuttet: bare når minst en tredjedel av utsnittet er nytt, og høyst ett trykk hvert 8. sekund. Kommer et søk tilbake uten cacheikoner (nettstedet har fått for mange søk), venter skriptet 30 sekunder – lenger om det skjer igjen, opptil 10 minutter – og trykker så én gang til, så ikonene kommer tilbake av seg selv. Under zoom 15 trykker du på knappen selv.</p>
+<h2><b>4. Velge kartlag</b></h2>
+<figure class="fig" style="--w:226px"><img src="img/no-7_2.png" alt=""><figcaption>Kartlagpanelets fane Bakgrunnskart med Kartverket Topo valgt; ett overlegg er på, og to innebygde kart er fjernet. Dra i håndtaket til venstre på raden for å endre rekkefølgen.</figcaption></figure>
+<p>Klikk <img class="ic" src="img/no-7-0.png" alt=""> for å åpne panelet. Kartene er delt i tre faner:</p>
+<ul>
+ <li><b>Geocaching</b> – geocaching.coms egne kart (for eksempel Google Maps eller nettstedets kartstiler), nettstedets egne overlegg, og <b>Geocaching.com-kartstiler …</b> på sider der nettstedet har den menyen.</li>
+ <li><b>Bakgrunnskart</b> – de innebygde bakgrunnskartene og dine egne.</li>
+ <li><b>Overlegg</b> – de innebygde overleggene og dine egne.</li>
+</ul>
+<p>En blå prikk viser hvilken fane bakgrunnskartet som er i bruk ligger i, og Overlegg-fanen viser hvor mange overlegg som er slått på. Panelet åpnes på fanen du brukte sist.</p>
+<h3><b>Bakgrunnskart</b></h3>
+<p>Velg ett bakgrunnskart, i en av de to bakgrunnsfanene.</p>
+<h3><b>Dempe bakgrunnskartet</b></h3>
+<p>Glidebryteren <b>Demping</b> (i begge bakgrunnsfanene) demper det valgte bakgrunnskartet: dra den mot venstre, så blekes kartet mot <b>hvitt</b>, med høyst 50 %. Verdien vises i prosent. Den følger med når du bytter kart, og virker også på geocaching.coms egne kart. Bakgrunnskartet ditt tegnes alltid helt dekkende, så geocaching.com-kartet skinner aldri gjennom. Cacheikoner og overlegg dempes aldri.</p>
+<h3><b>Overlegg</b></h3>
+<p>Kryss av for så mange overlegg du vil. Glidebryteren <b>Synlighet</b> styrer synligheten for alle valgte overlegg (50–100 %); et lag med egen standardverdi beholder den i forhold til glidebryteren (terrengskyggen holder seg på 60 % av verdien). Overlegg tegnes alltid over bakgrunnskartet og under cachene – og seg imellom <b>i listens rekkefølge</b>: det øverste tegnes øverst.</p>
+<h3><b>Endre rekkefølgen</b></h3>
+<p>Hver rad har et håndtak helt til venstre. Dra i det for å flytte kartet opp eller ned, eller klikk på håndtaket og bruk <kbd>↑</kbd> <kbd>↓</kbd>. Rekkefølgen huskes for hver fane.</p>
+<h3><b>Redigere og rydde i listene</b></h3>
+<ul>
+ <li><img class="ic" src="img/no-8-0.png" alt=""> på et innebygd kartlag lager en kopi du kan redigere.</li>
+ <li><img class="ic" src="img/no-8-2.png" alt=""> redigerer og sletter et av dine egne kartlag.</li>
+ <li><img class="ic" src="img/no-8-4.png" alt=""> på et innebygd kart – eller på et av geocaching.coms egne kart – fjerner det fra listen. Et av geocaching.coms overlegg som er slått på, slås av. <b>Hent tilbake fjernede kart (n)</b> henter alle tilbake.</li>
+ <li>Feltet øverst legger til et kartlag direkte fra en innlimt adresse.</li>
+</ul>
+<p>Valgt kart og valgte overlegg er markert med blått. Knappene vises når du holder musen over raden. Før et kart slettes eller fjernes, får du spørsmål i en liten dialog med rød knapp for å bekrefte.</p>
+<h3><b>Nederst i panelet</b></h3>
+<ul>
+ <li><b>Hent tilbake fjernede kart (n)</b> – vises når du har fjernet kart.</li>
+ <li>＋ <b>Nytt lag</b>, <b>Importer</b>, <b>Eksporter</b>.</li>
+</ul>
+<p>Valgene huskes og brukes også på cachesidene.</p>
+<h2><b>5. Innebygde kartlag</b></h2>
+<table>
+<tr><th><b>Navn</b></th><th><b>Type</b></th><th><b>Kilde og merknader</b></th></tr>
+<tr><td>Kartverket Topo</td><td>Bakgrunn</td><td>Kartverkets topografiske kart (WMTS-cache, Web Mercator).</td></tr>
+<tr><td>Kartverket Gråtone</td><td>Bakgrunn</td><td>Topografisk kart i gråtoner – cachene synes godt.</td></tr>
+<tr><td>Kartverket Toporaster</td><td>Bakgrunn</td><td>Klassisk topografisk rasterkart.</td></tr>
+<tr><td>OpenTopoMap</td><td>Bakgrunn</td><td>Topografisk kart for hele verden, basert på OpenStreetMap og SRTM.</td></tr>
+<tr><td>Esri flyfoto</td><td>Bakgrunn</td><td>Fly- og satellittfoto for hele verden (Esri World Imagery).</td></tr>
+<tr><td>OpenStreetMap</td><td>Bakgrunn</td><td>Standard OSM-kart.</td></tr>
+<tr><td>Esri topografisk</td><td>Bakgrunn</td><td>Topografisk kart for hele verden (Esri World Topo).</td></tr>
+<tr><td>Turruter (Kartverket)</td><td>Overlegg · WMS</td><td>Offisielle fot-, ski-, sykkel- og andre ruter (laget <code>Ruter</code> i tjenesten Tur- og friluftsruter).</td></tr>
+<tr><td>Eiendomsgrenser (Kartverket)</td><td>Overlegg · WMS</td><td>Eiendomsgrenser og gnr/bnr fra den åpne matrikkeltjenesten (CC BY 4.0). Vises fra zoom 14.</td></tr>
+<tr><td>Terrengskygge (Esri)</td><td>Overlegg</td><td>Terrengrelieff, blandet inn i kartet (60 % som standard).</td></tr>
+</table>
+<div class="note"><p>Flyfoto fra Norge i bilder er ikke med: Kartverket legger ned den åpne flistjenesten, og tilgangen er forbeholdt partene i Norge digitalt. Bruk Esri flyfoto i stedet.</p></div>
+<h2><b>6. Legge til egne kartlag</b></h2>
+<figure class="fig" style="--w:193px"><img src="img/no-9_2.png" alt=""><figcaption>Kartverkets WMS for tur- og friluftsruter legges til: lagoversikten ble lest automatisk.</figcaption></figure>
+<p>Bruk ＋ <b>Nytt lag</b>, eller lim inn en adresse i feltet øverst i panelet. Trykk <b>Gjenkjenn</b>, eller bare lim inn – redigeringsvinduet forstår:</p>
+<ul>
+ <li><b>Flismaler</b> med <code>{z}</code>, <code>{x}</code>, <code>{y}</code>, og også <code>{-</code> <code>y}</code> (TMS), <code>{s}</code> (underdomener) og <code>{q}</code> (quadkey som hos Bing).</li>
+ <li><b>Én enkelt flis</b> kopiert fra nettleserens utviklerverktøy (Nettverk-fanen), f.eks. <code>…/12/1196/2164.png</code>. Den gjøres om til en mal; rekkefølgen på x og y gjettes ut fra området du ser på.</li>
+ <li><b>WMTS</b>: en <code>WMTSCapabilities.xml</code> -adresse, en tjenesteadresse eller en mal med <code>{TileMatrix}</code>. Lag i et Web Mercator-flissett listes opp slik at du kan velge.</li>
+ <li><b>WMS</b>: en GetMap-adresse (lagnavnene hentes derfra), en tjenesteadresse eller en GetCapabilities-adresse. Lagene listes opp; hold <kbd>Ctrl</kbd> for å kombinere flere.</li>
+ <li><b>ArcGIS</b>-adresser som slutter på <code>/MapServer</code> (bufret, Web Mercator).</li>
+</ul>
+<p>Når adressen er gjenkjent, <b>forhåndsvises</b> laget på kartet med en teller for innlastede og feilede fliser. Velg <b>Bakgrunnskart</b> eller <b>Overlegg oppå kartet</b>, gi laget et navn og trykk <b>Lagre laget</b>.</p>
+<h3><b>Flere innstillinger</b></h3>
+<ul>
+ <li><b>Høyeste zoom med ekte fliser</b> – nærmere enn dette forstørres flisene i stedet for å hentes.</li>
+ <li><b>Underdomener for {s}</b>, <b>Snu Y-aksen (TMS-</b> <b>servere)</b>.</li>
+ <li>WMS: <b>bildeformat</b>, <b>WMS-versjon</b>, <b>stiler</b>, <b>gjennomsiktig bakgrunn</b>.</li>
+ <li><b>Vis fra zoomnivå</b>, <b>Kildehenvisning</b>.</li>
+</ul>
+<div class="note"><p>Hvis en server ikke lar skriptet lese lagoversikten (på grunn av begrensninger mot andre nettsteder), viser redigeringsvinduet en lenke til oversikten. Åpne den, kopier alt og lim det inn i vinduet.</p></div>
+<h2><b>7. Import og eksport</b></h2>
+<p><b>Eksporter</b> viser dine egne kartlag som tekst (JSON) som du kan kopiere eller lagre som fil. <b>Importer</b> tar imot slik tekst eller en <code>.json</code> -fil – for eksempel for å flytte kartlagene til en annen datamaskin eller dele dem med andre. Kartlag som allerede finnes, hoppes over. Limer du inn én kartadresse i Importer, åpnes den i redigeringsvinduet.</p>
+<h2><b>8. Finne et sted</b></h2>
+<figure class="fig" style="--w:226px"><img src="img/no-10_2.png" alt=""><figcaption>Søketreff for «lier».</figcaption></figure>
+<p>Klikk <img class="ic" src="img/no-10-0.png" alt=""> eller trykk <kbd>/</kbd>.</p>
+<ul>
+ <li>Alle treff vises <b>i én liste</b> mens du skriver, hver merket med hva det er: <b>Sted</b> (Kartverkets stedsnavn), <b>Adresse</b> (Kartverkets adresser) eller <b>Utland</b> (steder utenfor Norge fra OpenStreetMap, via Photon). De beste treffene kommer først, uansett kilde: navn som er helt like, så navn som begynner med det du skrev, så navn som inneholder det. Skriver du et husnummer, kommer adressene først.</li>
+ <li>Kartet zoomer til et nivå som passer treffet: fylke, kommune, tettsted, adresse – eller hele området til et sted i utlandet.</li>
+ <li><b>Koordinater</b> i DMM, DD, DMS eller UTM (f.eks. <code>32V 597980 6643119</code>) gjenkjennes og vises i andre formater øverst i listen.</li>
+ <li>En <b>GC-kode</b> (f.eks. <code>GC1AAA</code>) finner geocachen: de publiserte koordinatene, og dine løste koordinater først når du har dem. Ukjente cacher slås opp på cachesiden.</li>
+</ul>
+<p>Bruk <kbd>↑</kbd> <kbd>↓</kbd> og <kbd>Enter</kbd> for å velge. Stedet du velger, får en merkenål med navnet.</p>
+<h3><b>Hjemadresse</b></h3>
+<p>Knappen <img class="ic" src="img/no-10-5.png" alt=""> tar deg til hjemadressen din. Første gang åpner den <b>Angi hjemadresse</b> – den samme søkeboksen: skriv adressen og velg den. Etter det går et klikk rett hjem og merker stedet med en pin som heter <b>Hjemme</b> – selve adressen vises aldri på kartet. For å endre eller fjerne adressen høyreklikker du på knappen, eller høyreklikker hvor som helst på kartet og velger <img class="ic" src="img/no-10-6.png" alt=""> <b>Sett som hjem</b>. Adressen lagres bare i nettleseren din. I <b>Finn et sted</b> kommer hjemadressen din først når du skriver «hjem» eller «home» (fra to bokstaver) eller en del av navnet. I rutevinduet står den som en pin som heter <b>Hjemme</b>, blant de andre etter avstand, og finnes på samme måte.</p>
+<h2><b>9. Koordinater</b></h2>
+<h3><b>Koordinatvisning</b></h3>
+<p>Koordinatene under musepekeren vises nederst til høyre på /map og nederst til venstre på /play/map (ved siden av sidepanelet, og følger det når det åpnes og lukkes), med <b>zoomnivået</b> over. Klikk på koordinatene for å bla gjennom formatene; valget huskes. Skriv et tall i zoomfeltet og trykk <kbd>Enter</kbd> (eller bruk pilene i feltet) for å zoome; tall utenfor kartets område justeres til nærmeste nivå. ✕ i visningen skjuler den; vis den igjen i <img class="ic" src="img/no-12-0.png" alt=""> <b>Innstillinger</b>.</p>
+<p><img class="ic" src="img/no-12-1.png" alt=""> i visningen slår på et <b>trådkors</b> midt på kartet (av som standard). Koordinatene er da punktet under krysset: flytt kartet for å lese dem av – nyttig på en berøringsskjerm. Med trådkorset på <b>kopierer</b> <img class="ic" src="img/no-12-2.png" alt=""> koordinatene under krysset til utklippstavlen, i formatet som vises. Knappen <img class="ic" src="img/menu.svg" alt=""> åpner <b>høyreklikkmenyen ved trådkorset</b> – sett et punkt nøyaktig med trådkorset og åpne menyen, for eksempel for å sette en nål akkurat der. Punktet regnes fra der krysset faktisk står på skjermen. Lukker du visningen, forsvinner også krysset; det kommer tilbake når visningen vises igjen.</p>
+<table>
+<tr><th><b>Format</b></th><th><b>Eksempel (Oslo)</b></th><th><b>Merknad</b></th></tr>
+<tr><td>DMM</td><td><code>N 59° 54.834 E 010° 45.132</code></td><td>Standard i geocaching.</td></tr>
+<tr><td>DD</td><td><code>59.913900, 10.752200</code></td><td>Desimalgrader.</td></tr>
+<tr><td>DMS</td><td><code>N 59° 54′ 50.0″ E 10° 45′ 07.9″</code></td><td>Grader, minutter, sekunder.</td></tr>
+<tr><td>UTM</td><td><code>32V 597980 6643119</code></td><td>Sonen velges automatisk.</td></tr>
+</table>
+<p>Alle koordinater er WGS84 (det samme som EUREF89 i kartsammenheng). UTM regnes med Krüger-rekkene til 6. orden (samme metode som PROJ) og er nøyaktig til omtrent en millimeter, også langt utenfor sonen. Langt vest for en sone kan østkoordinaten bli negativ – det er riktig.</p>
+<h3><b>Høyreklikkmenyen</b></h3>
+<p>Høyreklikk hvor som helst på kartet for en boble med posisjonen på én linje. Den åpnes alltid i <b>DMM</b>; klikk på linjen for å bytte til DD, DMS, og UTM (lokal sone). Knappen kopierer koordinatene i formatet som vises. Boblen har dessuten:</p>
+<figure class="fig" style="--w:249px"><img src="img/no-13_2.png" alt=""><figcaption>Høyreklikkboblen: én koordinatlinje – klikk på den for å bytte format.</figcaption></figure>
+<ul>
+ <li><img class="ic" src="img/no-12-3.png" alt=""> <b>Merk</b> – sett en merkenål med navn (Nål 1, Nål 2 …, eller cachens GC-kode og navn). Høyreklikk eller klikk på en nål for å fjerne den eller <b>Last ned GPX</b>, og klikk på navnet i boblen for å gi den nytt navn; <b>Alle merkenåler som GPX</b> lagrer alle nålene i én fil til GPS'en. Nålene huskes så lenge fanen i nettleseren er åpen, og vises fra zoom 12.</li>
+ <li><img class="ic" src="img/no-12-5.png" alt=""> <b>Rute herfra</b> – starter en ny rute fra nåla eller cachen du klikket på (eller fra en ny nål her) og åpner rutevinduet, så du kan legge til resten.</li>
+ <li><img class="ic" src="img/no-12-7.png" alt=""> <b>Projiser …</b> – projiser et veipunkt (se under).</li>
+ <li><img class="ic" src="img/no-12-9.png" alt=""> <b>161 m-sirkel</b> – én sirkel her (eller <img class="ic" src="img/no-12-10.png" alt=""> <b>Fjern sirkelen</b> når du klikker inne i en).</li>
+ <li><img class="ic" src="img/no-12-12.png" alt=""> <b>Mål herfra</b>.</li>
+ <li><img class="ic" src="img/no-12-14.png" alt=""> <b>Google Street View</b> – åpner Street View ved punktet (eller cachen) i en ny fane.</li>
+ <li><img class="ic" src="img/no-12-16.png" alt=""> <b>Sett som hjem</b> – lagre punktet som hjemadressen din.</li>
+</ul>
+<h3><b>Festing til en geocache</b></h3>
+<figure class="fig" style="--w:227px"><img src="img/no-13_4.png" alt=""><figcaption>Boblen festet til en geocache – klikk på GC-koden for å åpne cachesiden.</figcaption></figure>
+<p>Høyreklikker du på en geocache, eller noen få piksler fra den (omtrent størrelsen på ikonet), <b>festes boblen til cachen</b>. En blå linje øverst viser cachens <b>GC-kode</b>, navn og <b>favorittpoeng</b> (<span class="blue">♥</span> 42), og koordinatene og alle verktøyene i boblen – merkenål, projisering, måling og 161 m-sirkel – bruker cachens posisjon. Dine egne <b>merkenåler</b> virker på samme måte: høyreklikk på en, så festes boblen til den, med <b>Fjern merkenålen</b> i stedet for Merk.</p>
+<ul>
+ <li>Klikk på <b>GC-koden</b> for å åpne cachesiden i en ny fane (midtklikk virker også). Kartet blir stående som det er.</li>
+ <li><b>Bruk klikkpunktet</b> bytter til det nøyaktige punktet du klikket på.</li>
+ <li>På <code>/play/map</code> tegnes cachene av nettstedets WebGL-kart; skriptet spør det hvilken cache som ligger under pekeren, og får GC-kode og nøyaktig posisjon. Høyreklikk der åpner vår boble, ikke nettstedets egen meny (med mindre det er valgt i Innstillinger). På begge kartene kommer de nøyaktige koordinatene fra geocaching.coms cachesøk så snart det har svart for området – de publiserte, eller dine korrigerte for løste cacher. Cacher som søket utelater, for eksempel dine egne, leses fra cachesiden i bakgrunnen fra zoom 15, eller første gang du høyreklikker på dem (boblen venter opptil 0,7 s). Til da beregnes posisjonen fra cacheikonet, vist med <b>≈</b> etter navnet.</li>
+ <li>Høyreklikk på merkene ved løste cacher og fysiske steg fester boblen til dem også.</li>
+ <li>Høyreklikker du lenger unna, får du klikkpunktet som før.</li>
+</ul>
+<h2><b>10. Måling og projisering</b></h2>
+<figure class="fig" style="--w:215px"><img src="img/no-14_2.png" alt=""><figcaption>Projisering 250 m i retning 45°.</figcaption></figure>
+<p><b>Måling</b> <img class="ic" src="img/no-14-0.png" alt="">: klikk punkter på kartet. Etiketten viser total avstand og lengde og retning for siste strekning. Dobbeltklikk for å starte en ny linje, <kbd>Esc</kbd> for å stoppe. Mens du måler, åpner klikk ikke cachenes informasjonsbobler.</p>
+<p><b>Projisere et veipunkt</b>: høyreklikk på startpunktet og velg <img class="ic" src="img/no-14-1.png" alt=""> <b>Projiser …</b>. Dialogen <b>Projiser et</b> <b>veipunkt</b> åpnes:</p>
+<ul>
+ <li><b>Fra</b> – fylt ut med punktet du klikket på (DMM). Alle koordinatformater virker, så du kan også projisere fra et annet punkt.</li>
+ <li><b>Retning</b> i grader (0–360), <b>Avstand</b> og <b>Enhet</b> (m, km eller ft – sist brukte enhet huskes). Desimalkomma virker, f.eks. <code>1,5</code>.</li>
+ <li>Mens du skriver, vises <b>veipunktet</b> i DMM med en -knapp for kopiering, og en stiplet linje viser det på kartet. Ugyldige verdier gir en tydelig melding, og <b>Projiser</b> er gråtonet.</li>
+ <li><b>Enter</b> eller <b>Projiser</b> setter ut punktet: en stiplet linje fra start, en merkenål med alle koordinatformater og en etikett med retning og avstand. <b>Avbryt</b> fjerner forhåndsvisningen.</li>
+</ul>
+<p class="small">Avstander og projiseringer beregnes på en kuleformet jord – feilen er godt under en meter på geocachingavstander.</p>
+<h2><b>11. Ruter, cacheliste og GPX</b> <span class="new">NYHET</span></h2>
+<figure class="fig" style="--w:168px"><img src="img/no-15_2.png" alt=""><figcaption>En rute settes sammen.</figcaption></figure>
+<p>Planlegg cacheturen på kartet og ta den med deg på GPS'en. Klikk på <img class="ic" src="img/no-15-0.png" alt=""> <b>Rute</b> i verktøylinjen.</p>
+<h3><b>Velg stoppene</b></h3>
+<ul>
+ <li>Vinduet viser <b>geocachene i kartutsnittet og</b> <b>merkenålene dine</b>, nærmest midten først, hver med typeikon, D/T, avstand og om den er <b>løst</b>, <b>funnet</b> eller <b>eiet</b>. Løste cacher ligger på det løste stedet. Listen følger kartet.</li>
+ <li><b>Søk</b> på GC-kode eller navn. En hel GC-kode finnes <b>hvor som helst i verden</b>, også cacher skriptet ikke har sett ennå. Stedsnavn og <b>adresser</b> finnes også, som i Finn et sted, og kan legges til som stopp uten å sette en merkenål.</li>
+ <li>Klikk på en linje – eller <b>klikk på en cache eller</b> <b>nål i kartet</b> mens vinduet er åpent – for å legge den til. Høyreklikkboblen har også <b>Legg til i</b> <b>ruten</b>.</li>
+</ul>
+<h3><b>Sett dem i rekkefølge</b></h3>
+<figure class="fig" style="--w:168px"><img src="img/no-16_2.png" alt=""><figcaption>Forhåndsvisningen før nedlasting.</figcaption></figure>
+<ul>
+ <li>Flytt stopp med ↑ ↓, fjern med ✕, eller <b>Sorter</b> <b>etter nærmeste</b> fra første stopp.</li>
+ <li>Kryss av for <b>Tilbake til start</b> for en <b>rundtur</b>: ruten slutter ved første stopp igjen – på kartet, i lengdene, i forhåndsvisningen og i GPX-filen.</li>
+ <li>Hvert stopp viser etappen fra forrige (avstand og retning), og ruten viser samlet lengde. Er en beregnet rute godtatt, viser hvert stopp i stedet avstanden langs den og <b>tiden etappen tar</b>. Klikk på et stopp for å se det i kartet.</li>
+ <li>Ruten tegnes på kartet som en lilla stiplet linje med nummererte stopp, og huskes så lenge fanen er åpen.</li>
+</ul>
+<h3><b>Forhåndsvis og last ned</b></h3>
+<p><b>Forhåndsvis</b> zoomer kartet til hele ruten – i den delen av kartet som vinduet, verktøylinjen, sidepanelet og andre knapper lar være fri – og viser nøyaktig hva GPX-filen inneholder: navnet hvert stopp får i GPS'en (GC-koden eller nålens navn), cachens navn som beskrivelse, koordinatene, etappen og samlet avstand. Klikk så <b>Last ned GPX-rute</b>.</p>
+<ul>
+ <li>Filen er en vanlig <b>GPX 1.1-rute</b> som Garmin og de fleste GPS-er kan importere.</li>
+ <li>Kryss av for <b>Fulle cachedata</b> (av som standard) for å ta med hver geocache som en full <b>papirløs</b> geocache, i samme format som GPX-filen på cachesiden (GPX 1.0 med Groundspeaks utvidelse): beskrivelse, hint, attributter, størrelse, D/T, logger og cachens ekstra veipunkter, etterfulgt av ruten. Med Premium brukes cachesidens egen GPX-fil; ellers leses det samme fra cachesiden (med loggene som vises der). Løste cacher får de løste koordinatene. Det tar litt tid, siden hver cacheside hentes.</li>
+ <li>Geocacher får Garmins <b>Geocache</b>-symbol (<b>Geocache Found</b> når du har funnet dem), merkenåler den <b>blå nålen</b>.</li>
+ <li>Filen får dato og klokkeslett i navnet, f.eks. <code>route-2026-10-28-121305.gpx</code>, så flere ruter samme dag ikke overskriver hverandre.</li>
+ <li>Avstandene er i luftlinje – veien dit er alltid lengre – til du godtar en <b>beregnet rute</b> (nedenfor); da måles de langs den.</li>
+</ul>
+<figure class="fig" style="--w:90px"><img src="img/no-16_4.png" alt=""><figcaption>Høydeprofilen for en rundtur.</figcaption></figure>
+<p>Vinduet kan – som alle dialogene – gjøres høyere eller lavere ved å dra i øvre eller nedre kant, og det tilpasser seg små skjermer.</p>
+<p>I forhåndsvisningen</p>
+<h3><b>Høydeprofil</b></h3>
+<p>viser <b>Høydeprofil</b> høydene langs hele ruten, med stoppene merket med nummer (også returen til start ved en rundtur). Under står total <b>stigning ↑</b> og <b>fall ↓</b>, laveste og</p>
+<p>høyeste punkt, og lengden. Endringer under 2 m teller ikke, så små ujevnheter ikke legges sammen.</p>
+<p>Uten at du åpner profilen, viser tabellen i forhåndsvisningen <b>stigning og fall for hver</b> <b>etappe</b> (f.eks. ↑ 43 m ↓ 12 m), og totalen for ruten under tabellen – så snart høydene er hentet.</p>
+<p>Før musa langs profilen for å se avstand og høyde der – en lilla prikk viser samme sted på kartet.</p>
+<p>Høydene i Norge kommer fra <b>Kartverkets</b> nasjonale høydemodell, ellers fra <b>Open-Meteo</b> (Copernicus, 90 m). Profilen følger de <b>rette</b> <b>linjene</b> mellom stoppene – eller, når en rute er beregnet, den <b>beregnede ruten</b>.</p>
+<h3><b>Ruteberegning</b> <span class="new">NYHET</span></h3>
+<figure class="fig" style="--w:196px"><img src="img/no-17_2.png" alt=""><figcaption>Før beregning.</figcaption></figure>
+<p>I forhåndsvisningen finner <b>Beregn rute</b> veien langs veger og stier – fra OpenStreetMap-data. Velg hvordan du ferdes:</p>
+<figure class="fig" style="--w:196px"><img src="img/no-18_2.png" alt=""><figcaption>En beregnet rute som spilles av.</figcaption></figure>
+<ul>
+ <li><b>Med bil</b> – du kjører fra start så langt vegen går mot hver geocache, går så til fots på sti, det siste stykket i luftlinje fra nærmeste punkt på stien, og tilbake til bilen. Bilen kjører aldri på traktorveg, sti eller skiløype, forbi en bom eller på en veg stengt for bil; der settes den igjen, merket <b>P</b> i kartet. Mellom to cacher som nås fra samme sted, går du; bilen kjøres alltid helt fram til siste stopp.</li>
+ <li><b>Med sykkel</b> – det samme, men sykkelen kan også bruke stengt veg, traktorveg, sykkelveg, gangveg og ridesti – ikke sti (med mindre den er merket for sykkel), trapp eller skiløype. Der sykkelruten ville gått langt rundt, kan sykkelen heller settes igjen der gåruten forlater siste veg, om det går raskere totalt.</li>
+ <li><b>Med bil og sykkel</b> – sykkelen henger på bilen: kjør så langt bilen kan, ta av sykkelen og sykle videre så langt sykkelen kan, gå resten – og sykle tilbake til bilen.</li>
+ <li><b>Til fots</b> – langs veger og stier hele veien.</li>
+</ul>
+<p><b>Rett på i terrenget inntil</b> (aldri, 100 m … 2 km) bestemmer hvor langt du vil gå utenfor sti der stien går langt rundt; det brukes bare der det er raskere å gå rett på (utenfor sti ca. 1,8 km/t, på sti ca. 5 km/t). Punktet der du går inn på eller forlater en sti, velges etter tid, ikke bare det nærmeste. En rett strekning går <b>aldri over vann</b> og ikke gjennom bebyggelse eller dyrket mark – der går du gater og veger: skriptet leser fargene i kartet – den jevne lyseblå fargen på innsjøer og elver, bebyggelse, bygninger og dyrket mark – i Kartverkets topografiske kart (OpenStreetMap-kartet utenfor Norge), og går rundt i stedet. Kan et stopp bare nås over vann – en cache på en øy, for eksempel – blir det ingen rute.</p>
+<p>Med <b>Foreslå en kortere rekkefølge på stoppene</b> på sjekker skriptet om en annen rekkefølge er raskere (første stopp ligger fast; det siste på en rundtur eller når det ikke er en cache). Er det det, viser det den nye rekkefølgen og tiden du sparer, og spør: <b>Endre rekkefølgen</b> eller <b>Behold min</b> <b>rekkefølge</b>.</p>
+<p>Den beregnede ruten <b>vises først bare i kartet</b> – lilla med bil, grønn med sykkel, oransje til fots og oransje stiplet rett på i terrenget – med total lengde, tid og hvor mye som kjøres, sykles og gås; høydeprofilen følger den med en gang. Med <b>Gjennomsiktig</b> (0–90 %) skinner kartet gjennom ruten. <b>Godta</b> den (den merkes da <b>✓ Godtatt</b>) for å måle etappene og totalen langs den – med tid per etappe og samlet tid i tabellen – og for å få den med i GPX-filen som spor – til enhver app som følger et GPX-spor, som OsmAnd eller Locus. Ruten og sporet får navn med dato og klokkeslett til sekundet, så hver av dem får sitt eget navn i GPS'en. <b>Forkast</b> gir luftlinjene tilbake; endrer du stoppene, forkastes den også.</p>
+<p><b>Spill av ruten</b> flytter deg langs ruten i kartet – bil, sykkel eller fotgjenger – i ×10 … ×600 sanntid, med pause, stopp og en glidebryter for å hoppe; kartet følger med, og det gjør også markøren i høydeprofilen.</p>
+<p><b>Fart.</b> Tidene på veg og sti kommer fra rutetjenesten (OSRM), og skriptet legger dem sammen:</p>
+<ul>
+ <li><b>Bil</b> – etter vegtype og fartsgrense i OpenStreetMap, som en vanlig bilnavigator.</li>
+ <li><b>Sykkel</b> – ca. 15 km/t på veg, lavere på grus, traktorveg og dårlig dekke. Der skriptet selv sykler langs gåruten, ca. 14 km/t.</li>
+ <li><b>Til fots på sti og veg</b> – ca. 5 km/t.</li>
+ <li><b>Til fots rett på i terrenget</b> – 1,8 km/t, satt av skriptet.</li>
+</ul>
+<p>Høydeforskjeller regnes ikke med, så sykling i kupert terreng blir nok litt for raskt beregnet. Når skriptet vurderer om bilen eller sykkelen skal flyttes, legger det til ett minutt for å parkere; det minuttet er ikke med i tiden som vises.</p>
+<div class="note"><p><b>Stier mangler ofte.</b> Ruteberegningen kjenner bare vegene og stiene i OpenStreetMap, og mange steder mangler de fleste stiene der – de prikkede stiene i de norske kartene kommer fra Kartverket og finnes ofte ikke i OpenStreetMap. Der de mangler, kan ruten få merkelige veivalg: lange omveier rundt via stiene den kjenner, eller lange strekninger rett på i terrenget. Øk da <b>Rett på i terrenget inntil</b>, eller sett en nål der du vil at ruten skal gå, og beregn på nytt.</p></div>
+<figure class="fig" style="--w:168px"><img src="img/no-20_2.png" alt=""><figcaption>Cachelisten.</figcaption></figure>
+<p class="small">Veger og stier: OSRM (routing.openstreetmap.de); sjekken av vegtyper, bommer og skiløyper: Valhalla (valhalla1.openstreetmap.de) og OpenStreetMaps API – alle drevet av FOSSGIS / OpenStreetMap. Vann: kartflisene til Kartverket (cache.kartverket.no) eller OpenStreetMap (tile.openstreetmap.org).</p>
+<h3><b>Cacheliste</b> <span class="new">NYHET</span></h3>
+<p>På <code>/map</code> åpner <img class="ic" src="img/no-20-0.png" alt=""> <b>Geocacher på kartet</b> en liste over geocachene i kartutsnittet, nærmest midten først. (<code>/play/map</code> har sin egen liste.)</p>
+<ul>
+ <li>Hver linje har typeikon, GC-kode og navn, merkelappene <b>Løst</b>, <b>Funnet</b> og <b>Eiet</b>, D/T, ♥ favorittpoeng og avstand.</li>
+ <li>Listen <b>følger kartet</b> – den endres når du flytter eller zoomer, og når nettstedets cachesøk svarer. Den følger også nettstedets <b>filtre i</b> <b>sidepanelet</b> (cachetyper, My Finds, My Hides, My DNFs) og knappen <img class="ic" src="img/no-20-3.png" alt=""> som skjuler alle geocacher. Skriv i feltet for å filtrere på kode eller navn.</li>
+ <li>Navn, D/T, favorittpoeng og merkelapper hentes fra nettstedets cachesøk på alle zoomnivåer mens listen er åpen.</li>
+ <li><b>Pek på en cache i kartet</b>, så markeres linjen dens i listen.</li>
+ <li><b>Klikk på en linje</b> for å zoome helt inn til cachen, ved siden av listen. Den får en myk gul glød på kartet, og en løst cache du har funnet får merket sitt på det løste stedet. Klikk på samme linje igjen for å slippe den og gå tilbake til kartutsnittet du hadde.</li>
+ <li>Knappen til høyre på hver linje åpner <b>cachesiden i en ny fane</b>.</li>
+</ul>
+<p>Cachelisten og rutevinduet står <b>øverst til høyre</b> (standard) eller <b>øverst til venstre</b> på kartet – velg i Innstillinger – så høye som kartet tillater. De holder seg unna nettstedets sidepanel og følger det når det åpnes og lukkes, og de to knappene bytter mellom dem.</p>
+<h2><b>12. 161 m-sirkler</b></h2>
+<p>Slå på <b>161 m-sirkler</b> i <img class="ic" src="img/no-20-8.png" alt=""> <b>Vis på kartet</b> for å tegne en sirkel på 161 m (0,1 mile) – minsteavstanden mellom cacher i retningslinjene – rundt hvert sted der noe er utplassert:</p>
+<figure class="fig" style="--w:119px"><img src="img/no-21_2.png" alt=""></figure>
+<ul>
+ <li><b>Tradisjonelle cacher</b>, på de nøyaktige publiserte koordinatene.</li>
+ <li><b>Cacher med løste (korrigerte) koordinater</b>, på den løste posisjonen.</li>
+ <li><b>Fysiske steg og endelige plasseringer</b> i multier, mysterier, Wherigoer og letterboxer som eieren har gjort synlige på cachesiden.</li>
+</ul>
+<p>Der ingen cacheikon viser stedet, tegnes et lite klikkbart merke midt i sirkelen. Merkene ved løste cacher slås av og på for seg i <img class="ic" src="img/no-21-0.png" alt=""> <b>Vis på kartet</b>; merker for steg og endelige plasseringer vises bare sammen med sirklene.</p>
+<ul>
+ <li><b>Gult smilefjes med en grønn hake</b> (nede til venstre), like stort som nettstedets eget Merket ved en løst cache du har funnet. «funnet»-ikon – en løst cache du har funnet (og ikke eier): ikonet er flyttet tilbake til de publiserte koordinatene.</li>
+ <li><b>Blått, rundt merke med ?</b> – en løst cache der ikonet ikke er på kartet akkurat nå.</li>
+ <li><b>Liten blå prikk</b> – et fysisk steg; <b>liten grønn</b> <b>prikk</b> – en endelig plassering.</li>
+</ul>
+<p>Hold musen over et merke for å se GC-kode, navn og <b>Endelig plassering</b>; klikk for å åpne cachesiden i en ny fane. Høyreklikk gir de nøyaktige koordinatene. Med favorittpoeng og D/T på får merket dem også.</p>
+<p>Løste cacher <b>huskes</b> i nettleseren (60 dager), så merket vises også når de publiserte koordinatene ligger langt utenfor kartet – typisk for Wherigoer og mysterier. Skriptet lærer en cache første gang de publiserte koordinatene er i bildet fra zoom 15.</p>
+<p>Løste cacher der ikonet allerede står på de korrigerte koordinatene – dine egne, og de du ikke har funnet ennå – beholder nettstedets ikon. Et usynlig merke over det gir den samme teksten (<b>Endelig plassering</b>) i stedet for nettstedets, og klikk åpner fortsatt nettstedets egen boble. Nettstedets «løst»-ikon sier ikke noe om cachetypen, så et <b>lite typeikon</b> – det samme som i cachelista – kan vises nede til høyre på det, og på våre merker ved løste cacher du har funnet (Innstillinger, av som standard).</p>
+<ul>
+ <li>Sirklene vises fra <b>zoomnivå 15</b>; merkene ved løste cacher allerede fra zoom 10 – som blå prikker på 10–11, små på 12–13 og i full størrelse fra 14 (favorittpoeng og D/T fra 15). De følger kartet når du flytter og zoomer, en sirkel tegnes så snart en del av den kan være synlig, og de hindrer aldri klikk på cacher.</li>
+ <li>Enkeltsirkler hvor som helst: høyreklikk → <img class="ic" src="img/no-21-5.png" alt=""> <b>161 m-sirkel</b>.</li>
+ <li><b>Filtre:</b> cacher du utelater i nettstedets sidepanel på /map – <b>Mine funn</b>, <b>Mine gjemte</b> eller cachetyper – mister også sirkler, merker og favorittpoeng, og får dem tilbake når filteret slås på igjen. Dine egne cacher kjennes igjen på eiernavnet (sammenlignes bare i nettleseren din). <img class="ic" src="img/no-21-8.png" alt=""> <b>Skjul alle geocacher</b> skjuler også sirklene.</li>
+</ul>
+<p><b>Slik finnes cachetypene</b>: kartet selv forteller bare GC-koden, så skriptet spør geocaching.coms eget cachesøk (det /play/map bruker) én gang for hvert område du ser på, ved hvert besøk. Svaret gir hver caches type, de nøyaktige publiserte koordinatene, om du har funnet den, og eventuelle koordinater du har korrigert. Krever søket innlogging, brukes nettstedets egen kortlivede tilgangsnøkkel – den lagres bare i minnet. Cachetypene huskes i nettleseren; løste koordinater hentes på nytt ved hvert besøk, siden du kan endre dem.</p>
+<p><b>Slik finnes stegene</b>: kartet viser ikke tilleggsveipunkter, så skriptet leser listen <i>Additional Waypoints</i> på cachesiden til hver multi, hvert mysterium, hver Wherigo og letterbox i bildet – to sider om gangen, fra zoom 15, og hvert resultat huskes i 14 dager. Steg der eieren har skjult koordinatene (???), kan ikke finnes. Et fysisk steg uten egne koordinater regnes som å ligge på de publiserte koordinatene; en endelig plassering uten koordinater vises ikke.</p>
+<p><b>Slik finnes posisjonene</b>: på /map tegnes cachene som bilder, men nettstedet laster også et skjult rutenett som forteller hvilken cache som dekker hver celle på 4 × 4 piksler. Til cachesøket har svart for et område, brukes midten av cellene til hver cache – nøyaktig til noen få meter. På /play/map er cachene vanlige kartmarkører, og de nøyaktige posisjonene brukes.</p>
+<h2><b>13. Cachesider</b></h2>
+<p>På cachesidene viser det lille kartet bakgrunnskartet og overleggene du har valgt, med samme demping og synlighet. Kartet beholder nettstedets eget utsnitt og zoomnivå. Ingenting annet legges til, og cachesiden endrer aldri valget du har lagret.</p>
+<h2><b>14. Språk</b></h2>
+<p>Grensesnittet finnes på <b>norsk (bokmål)</b> og <b>engelsk</b>. Som standard følger språket geocaching.com og nettleseren (norsk hvis en av dem er bokmål, nynorsk eller «no»). Bytt med <b>Språk / Language</b> i <img class="ic" src="img/no-22-0.png" alt=""> <b>Innstillinger</b>; endringen gjelder straks og huskes.</p>
+<h2><b>15. Tastatur og mus</b></h2>
+<table>
+<tr><th><b>Tast / handling</b></th><th><b>Virkning</b></th></tr>
+<tr><td><kbd>/</kbd></td><td>Åpne søket (når du ikke skriver i et felt).</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Lukk et vindu; stopp måling.</td></tr>
+<tr><td>Dra i tittellinjen på en dialog</td><td>Flytt dialogen.</td></tr>
+<tr><td><kbd>Enter</kbd> i projiseringsdialogen Sett ut det projiserte punktet.</td><td></td></tr>
+<tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></td><td>Velg et søketreff.</td></tr>
+<tr><td><kbd>+</kbd> <kbd>−</kbd>, musehjul</td><td>Zoom (Leaflets egne taster).</td></tr>
+<tr><td>Høyreklikk på kartet</td><td>Koordinater og punktverktøy.</td></tr>
+<tr><td>Høyreklikk på <img class="ic" src="img/no-22-1.png" alt="">-knappen</td><td>Endre eller fjern hjemadressen.</td></tr>
+<tr><td>Dobbeltklikk under måling</td><td>Start en ny målelinje.</td></tr>
+<tr><td>Klikk på koordinatvisningen</td><td>Bytt koordinatformat.</td></tr>
+<tr><td>Skriv i zoomfeltet, <kbd>Enter</kbd></td><td>Zoom til det nivået (<kbd>Esc</kbd> angrer).</td></tr>
+<tr><td>Klikk på et merke i en 161 m- sirkel</td><td>Åpne cachesiden i en ny fane.</td></tr>
+<tr><td>Klikk på GC-koden i boblen</td><td>Åpne cachesiden i en ny fane.</td></tr>
+<tr><td>Dra i i kartlagpanelet, eller <kbd>↑</kbd> <kbd>↓</kbd> på det</td><td>Endre rekkefølgen på kartene.</td></tr>
+</table>
+<h2><b>16. Feilsøking</b></h2>
+<table>
+<tr><th><b>Problem</b></th><th><b>Hva du gjør</b></th></tr>
+<tr><td>Et kartlag viser ingenting</td><td>Åpne det med og trykk <b>Forhåndsvis på kartet</b>: flistelleren viser om flisene lastes. Sjekk zoomområdet og, for WMS, lagnavnet. Mange tjenester dekker bare visse områder.</td></tr>
+<tr><td>«Fant ingen cacheposisjoner på kartet ennå»</td><td>Nettstedet kan ha endret hvordan cachene tegnes. Kjør <code>gcctReport()</code> (se under) og send resultatet.</td></tr>
+<tr><td>Høyreklikk fester seg ikke til en cache, eller viser ≈</td><td>Høyreklikk på cachen og kjør så <code>gcctSnapTest('GC…')</code> med koden: den viser hva skriptet vet om cachen (publiserte og korrigerte koordinater, om søket returnerte den) og hvor boblen kan feste seg.</td></tr>
+<tr><td>Ingen sirkler ved en multis fysiske steg</td><td>Kjør <code>gcctStageTest('GC…')</code> med cachens kode: den viser veipunktlisten skriptet fant på cachesiden og stegene det plukket ut.</td></tr>
+<tr><td>Ingen 161 m-sirkler, eller «cachetypene er ikke kjent ennå»</td><td>Kjør <code>gcctCacheDebug()</code> i konsollen. Den viser om cachesøket svarte og hvilke felt svaret inneholdt – bare feltnavn og antall, ingen verdier eller personopplysninger.</td></tr>
+<tr><td>Doble eller overlappende knapper</td><td>Kjør <code>gcctReport()</code>; listen <i>siteButtons</i> viser hvordan hver av nettstedets knapper ble tolket.</td></tr>
+<tr><td>Vil ha nettstedets egne knapper tilbake</td><td>Kryss av for <b>Vis også geocaching.coms egne kartknapper</b> i <img class="ic" src="img/no-23-0.png" alt=""> <b>Innstillinger</b>.</td></tr>
+<tr><td>Søket sier at en tjeneste ikke svarte</td><td>Et midlertidig problem hos Kartverket eller OpenStreetMap; prøv igjen litt senere.</td></tr>
+</table>
+<h3><b>Diagnoserapport</b></h3>
+<p>Åpne nettleserkonsollen (<kbd>F12</kbd> → Konsoll) på kartsiden og skriv <code>gcctReport()</code>. En kort rapport skrives ut og kopieres til utklippstavlen. Den inneholder siden, Leaflet-versjonen, skriptversjonen, nettstedsknappene som ble funnet (med status), et sammendrag av kartets lag og kartrutene – ingen personopplysninger. Feil fra skriptet logges med prefikset <code>[gcct]</code>.</p>
+<h2><b>17. Slik virker det</b></h2>
+<h3><b>Finne kartet</b></h3>
+<p>Skriptet starter før siden og fanger opp Leaflet i det øyeblikket siden definerer biblioteket. Deretter kjenner det igjen nettstedets kart når det lages, eller – hvis kartet allerede finnes – neste gang kartet sender en hendelse. Bytter appen ut kartet (navigering i en enkeltsideapp), følger skriptet med. Skriptets eget oppsett kjøres først når nettstedet er ferdig med sitt, og feil i skriptet når aldri nettstedets kode.</p>
+<h3><b>Rekkefølgen på kartlagene</b></h3>
+<p>Både geocaching.com-bakgrunnen og cacheikonene kan tegnes som fliser i samme Leaflet-rute. Skriptet fjerner aldri nettstedets lag. Det finner nettstedets bakgrunn – fra nettstedets kartvelger, ellers som nettstedets nederste flislag pluss lag fra kjente kartleverandører – og legger lagene i denne rekkefølgen: nettstedets bakgrunn → ditt bakgrunnskart → dine overlegg → forhåndsvisning → alle andre flislag fra nettstedet, som cacheflisene (løftet øverst). Bakgrunnskartet ditt er alltid helt dekkende, og mens et av bakgrunnskartene dine er valgt, skjules nettstedets egen bakgrunn (på /play/map slås WebGL-kartets lag av ett for ett, mens eventuelle cachelag får være), så den ikke kan skinne gjennom mens flisene dine lastes. Demping bruker et fargefilter (inverter, mørkne, inverter) som bleker kartet nøyaktig mot hvitt; ingen ekstra elementer legges til.</p>
+<h3><b>Skjøter mellom flisene</b></h3>
+<p>Med skjermskalering som 110 % eller 125 % og under zoomanimasjoner kan nettleseren etterlate hårfine glipper mellom kartflisene. Skriptets egne fliser tegnes derfor 1 piksel større enn størrelsen Leaflet gir dem (så naboflisene overlapper) og med vanlig blanding – Leaflet 1.9 sin egen blandingsmodus ville lagt sammen de overlappende stripene til lyse linjer. Nettstedets egne lag blir stående nøyaktig som de er.</p>
+<h3><b>Nettstedets knapper</b></h3>
+<p>Små knapper som ligger over kartet, finnes ut fra det som faktisk er tegnet langs kartets kanter, og ut fra ekte knapper og ikoner. De kjennes igjen på tekst, etiketter, id-er, klassenavn og ikonnavn. Knapper for zoom og posisjon skjules (verktøylinjen har dem); nettstedets kartstilknapp gjøres usynlig, men blir stående på plass, og panelet åpner menyen dens. Knapper i sidepaneler og lister røres aldri. Som sikkerhetsregler vurderes bare elementer nær kartets venstre eller høyre kant, aldri et element blant mange like (som cacheikoner), og hvis mer enn to elementer ser ut som samme slags knapp, røres ingen av dem. Letingen etter nettstedets knapper kjøres bare mens siden lastes og når kontrollene endres.</p>
+<h3><b>Sideskjemaet</b></h3>
+<p>Kartsiden /map ligger inne i ett stort ASP.NET-skjema. Alle skriptets knapper er laget slik at de ikke sender skjemaet, og en innsending som starter fra skriptets kontroller, avbrytes – siden lastes derfor aldri på nytt.</p>
+<h3><b>Lagrede innstillinger</b></h3>
+<table>
+<tr><th><b>Nøkkel (localStorage)</b></th><th><b>Innhold</b></th></tr>
+<tr><td><code>gcct.state</code></td><td>Valgt bakgrunnskart og overlegg, demping av bakgrunnskartet, synlighet for overleggene, om nettstedets knapper vises, fjernede innebygde kart, verktøylinjens plassering, innstillinger for favorittpoeng, om zoom og koordinater vises, valget for høyreklikk på /play/map, siden for cachelisten og rutevinduet.</td></tr>
+<tr><td><code>gcct.customLayers</code></td><td>Dine egne kartlag.</td></tr>
+<tr><td><code>gcct.fmt</code></td><td>Koordinatformatet i koordinatvisningen (boblen åpnes alltid i DMM).</td></tr>
+<tr><td><code>gcct.autoCircles</code></td><td>161 m-sirkler av/på.</td></tr>
+<tr><td><code>gcct.marks</code></td><td>Merker ved løste cacher av/på (uten sirkler).</td></tr>
+<tr><td><code>gcct.cacheTypes</code></td><td>Cachetypen for hver GC-kode som er sett (så den ikke må slås opp igjen).</td></tr>
+<tr><td><code>gcct.tab</code></td><td>Kartlagpanelets sist brukte fane.</td></tr>
+<tr><td><code>gcct.stages</code></td><td>Fysiske steg og endelige plasseringer lest fra cachesider (huskes i 14 dager).</td></tr>
+<tr><td><code>gcct.solvedCaches</code></td><td>Dine løste cacher: korrigert posisjon, funnet eller ikke, navn, favorittpoeng og D/T (huskes i 60 dager).</td></tr>
+<tr><td><code>gcct.handoff</code></td><td>Utsnittet på kartet du sist var på og om sidepanelet var sammenfelt, for bytte mellom /map og /play/map (brukes i 5 minutter).</td></tr>
+<tr><td><code>gcct.dlgPos</code></td><td>Hvor du sist dro kartlagpanelet, Finn et sted, Innstillinger, Hjelp og Vis på kartet.</td></tr>
+<tr><td><code>gcct.panelSels</code></td><td>Det skriptet har lært om nettstedets sidepanel på /map og /play/map (hvilket element og hvilken knapp, og hvor langt det felles sammen), for å starte med det sammenfelt.</td></tr>
+<tr><td><code>gcct.route</code></td><td>Ruten din – bare for denne fanen i nettleseren (sessionStorage), glemmes når den lukkes. <code>gcct.routeLoop</code> og <code>gcct.gpxFull</code> husker valgene <i>Tilbake til start</i> og <i>Fulle cachedata</i> på samme måte.</td></tr>
+<tr><td><code>gcct.pins</code></td><td>Merkenålene dine med navn – bare for denne fanen i nettleseren (sessionStorage), glemmes når den lukkes.</td></tr>
+<tr><td><code>gcct.lang</code></td><td>Språk (en / no).</td></tr>
+<tr><td><code>gcct.home</code></td><td>Hjemadressen din (navn og posisjon).</td></tr>
+<tr><td><code>gcct.projUnit</code></td><td>Sist brukte avstandsenhet ved projisering (m / km / ft).</td></tr>
+</table>
+<h2><b>18. Personvern og nettverksbruk</b></h2>
+<p>Skriptet samler ikke inn og sender ikke personopplysninger, og det har ingen egen server. Det kontakter bare:</p>
+<ul>
+ <li><b>flis- og kartserverne</b> for kartlagene du slår på (eller forhåndsviser);</li>
+ <li><b>ws.geonorge.no</b> (Kartverket) for søk etter stedsnavn og adresser, mens du skriver;</li>
+ <li><b>photon.komoot.io</b> (OpenStreetMap-data) for steder i utlandet, mens du skriver (fra tre bokstaver);</li>
+ <li>en karttjenestes <b>capabilities</b>-adresse når du legger til et WMS- eller WMTS-lag;</li>
+ <li><b>geocaching.com</b>s eget cachesøk for området du ser på, når 161 m-sirklene, merkene eller favorittpoengene er på (for å finne cachetypene, de nøyaktige posisjonene, favorittpoengene og dine løste koordinater).</li>
+ <li><b>cachesidene</b> til multier, mysterier, Wherigoer og letterboxer i bildet, fra zoom 15 med sirklene på, for å lese de synlige fysiske stegene;</li>
+ <li><b>cachesiden</b> til én cache når du høyreklikker på den og de nøyaktige koordinatene ikke er kjent ennå (én gang per besøk);</li>
+ <li>fra zoom 15, <b>cachesidene</b> til cacher i bildet som cachesøket utelot (typisk dine egne) – to om gangen, høyst 20 per utsnitt, én gang per besøk – for å lese de nøyaktige publiserte og korrigerte koordinatene;</li>
+ <li><b>cachesidene</b> (og, med Premium, GPX-filene deres) til geocachene i ruten din, bare når du laster ned ruten med <b>Fulle cachedata</b> på – tre om gangen;</li>
+ <li><b>routing.openstreetmap.de</b>, <b>valhalla1.openstreetmap.de</b> og <b>api.openstreetmap.org</b> når du beregner en rute – bare koordinatene til ruten sendes – og kartfliser fra <b>cache.kartverket.no</b> eller <b>tile.openstreetmap.org</b> langs de rette strekningene, for å se om de går over vann, gjennom bebyggelse eller dyrket mark.</li>
+</ul>
+<p>Posisjonen din hentes bare når du klikker <img class="ic" src="img/no-26-8.png" alt="">, via nettleserens vanlige spørsmål om tillatelse. <b>Google</b> <b>Street View</b> åpnes bare når du klikker på det i høyreklikkmenyen.</p>
+<h2><b>19. Kjente begrensninger</b></h2>
+<ul>
+ <li>Bare karttjenester i Web Mercator (EPSG:3857) kan vises, fordi geocaching.com-kartet bruker den projeksjonen. WMTS-lag i UTM-flissett listes derfor ikke opp.</li>
+ <li>Gjenkjenning av nettstedets knapper og cacheposisjoner avhenger av hvordan geocaching.com bygger sidene sine; en ny utforming kan kreve en oppdatering (<code>gcctReport()</code> hjelper).</li>
+ <li>Fysiske steg der eieren har skjult koordinatene, kan ikke finnes, og cachesiden sier ikke om noe er utplassert på de publiserte koordinatene til en multi eller et mysterium – bruk en enkeltsirkel (høyreklikk) der.</li>
+ <li>Hvilke cacher som får 161 m-sirkel, avhenger av geocaching.coms cachesøk; endrer nettstedet det, viser <code>gcctCacheDebug()</code> hva det sender.</li>
+ <li>UTM-søket godtar ikke negative østkoordinater; bruk grader for punkter langt utenfor en sone.</li>
+ <li>Hjemadressen hentes ikke fra geocaching.com-profilen din; du angir den én gang i skriptet.</li>
+ <li>Strava-varmekart og dekningskart for mobil finnes ikke som åpne tjenester.</li>
+</ul>
+<h2><b>20. Versjonshistorikk</b></h2>
+<table>
+<tr><th><b>Versjon</b></th><th><b>Endringer</b></th></tr>
+<tr><td>1.0</td><td>Egne XYZ-flislag på kartet; Kartverket og andre ferdige kartlag.</td></tr>
+<tr><td>1.1</td><td>Koordinatvisning (DMM/DD/DMS/UTM), gå til koordinater, måling, 161 m-sirkler, projisering, posisjon, fullskjerm.</td></tr>
+<tr><td>1.2</td><td>Redigeringsvindu for kartlag: gjenkjenning av adresser, oversikt over WMS/WMTS-lag, forhåndsvisning, redigering/kopiering, import/eksport.</td></tr>
+<tr><td>1.3–1.4</td><td>Kartlagene legges under cacheflisene; nettstedets lag fjernes aldri; støtte for Leaflet 0.7; pålitelige verktøyklikk; vinduer over sidepanelet; ingen skjemainnsending.</td></tr>
+<tr><td>1.5</td><td>Søk etter steder, adresser og koordinater (Kartverket, OpenStreetMap).</td></tr>
+<tr><td>1.6–1.7</td><td>Flere kartlag (OSM, CyclOSM, Esri Topo, Kartverkets turruter og eiendomsgrenser, terrengskygge, Waymarked, OpenSeaMap); tydeligere og mer lesbare vinduer.</td></tr>
+<tr><td>1.8</td><td>Automatiske 161 m-sirkler rundt hver geocache.</td></tr>
+<tr><td>1.9</td><td>Støtte for <code>/play/map</code>; diagnoserapport.</td></tr>
+<tr><td>1.10–1.13</td><td>Strekikoner; én verktøylinje med alle kontroller; nettstedets knapper samlet uten duplikater; plassering uten kollisjoner.</td></tr>
+<tr><td>1.14</td><td>Norsk (bokmål) grensesnitt.</td></tr>
+<tr><td>1.15</td><td>Valgt kart på cachesidene.</td></tr>
+<tr><td>1.16</td><td>UTM-sone 35; nøyaktig UTM-omregning (Krüger-rekker).</td></tr>
+<tr><td>1.17</td><td>Demping bleker mot hvitt; geocaching.com-kartet skinner ikke lenger gjennom.</td></tr>
+<tr><td>1.18</td><td>Søketreff i én samlet liste (steder, adresser, utland); steder i utlandet mens du skriver, via Photon.</td></tr>
+<tr><td>1.19</td><td>Fjerne innebygde kart (og hente dem tilbake); hjemknapp; cachefliser fra ukjente adresser holdes alltid over kartet ditt; demping med fargefilter; sikrere gjenkjenning av nettstedets knapper og langt mindre leting; ingen rutenettlinjer mellom flisene.</td></tr>
+<tr><td>1.20</td><td>Kartverket Sjøkart, CyclOSM og Waymarked-overleggene fjernet; én glidebryter per gruppe (demper det valgte bakgrunnskartet, høyst 50 %; synlighet for de valgte overleggene); høyreklikkboble med én koordinatlinje som åpnes i DMM; ingen skjøter mellom flisene ved skjermskalering; nettstedets egen posisjonsknapp på /play/map skjult.</td></tr>
+<tr><td>1.21</td><td>Nytt, helhetlig utseende: samme farger, knapper og felt i panelet, dialogene, boblen og verktøylinjen; dialoger med tittellinje du kan dra i; projisering i egen dialog med forhåndsvisning, enheter og kopiknapp; bekreftelsesdialoger i stedet for nettleserens bokser; valgte kart markert og glidebryterverdier i prosent; Sjømerker (OpenSeaMap) fjernet.</td></tr>
+<tr><td>1.22</td><td>De samme enkle svart-hvite strekikonene overalt – også i høyreklikkmenyen, kartlagpanelet, kopiknappene og dialogene – i stedet for emojier.</td></tr>
+<tr><td>1.23</td><td>Høyreklikkboblen festes til en geocache like ved og viser GC-kode og navn (nøyaktig på /play/map, beregnet på /map); GC-koden åpner cachesiden; boblen er bred nok for alle koordinatformater, med bedre plass rundt kopi- og lukkeknappen.</td></tr>
+<tr><td>1.24</td><td>Automatiske 161 m-sirkler bare rundt tradisjonelle cacher og cacher med løste koordinater (cachetyper og korrigerte koordinater fra geocaching.coms cachesøk); <code>gcctCacheDebug()</code> for feilsøking; MIT-lisens.</td></tr>
+<tr><td>1.25</td><td>Også geocaching.coms egne kart kan fjernes fra listen.</td></tr>
+<tr><td>1.26</td><td>Kartlagpanelet delt i tre faner: Geocaching, Bakgrunnskart og Overlegg.</td></tr>
+<tr><td>1.27</td><td>Dra kartene opp og ned for å endre rekkefølgen; overleggene tegnes i listens rekkefølge.</td></tr>
+<tr><td>1.27.1–2</td><td>Geocaching.coms eget kart skjules mens bakgrunnskartet ditt er valgt, også på /play/map – det skinner ikke lenger gjennom mens flisene lastes.</td></tr>
+<tr><td>1.28</td><td>Klikkbart merke på den løste posisjonen til cacher du har funnet (ikonet er tilbake på de publiserte koordinatene); sirklene blir værende når du zoomer inn.</td></tr>
+<tr><td>1.29</td><td>Nøyaktige publiserte koordinater fra cachesøket for festing av høyreklikkboblen og for sirklene på /map; runde blå merker.</td></tr>
+<tr><td>1.30</td><td>161 m-sirkler og merker for synlige fysiske steg og endelige plasseringer, lest fra cachesidene; <code>gcctStageTest()</code>.</td></tr>
+<tr><td>1.31</td><td><b>Fysisk her (161 m)</b> i høyreklikkmenyen; sirkler fra zoom 15.</td></tr>
+<tr><td>1.32</td><td>Zoomnivået over koordinatene – skriv et tall for å zoome. 1.32.2: jevnere 161 m-sirkler; «fysiske steg» i stedet for «fysiske poster». 1.32.3: det lille kartet på cachesidene beholder nettstedets utsnitt. 1.32.4: Google Street View i høyreklikkmenyen. 1.33.0: knapp som skjuler alle geocacher.</td></tr>
+<tr><td>1.33</td><td><b>Fysisk her (161 m)</b> fjernet. Senere: overleggsglidebryter 50–100 %; nøyaktige høyreklikk- koordinater for alle cacher, også dine egne (lest fra cachesiden); «Endelig plassering» ved musepekeren over løste cacher; finaler uten koordinater vises ikke; <code>gcctSnapTest()</code>.</td></tr>
+<tr><td>1.34</td><td>Knapp for merkene ved løste cacher uten sirkler; merker for steg bare sammen med sirklene.</td></tr>
+<tr><td>1.35–1.38</td><td>Verktøylinjen til høyre, venstre, øverst eller nederst, i én eller to rekker, og kan dras til en annen kant; holder seg klar av nettstedets søkepanel; dialogen <b>Innstillinger</b> (verktøylinje, språk, nettstedets knapper); dialogene og kartlagpanelet åpnes ved siden av verktøylinjen; nettstedets zoomknapper er alltid skjult; ikonene i verktøylinjen i nettstedets grønnfarge; verktøylinjen sentreres langs kanten og holder seg klar av andre knapper; dialogene og kartlagpanelet holder seg klar av andre knapper og kan dras.</td></tr>
+<tr><td>1.39</td><td><b>Favorittpoeng</b>: <span class="red">♥</span> og antallet i høyreklikkboblen og over cachene på kartet (fra zoom 15, bare cacher nettstedet viser, fra et minste antall du velger); zoom- og koordinatvisningen kan skjules; høyreklikk på /play/map åpner vår boble og fester seg til nettstedets WebGL- cacher. 1.39.14–25: filtrene i sidepanelet på /map (Mine funn, Mine gjemte, cachetyper) skjuler også sirkler, merker og favorittpoeng.</td></tr>
+<tr><td>1.40</td><td>Knapp <img class="ic" src="img/no-28-0.png" alt=""> i verktøylinjen for favorittpoengene på kartet.</td></tr>
+<tr><td>1.41</td><td>GC-koder i <b>Finn et sted</b>. 1.41.1–9: verktøylinjen holder seg sentrert ved siden av nettstedets sidepanel og bruker to rekker ved behov; avrundet høyre ende; blått hjerte i høyreklikkboblen.</td></tr>
+<tr><td>1.42</td><td><b>D/T</b> (vanskelighet/terreng) under cachene på kartet, med en knapp <img class="ic" src="img/no-28-1.png" alt=""> i verktøylinjen og en innstilling; knappene i dialogene er alltid synlige.</td></tr>
+<tr><td>1.43</td><td><b>FTF</b>-merke på cacher ingen har funnet ennå (Innstillinger).</td></tr>
+<tr><td>1.44</td><td>Høyreklikk festes også til merkenålene dine, med <b>Fjern merkenålen</b> i boblen; lettere tall for favoritter og D/T.</td></tr>
+<tr><td>1.45</td><td>Favorittpoeng og D/T ved merkene til løste cacher du har funnet; mindre merke; løste cacher huskes, så merket vises selv når de publiserte koordinatene er utenfor kartet.</td></tr>
+<tr><td>1.46</td><td>Merker ved løste cacher fra zoom 10: blå prikker på 10–11, små merker på 12–13, fulle merker fra 14.</td></tr>
+<tr><td>1.47</td><td>Merkenåler med navn, som huskes i fanen og kan eksporteres som <b>GPX</b> – én nål eller alle; nytt navn ved å klikke på navnet; nåler fra zoom 12.</td></tr>
+<tr><td>1.48–1.50</td><td><b>Ruter</b>: søkbar liste over geocacher og merkenåler (hele verden på GC-kode), valg i kartet, rekkefølge, forhåndsvisning og nedlasting som <b>GPX-rute</b> med Garmin-symboler; dialogene kan gjøres høyere/lavere ved å dra; kartlagpanelet åpnes ved siden av en sentrert verktøylinje.</td></tr>
+<tr><td>1.51</td><td>Ruter: <b>Tilbake til start</b> (rundtur), og <b>Fulle cachedata</b> – geocachene i GPX-filen som fulle papirløse cacher i Groundspeaks format.</td></tr>
+<tr><td>1.51.1–1.51.9</td><td>Rute: forhåndsvisning og stopp vises ved siden av vinduet; merkenåler som får nytt navn, får det i ruten også; vinduet så høyt som skjermen tillater; klokkeslett i navnet på GPX-filer (ruter og alle nåler); merkelappen <b>Eiet</b>; listen følger kartet.</td></tr>
+<tr><td>1.52–1.53</td><td><b>Cacheliste</b> (/map): geocachene på kartet, som følger kartet, med markering ved peking, zoom med glød og tilbake igjen, og en knapp for cachesiden. Cacheliste og rute øverst til høyre eller venstre (Innstillinger), unna sidepanelet; rutevinduet like smalt som listen; listen følger filtrene i sidepanelet og skjul-knappen; forhåndsvisningen av ruten holder seg unna alle knapper.</td></tr>
+<tr><td>1.54</td><td>Innstilling for å starte med nettstedets <b>sidepanel felt sammen</b> – tegnet sammenfelt fra første øyeblikk, uten bevegelse; en verktøylinje til venstre står ved siden av fliken til det sammenfelte panelet og holder seg midtstilt. Senere: 161 m-sirkler også for dine egne cacher på /play/map; tilleggene følger nettstedets egne ikoner; cachesøket er begrenset så nettstedets eget søk ikke feiler; kartlagpanelet, søket og innstillingene åpnes der du la dem; typeikon på løste cacher (Innstillinger); smilefjes-merke ved løste cacher du har funnet; merkeknappen uavhengig av sirklene; grønn kant på Rute og cachelista mens de er åpne.</td></tr>
+<tr><td>1.55</td><td>Et ryddigere brukergrensesnitt: verktøylinjen i grupper; <b>Vis på kartet</b> – ett panel for sirkler, merker, favorittpoeng, D/T, FTF og typeikoner, med zoomnivået hver vises fra; Innstillinger i deler; <b>Hjelp</b>; <b>trykk og hold</b> på berøringsskjermer for høyreklikkmenyen; måling festes til geocacher; <b>Forrige utsnitt</b> – opptil 10 steg tilbake; <b>trådkors</b> og <b>kopieringsknapp</b> i koordinatvisningen; UTM som sone, øst og nord (f.eks. 32V 597980 6643119), bare lokal sone; verktøylinjens plassering huskes for /map og /play/map hver for seg; på /play/map kan nettstedets ikon ved oppgitte koordinater skjules for løste cacher du har funnet; koordinatvisningen nederst til venstre på /play/map; verktøylinjen øverst eller nederst alltid sentrert; bytte mellom /map og /play/map beholder utsnittet og sidepanelet; hjemadressen i søkene; <b>høydeprofil</b> for ruter, med stigning og fall for hver etappe i forhåndsvisningen; «Glem ruten» lukker vinduet; fra zoom 15 trykkes <b>Søk i dette området</b> på /play/map for deg når du flytter kartet; går du hjem, merkes stedet med en pin som heter <b>Hjemme</b>, aldri adressen, og hjem står som en pin i rutevinduet.</td></tr>
+<tr><td>1.56</td><td><b>Ruteberegning</b> langs veger og stier – med bil, bil og sykkel, sykkel eller til fots, der bilen (eller sykkelen) settes igjen der vegen slutter; forslag til kortere rekkefølge; forhåndsvisning i kartet med parkeringsplasser, avspilling av ruten, og – når den er godtatt – etapper, total, høydeprofil og GPX-spor langs den. Rette strekninger går aldri over vann eller gjennom bebyggelse eller dyrket mark, og tegnes stiplet. Ingen rute til et stopp som bare kan nås over vann. <b>Rute herfra</b> i høyreklikkboblen. Navnet på en nål legger seg aldri over en cache. Tid per etappe i rutelista og samlet tid i forhåndsvisningen. Knapp i koordinatvisningen som åpner høyreklikkmenyen ved trådkorset.</td></tr>
+</table>
+<h2><b>21. Datakilder og kreditering</b></h2>
+<ul>
+ <li><b>Kartverket</b> – topografiske kart, Tur- og friluftsruter, Matrikkelen (CC BY 4.0), søk etter stedsnavn og adresser (Geonorge).</li>
+ <li><b>OpenStreetMap-bidragsytere</b> – OpenStreetMap, OpenTopoMap (med SRTM); stedssøk i utlandet via <b>Photon</b> fra komoot.</li>
+ <li><b>Esri</b> – World Imagery, World Topo Map, World Hillshade.</li>
+ <li><b>FOSSGIS</b> – ruteberegning med <b>OSRM</b> og <b>Valhalla</b> på OpenStreetMap-data.</li>
+ <li><b>Leaflet</b> – kartbiblioteket geocaching.com bruker.</li>
+</ul>
+<p class="small">Hver karttjeneste har sine egne bruksvilkår; krediteringen for lagene som vises, står i kartets kildelinje. Geocaching og geocaching.com er varemerker som tilhører Groundspeak, Inc. Dette skriptet er et uavhengig tillegg og har ingen tilknytning til Groundspeak. Skriptet er utgitt under MIT-lisensen.</p>
