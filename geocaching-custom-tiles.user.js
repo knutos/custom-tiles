@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.107
+// @version      1.56.109
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -392,7 +392,7 @@
     "Show on the map": "Vis på kartet",
     "Straight-line distances; the way there is always longer.": "Avstander i luftlinje; veien dit er alltid lengre.",
     "Added to the route: {name}": "Lagt til i ruten: {name}",
-    "Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.": "Geocacher i kartutsnittet og merkenålene dine, nærmest midten først – søk for å finne andre. Klikk på en – her eller på kartet – for å legge den til i ruten.",
+    "Geocaches on the map and your pins, nearest the middle first – search to find others. Click one here to add it to the route – or right-click a geocache or pin on the map and choose Add to route.": "Geocacher i kartutsnittet og merkenålene dine, nærmest midten først – søk for å finne andre. Klikk på en her for å legge den til i ruten – eller høyreklikk på en geocache eller nål i kartet og velg Legg til i ruten.",
     "Move down": "Flytt ned",
     "Remove": "Fjern",
     "Download GPX": "Last ned GPX",
@@ -5099,8 +5099,12 @@
       if (pinRecs.length) btn('download', T('All pins as GPX ({n})', { n: pinRecs.length }), () => downloadGpx(pinRecs, `pins-${fileStamp()}.gpx`));
       const st = snap && snap.kind === 'pin' && snap.marker && snap.marker.__pin ? { key: 'p:' + snap.marker.__pin.id, kind: 'pin', name: snap.marker.__pin.name, lat: snap.marker.__pin.lat, lng: snap.marker.__pin.lng }
         : snap && snap.code ? { key: 'c:' + snap.code, kind: 'cache', code: snap.code, name: (CACHE_INFO.get(snap.code) || {}).name || snap.name || '', lat: ll.lat, lng: ll.lng } : null;
+      // with a route under way: add this pin or geocache to it (this is how stops are added from the map)
+      // (a route under way: only "Add to route" – "Route from here" is for starting a new route, with none under way)
+      if (route.length && st && !route.some(r => r.key === st.key))
+        btn('route', T('Add to route'), () => { if (addStop(st)) toast(T('Added to the route: {name}', { name: st.kind === 'cache' ? st.code : st.name })); });
       // a new route starting at this pin or geocache – or at a new pin here – with the route window open to add the rest
-      btn('route', T('Route from here'), () => {
+      if (!route.length) btn('route', T('Route from here'), () => {
         let first = st;
         if (!first) { const m = namedPin(ll, null), r = m.__pin; first = { key: 'p:' + r.id, kind: 'pin', name: r.name, lat: r.lat, lng: r.lng }; }
         if (routeOpen()) api.closeDialog();
@@ -5108,7 +5112,6 @@
         addStop(first);
         openRoute();
       });
-      if ((route.length || routeOpen()) && st && !route.some(r => r.key === st.key)) btn('route', T('Add to route'), () => addStop(st));
       btn('compass', T('Project…'), () => projectFrom(ll));
       if (circles.some(o => o.c.distanceTo(ll) <= 161)) btn('x', T('Remove circle'), () => removeCircleAt(ll));
       else btn('ring', T('161 m circle'), () => circle161(ll));
@@ -8307,24 +8310,8 @@ ${calcTrk(stamp)}</gpx>
       if (c && c.code) { const i = CACHE_INFO.get(c.code) || {}; return { key: 'c:' + c.code, kind: 'cache', code: c.code, name: i.name || c.name || '', lat: c.ll.lat, lng: c.ll.lng }; }
       return null;
     }
-    // While the route window is open, a click on a geocache or pin on the map adds it (instead of the site's popup);
-    // one that is in the route already opens the site's popup as usual.
-    // Only a real click: the end of a drag of the map (the pointer moved, or held a while) is not one.
-    let downAt = null;
-    window.addEventListener('pointerdown', e => { downAt = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
-    window.addEventListener('click', e => {
-      if (!routeOpen() || e.button !== 0) return;
-      if (downAt && (Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6 || Date.now() - downAt.t > 700)) return;
-      const root = map.getContainer(), tgt = e.target;
-      if (!root.contains(tgt) || (tgt.closest && tgt.closest('.leaflet-popup, .leaflet-control-container, .gcct-dock, .gcct-coord, .gcct-dlg'))) return;
-      let ll;
-      try { ll = map.mouseEventToLatLng(e); } catch (err) { return; }
-      const x = stopAt(ll);
-      if (!x) return;
-      if (route.some(r => r.key === x.key)) return;      // already in the route: the site's own popup, as usual
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (addStop(x)) toast(T('Added to the route: {name}', { name: x.kind === 'cache' ? x.code : x.name }));
-    }, true);
+    // A geocache or pin is added to the route from its right-click menu ("Add to route"), or from the list in the
+    // route window – a click on the map is left to the site (its own popup).
     // --- Cache list (the old map only) ---------------------------------------------------------------
     // The geocaches on the map you see, nearest the middle first, kept up to date as the map moves and
     // as the site's cache search answers. Click one to zoom to it and open its cache page in a new tab.
@@ -8497,7 +8484,7 @@ ${calcTrk(stamp)}</gpx>
       if (routeOpen()) { api.closeDialog(); return; }            // the button opens and closes it
       const d = api.openDialog(T('Route'), `
         <input class="gcct-q rt-q" placeholder="${esc(T('Search code or name …'))}">
-        <p class="hint">${esc(T('Geocaches on the map and your pins, nearest the middle first – search to find others. Click one – here or on the map – to add it to the route.'))}</p>
+        <p class="hint">${esc(T('Geocaches on the map and your pins, nearest the middle first – search to find others. Click one here to add it to the route – or right-click a geocache or pin on the map and choose Add to route.'))}</p>
         <div class="rt-list"></div>
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
         <ol class="rt-route"></ol>
