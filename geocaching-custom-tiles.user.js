@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.137
+// @version      1.56.138
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -400,7 +400,10 @@
     "Name of the list": "Navn på listen",
     "Title of the printout": "Tittel på utskriften",
     "Title": "Tittel",
-    "<b>Clear</b> measurements, single circles, pins and the route.": "<b>Fjern</b> målinger, enkeltsirkler, nåler og ruten.",
+    "You have a route with {n} stops. Shall it be forgotten too?": "Du har en rute med {n} stopp. Skal den også glemmes?",
+    "Clear all, the route too": "Fjern alt, også ruten",
+    "Keep the route": "Behold ruten",
+    "<b>Clear</b> measurements, single circles, pins – and the route, if you say so.": "<b>Fjern</b> målinger, enkeltsirkler, nåler – og ruten, om du vil.",
     "The background map did not come along": "Bakgrunnskartet kom ikke med",
     "Parallels and meridians, with latitude and longitude in the margin": "Breddesirkler og meridianer, med bredde og lengde i margen",
     "<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.": "<b>Skriv ut kartet</b> – det kartet viser nå, med egen tittel og målestokk.",
@@ -6767,7 +6770,7 @@
           ${r('print', T('<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.'))}
           ${r('sliders', T('<b>Show on map</b> – 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons, each with the zoom it shows from.'))}
           ${r('eyeoff', T('<b>Hide all geocaches</b> to see the map underneath.'))}
-          ${r('eraser', T('<b>Clear</b> measurements, single circles, pins and the route.'))}
+          ${r('eraser', T('<b>Clear</b> measurements, single circles, pins – and the route, if you say so.'))}
           ${r('gear', T('<b>Settings</b> – toolbar position, language and how the script behaves.'))}
         </table>
         <p class="hint">${T('A green edge shows what is on or open.')}</p>
@@ -6887,12 +6890,19 @@
           if (window.__gcctClRefresh) window.__gcctClRefresh();     // the cache list empties and fills with it
         });
         add(null, 'eraser', 'Clear all drawings', () => {
-          tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); pinRecs = []; savePins();
-          // the route is a drawing too: it is forgotten as well (as with Forget the route)
-          if (route.length) {
+          const clearDrawings = () => { tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); pinRecs = []; savePins(); };
+          if (!route.length) { clearDrawings(); return; }
+          // With a route made: ask whether it goes too (as with Forget the route) – or stays.
+          const d = api.openDialog(T('Clear all drawings'), `
+            <p>${esc(T('You have a route with {n} stops. Shall it be forgotten too?', { n: route.length }))}</p>
+            <div class="btns"><button class="primary" data-a="all">${esc(T('Clear all, the route too'))}</button><button data-a="keep">${esc(T('Keep the route'))}</button><button data-a="no">${esc(T('Cancel'))}</button></div>`, { small: true });
+          d.querySelector('[data-a=all]').onclick = () => {
+            api.closeDialog(); clearDrawings();
             route = []; routeTitle = ''; saveRoute(); drawRoute();
-            if (routeDlg && document.body.contains(routeDlg) && api.closeDialog) api.closeDialog();
-          }
+          };
+          d.querySelector('[data-a=keep]').onclick = () => { api.closeDialog(); clearDrawings(); drawRoute(); };
+          d.querySelector('[data-a=no]').onclick = () => api.closeDialog();
+          setTimeout(() => { try { d.querySelector('[data-a=all]').focus(); } catch (e) { /* gone */ } }, 0);
         }).classList.add('sep');
         add(null, 'gear', 'Settings', () => api.openSettings && api.openSettings());
         add(null, 'help', 'Help: what the buttons do, right-click and long-press, keys', openHelp);
