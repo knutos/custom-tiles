@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.133
+// @version      1.56.135
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -8689,11 +8689,34 @@ ${calcTrk(stamp)}</gpx>
       };
       const baseCss = {}, baseBox = document.body.appendChild(document.createElement('div'));
       baseBox.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden';
+      // The script's own round marks (solved "?", found smiley, green tick) are drawn in SVG, not copied as
+      // HTML: Chrome on a Mac prints the copied circles as dark squares.
+      let solvedSvg = '';
+      const P = (r, k) => (k === 'x' ? r.left - rr.left - x0 : r.top - rr.top - y0);
+      const solvedMark = (el, op) => {
+        const ic = el.querySelector('.ic'); if (!ic) return;
+        const fb = ic.querySelector('.fb'), ri = ic.getBoundingClientRect(), cx = P(ri, 'x') + ri.width / 2, cy = P(ri, 'y') + ri.height / 2, R = ri.width / 2;
+        const cs = getComputedStyle(ic), bw = parseFloat(cs.borderTopWidth) || 0, fill = fb ? getComputedStyle(fb).backgroundColor : '#336699';
+        let g = `<g opacity="${op.toFixed(2)}"><circle cx="${cx.toFixed(1)}" cy="${(cy + 1).toFixed(1)}" r="${(R + 0.8).toFixed(1)}" fill="#000" fill-opacity=".28"/>`
+          + `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${R.toFixed(1)}" fill="${cs.borderTopColor || '#fff'}"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${Math.max(1, R - bw).toFixed(1)}" fill="${fill}"/>`;
+        const face = fb && fb.querySelector('svg');
+        if (face) { const f = face.cloneNode(true), inner = 2 * Math.max(1, R - bw); f.setAttribute('x', (cx - inner / 2).toFixed(1)); f.setAttribute('y', (cy - inner / 2).toFixed(1)); f.setAttribute('width', inner.toFixed(1)); f.setAttribute('height', inner.toFixed(1)); g += f.outerHTML; }
+        else if (fb && fb.textContent.trim()) { const fc = getComputedStyle(fb); g += `<text x="${cx.toFixed(1)}" y="${(cy + parseFloat(fc.fontSize) * 0.36).toFixed(1)}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="${fc.fontSize}" fill="${fc.color}">${esc(fb.textContent.trim())}</text>`; }
+        const tk = el.querySelector('.tick');
+        if (tk) {
+          const rt = tk.getBoundingClientRect(), tx = P(rt, 'x') + rt.width / 2, ty = P(rt, 'y') + rt.height / 2, tr = rt.width / 2, tc = getComputedStyle(tk);
+          g += `<circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="${tr.toFixed(1)}" fill="${tc.borderTopColor || '#fff'}"/><circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="${Math.max(1, tr - (parseFloat(tc.borderTopWidth) || 0)).toFixed(1)}" fill="${tc.backgroundColor}"/>`;
+          const ck = tk.querySelector('svg');
+          if (ck) { const c2 = ck.cloneNode(true), w = tr * 1.25; c2.setAttribute('x', (tx - w / 2).toFixed(1)); c2.setAttribute('y', (ty - w / 2).toFixed(1)); c2.setAttribute('width', w.toFixed(1)); c2.setAttribute('height', w.toFixed(1)); c2.setAttribute('color', tc.color); g += c2.outerHTML; }
+        }
+        solvedSvg += g + '</g>';
+      };
       root.querySelectorAll('div.leaflet-marker-icon').forEach(el => {
         if (skip(el)) return;
         const r = el.getBoundingClientRect();
         if (!inBox(r)) return;
         const op = opOf(el); if (op < 0.03) return;
+        if (el.classList.contains('gcct-solved')) { solvedMark(el, op); return; }
         const c = styled(el, true);
         c.style.position = 'absolute'; c.style.margin = '0'; c.style.transform = 'none';
         c.style.left = px(r.left - rr.left - x0); c.style.top = px(r.top - rr.top - y0); c.style.opacity = op.toFixed(2);
@@ -8712,7 +8735,7 @@ ${calcTrk(stamp)}</gpx>
         above.push([zKey(sv), html, seq++, sv]);
       });
       // Hearts with favourite points, D/T and FTF – drawn here as on the map (from zoom 15, when they are on).
-      let lbls = '';
+      let lbls = solvedSvg;
       const halo = 'stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke"';
       (window.__gcctPrintLabels ? window.__gcctPrintLabels(true) : []).forEach(l => {
         const q = cp(l.ll), x = q.x - x0, y = q.y - y0;
@@ -8726,6 +8749,22 @@ ${calcTrk(stamp)}</gpx>
       if (!below.length && (o.tries || 0) < 2) { await new Promise(r => setTimeout(r, 700)); return snapMap(Object.assign({}, o, { tries: (o.tries || 0) + 1, minMs: 0 })); }
       return { W, H, x0, y0, cp, below, above, lbls, why: below.length ? null : Object.assign(why, { zoom: map.getZoom(), box: [x0, y0, x1, y1].map(Math.round), rect: [rr.width, rr.height].map(Math.round) }) };
     }
+    // Console: what a map print would take, layer by layer (kind, class, image path, size) – no names or codes.
+    window.gcctPrintDebug = async () => {
+      const S = await snapMap({ all: true, minMs: 0 }), rows = [];
+      const one = (grp, x) => {
+        const el = x[3]; if (!el) return;
+        const src = el.currentSrc || el.src || '', r = el.getBoundingClientRect();
+        rows.push({ grp, tag: el.tagName.toLowerCase(), cls: String(el.className && el.className.baseVal != null ? el.className.baseVal : el.className).slice(0, 80),
+          path: src ? (src.startsWith('data:') ? 'data:' : (() => { try { const u = new URL(src); return u.host + u.pathname.replace(/GC[A-Z0-9]{2,}/g, 'GC…').replace(/\d{5,}/g, '#'); } catch (e) { return '?'; } })()) : '',
+          size: `${Math.round(r.width)}x${Math.round(r.height)}` });
+      };
+      S.below.forEach(x => one('below', x)); S.above.forEach(x => one('above', x));
+      const sum = {};
+      rows.forEach(r => { const k = `${r.grp} ${r.tag} ${r.cls} ${r.path.replace(/\/\d+\/\d+\/\d+/, '/z/x/y')} ${r.size}`; sum[k] = (sum[k] || 0) + 1; });
+      console.log(JSON.stringify({ dpr: devicePixelRatio, zoom: map.getZoom(), kinds: sum }, null, 1));
+      return sum;
+    };
     // A scale bar for the copy: a round length about a fifth of the width, in the copy's own pixels.
     function scaleBarSvg(S) {
       const y = S.H / 2, a = map.containerPointToLatLng([S.x0 + S.W * 0.1, S.y0 + y]), b = map.containerPointToLatLng([S.x0 + S.W * 0.9, S.y0 + y]);
