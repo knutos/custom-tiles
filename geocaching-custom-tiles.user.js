@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.136
+// @version      1.56.137
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -400,6 +400,7 @@
     "Name of the list": "Navn på listen",
     "Title of the printout": "Tittel på utskriften",
     "Title": "Tittel",
+    "<b>Clear</b> measurements, single circles, pins and the route.": "<b>Fjern</b> målinger, enkeltsirkler, nåler og ruten.",
     "The background map did not come along": "Bakgrunnskartet kom ikke med",
     "Parallels and meridians, with latitude and longitude in the margin": "Breddesirkler og meridianer, med bredde og lengde i margen",
     "<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.": "<b>Skriv ut kartet</b> – det kartet viser nå, med egen tittel og målestokk.",
@@ -6766,7 +6767,7 @@
           ${r('print', T('<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.'))}
           ${r('sliders', T('<b>Show on map</b> – 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons, each with the zoom it shows from.'))}
           ${r('eyeoff', T('<b>Hide all geocaches</b> to see the map underneath.'))}
-          ${r('eraser', T('<b>Clear</b> measurements, single circles and pins.'))}
+          ${r('eraser', T('<b>Clear</b> measurements, single circles, pins and the route.'))}
           ${r('gear', T('<b>Settings</b> – toolbar position, language and how the script behaves.'))}
         </table>
         <p class="hint">${T('A green edge shows what is on or open.')}</p>
@@ -6885,7 +6886,14 @@
           hideBtn.setAttribute('aria-label', hideBtn.title);
           if (window.__gcctClRefresh) window.__gcctClRefresh();     // the cache list empties and fills with it
         });
-        add(null, 'eraser', 'Clear all drawings', () => { tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); pinRecs = []; savePins(); }).classList.add('sep');
+        add(null, 'eraser', 'Clear all drawings', () => {
+          tools.clearLayers(); circles.length = 0; finishMeasure(); locShown = []; setLocActive(false); pinRecs = []; savePins();
+          // the route is a drawing too: it is forgotten as well (as with Forget the route)
+          if (route.length) {
+            route = []; routeTitle = ''; saveRoute(); drawRoute();
+            if (routeDlg && document.body.contains(routeDlg) && api.closeDialog) api.closeDialog();
+          }
+        }).classList.add('sep');
         add(null, 'gear', 'Settings', () => api.openSettings && api.openSettings());
         add(null, 'help', 'Help: what the buttons do, right-click and long-press, keys', openHelp);
         return bar;
