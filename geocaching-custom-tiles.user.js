@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.123
+// @version      1.56.125
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4695,7 +4695,7 @@
       .gcct-route .rt-act{min-width:178px;justify-content:center}
       .gcct-route .rt-out-back{margin-top:10px;display:flex}
       .gcct-route .rt-out:last-of-type{border-bottom:0}
-      .gcct-route .rt-bm{margin:6px 0 2px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--hover)}
+      .gcct-route .rt-bm{margin:8px 0 8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--hover)}
       .gcct-route .rt-bm-row{display:flex;gap:6px}
       .gcct-route .rt-bm-row input{flex:1;min-width:0}
       .gcct-route .rt-bm-msg{margin:6px 0 0;font-size:12px;color:var(--muted)}
@@ -8616,7 +8616,9 @@ ${calcTrk(stamp)}</gpx>
       // copy stacks as the map does (the site's cache tiles are raised above our base map by z-index).
       const below = [], above = [];
       const zKey = el => { const k = []; for (let e = el; e && e !== root; e = e.parentElement) { const z = parseInt(getComputedStyle(e).zIndex, 10); k.unshift(isFinite(z) ? z : 0); } return k; };
-      const cmp = (a, b) => { for (let i = 0; i < Math.max(a[0].length, b[0].length); i++) { const d = (a[0][i] || 0) - (b[0][i] || 0); if (d) return d; } return a[2] - b[2]; };
+      const cmp = (a, b) => { for (let i = 0; i < Math.max(a[0].length, b[0].length); i++) { const d = (a[0][i] || 0) - (b[0][i] || 0); if (d) return d; }
+        if (a[3] && b[3] && a[3] !== b[3]) return a[3].compareDocumentPosition(b[3]) & 4 ? -1 : 1;   // same z-index: the order in the page, as on the map
+        return a[2] - b[2]; };
       const opOf = el => { let op = 1; for (let e = el; e && e !== root; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return 0; op *= +cs.opacity; } return op; };
       const inBox = r => { const x = r.left - rr.left, y = r.top - rr.top; return !(x + r.width < x0 - 40 || x > x1 + 40 || y + r.height < y0 - 40 || y > y1 + 40); };
       // The route print draws the route itself; the map print takes the route as it is drawn on the map.
@@ -8631,7 +8633,7 @@ ${calcTrk(stamp)}</gpx>
         if (im.tagName === 'CANVAS') { try { src = im.toDataURL(); } catch (e) { return; } }   // a canvas from another site can't be read
         else { if (!im.complete || !im.naturalWidth) return; if (im.classList.contains('leaflet-tile') && !im.classList.contains('leaflet-tile-loaded')) return; src = im.src; }
         const cache = im.tagName !== 'IMG' || !im.classList.contains('leaflet-tile') || /map\.png/.test(src);
-        (cache ? above : below).push([zKey(im), `<img src="${esc(src)}" alt="" style="left:${px(r.left - rr.left - x0)};top:${px(r.top - rr.top - y0)};width:${px(r.width)};height:${px(r.height)};opacity:${op.toFixed(2)}">`, seq++]);
+        (cache ? above : below).push([zKey(im), `<img src="${esc(src)}" alt="" style="left:${px(r.left - rr.left - x0)};top:${px(r.top - rr.top - y0)};width:${px(r.width)};height:${px(r.height)};opacity:${op.toFixed(2)}">`, seq++, im]);
       });
       // Labels drawn as HTML (favourite points, D/T, FTF, pin names, solved marks …): copied with their look.
       const styled = (el, top) => {
@@ -8662,19 +8664,19 @@ ${calcTrk(stamp)}</gpx>
         const c = styled(el, true);
         c.style.position = 'absolute'; c.style.margin = '0'; c.style.transform = 'none';
         c.style.left = px(r.left - rr.left - x0); c.style.top = px(r.top - rr.top - y0); c.style.opacity = op.toFixed(2);
-        above.push([zKey(el), c.outerHTML, seq++]);
+        above.push([zKey(el), c.outerHTML, seq++, el]);
       });
       baseBox.remove();
       // Lines and circles drawn on the map (measurements, 161 m circles, the route …): the map's own SVG, as it is.
-      if (o.all) root.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-overlay-pane canvas').forEach(sv => {
-        if (skip(sv)) return;
+      if (o.all) root.querySelectorAll('svg, .leaflet-overlay-pane canvas').forEach(sv => {   // any pane: the route's layer sits among the site's cache tiles
+        if (skip(sv) || sv.closest('.leaflet-marker-icon') || (sv.parentElement && sv.parentElement.closest('svg'))) return;
         const r = sv.getBoundingClientRect(); if (!r.width || !inBox(r)) return;
         const op = opOf(sv); if (op < 0.03) return;
         let html;
         if (sv.tagName === 'CANVAS') { try { html = `<img src="${sv.toDataURL()}" alt="">`; } catch (e) { return; } }
         else { const c = sv.cloneNode(true); c.setAttribute('width', r.width); c.setAttribute('height', r.height); html = c.outerHTML; }
         html = html.replace(/^<(svg|img)/, `<$1 style="position:absolute;left:${px(r.left - rr.left - x0)};top:${px(r.top - rr.top - y0)};width:${px(r.width)};height:${px(r.height)};opacity:${op.toFixed(2)};transform:none;overflow:visible"`);
-        above.push([zKey(sv), html, seq++]);
+        above.push([zKey(sv), html, seq++, sv]);
       });
       // Hearts with favourite points, D/T and FTF – drawn here as on the map (from zoom 15, when they are on).
       let lbls = '';
@@ -8784,8 +8786,8 @@ ${calcTrk(stamp)}</gpx>
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On your GPS'))}</b><span>${esc(T('a GPX file'))}</span></div><div class="rt-out-r"><button class="primary rt-act" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label></div></div>
 
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On Geocaching.com'))}</b><span>${esc(T('a list – also in the app'))}</span></div><button class="rt-act" data-a="bm" title="${esc(T('Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app'))}">${icon('list', 15)}<span>${esc(T('Save as list'))}</span></button></div>
-          <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On paper'))}</b><span>${esc(T('map and list, to print'))}</span></div><button class="rt-act" data-a="print" title="${esc(T('A page with a map of the route and everything about the stops, to print or save as PDF'))}">${icon('print', 15)}<span>${esc(T('Print'))}</span></button></div>
           <div class="rt-bm" style="display:none"><div class="rt-bm-row"><input type="text" data-a="bmname" maxlength="100" aria-label="${esc(T('Name of the list'))}"><button class="primary" data-a="bmsave">${esc(T('Save'))}</button><button data-a="bmcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg"></p></div>
+          <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On paper'))}</b><span>${esc(T('map and list, to print'))}</span></div><button class="rt-act" data-a="print" title="${esc(T('A page with a map of the route and everything about the stops, to print or save as PDF'))}">${icon('print', 15)}<span>${esc(T('Print'))}</span></button></div>
           <div class="rt-bm rt-pr" style="display:none"><div class="rt-bm-row"><input type="text" data-a="prname" maxlength="100" aria-label="${esc(T('Title of the printout'))}"><button class="primary" data-a="prgo">${esc(T('Make the page'))}</button><button data-a="prcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg">${esc(T('The title at the top of the printout.'))}</p></div>
           <div class="rt-out-back"><button data-a="back">${icon('back', 15)}<span>${esc(T('Back to the stops'))}</span></button></div>
         </div>`, { cls: 'gcct-route' });
