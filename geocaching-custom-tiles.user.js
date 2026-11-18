@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.109
+// @version      1.56.121
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -378,6 +378,43 @@
     "Preview": "Forhåndsvis",
     "Back": "Tilbake",
     "Download GPX route": "Last ned GPX-rute",
+    "Save as list": "Lagre som liste",
+    "On paper": "På papir",
+    "map and list, to print": "kart og liste, til utskrift",
+    "A page with a map of the route and everything about the stops, to print or save as PDF": "En side med kart over ruten og alt om stoppene, til å skrive ut eller lagre som PDF",
+    "Print": "Skriv ut",
+    "The browser blocked the new tab – allow pop-ups for geocaching.com.": "Nettleseren blokkerte den nye fanen – tillat sprettoppvinduer for geocaching.com.",
+    "Making the page …": "Lager siden …",
+    "Could not make the page: {e}": "Kunne ikke lage siden: {e}",
+    "Stops": "Stopp",
+    "Made {d} with Geocaching Map – Custom Tile Layers.": "Laget {d} med Geocaching Map – Custom Tile Layers.",
+    "straight across the terrain": "rett på i terrenget",
+    "Take the route with you": "Ta med ruten",
+    "On your GPS": "På GPS'en",
+    "a GPX file": "en GPX-fil",
+    "On Geocaching.com": "På Geocaching.com",
+    "a list – also in the app": "en liste – også i appen",
+    "Back to the stops": "Tilbake til stoppene",
+    "Save": "Lagre",
+    "Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app": "Lagre geocachene i ruten, i rekkefølge, som en liste på geocaching.com – den dukker opp under Lister i Geocaching-appen",
+    "Name of the list": "Navn på listen",
+    "Title of the printout": "Tittel på utskriften",
+    "Title": "Tittel",
+    "<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.": "<b>Skriv ut kartet</b> – det kartet viser nå, med egen tittel og målestokk.",
+    "Map": "Kart",
+    "zoom {z}": "zoom {z}",
+    "Print the map": "Skriv ut kartet",
+    "Print the map: what it shows now, with a title and a scale bar": "Skriv ut kartet: det som vises nå, med egen tittel og målestokk",
+    "A page with what the map shows now – background, caches, labels and what you have drawn – with a scale bar, to print or save as PDF.": "En side med det kartet viser nå – bakgrunn, cacher, merker og det du har tegnet – med målestokk, til å skrive ut eller lagre som PDF.",
+    "Make the page": "Lag siden",
+    "The title at the top of the printout.": "Tittelen øverst på utskriften.",
+    "{n} geocaches go in the list, in the order of the route; pins do not.": "{n} geocacher kommer med i listen, i rutens rekkefølge; merkenåler kommer ikke med.",
+    "There are no geocaches in the route.": "Det er ingen geocacher i ruten.",
+    "Saving …": "Lagrer …",
+    "Saved as the list {link} – {n} geocaches. Open it under Lists in the Geocaching app.": "Lagret som listen {link} – {n} geocacher. Åpne den under Lister i Geocaching-appen.",
+    "Could not save the list: {e}": "Kunne ikke lagre listen: {e}",
+    "A route of {n} geocaches, made in Geocaching Map – Custom Tile Layers.": "En rute med {n} geocacher, laget i Geocaching Map – Custom Tile Layers.",
+    "the site did not answer with a list": "nettstedet svarte ikke med en liste",
     "Full cache data": "Fulle cachedata",
     "Back to the start": "Tilbake til start",
     "End the route at the first stop again": "Avslutt ruten ved første stopp igjen",
@@ -611,6 +648,7 @@
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4"/>',
     person: '<circle cx="12" cy="4.8" r="2.3"/><path d="M9 21v-6.5H7.5V10a2.5 2.5 0 0 1 2.5-2.5h4a2.5 2.5 0 0 1 2.5 2.5v4.5H15V21Z"/>',
+    print: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
     menu: '<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
     copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
@@ -4645,7 +4683,24 @@
       .gcct-route .rt-pv-btns, .gcct-route .rt-edit-btns{flex-wrap:wrap;row-gap:8px}
       .gcct-route .rt-back{color:var(--muted)}
       .gcct-route .rt-back .rt-n{opacity:.6}
-      .gcct-route .rt-pv-btns .rt-gpx{margin-left:auto}
+      .gcct-route .bd > .btns.rt-pv-btns{display:block;padding:10px 20px 12px}
+      .gcct-route .rt-out-h{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px}
+      .gcct-route .rt-out{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+      .gcct-route .rt-out-l{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+      .gcct-route .rt-out-l span{font-size:12px;color:var(--muted)}
+      .gcct-route .rt-out-r{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+      .gcct-route .rt-out .rt-full{margin-left:2px;font-size:12.5px}
+      .gcct-route .rt-out-l b{white-space:nowrap}
+      .gcct-route .rt-act, .gcct-route .rt-out-back button{display:inline-flex;align-items:center;gap:6px}
+      .gcct-route .rt-act{min-width:178px;justify-content:center}
+      .gcct-route .rt-out-back{margin-top:10px;display:flex}
+      .gcct-route .rt-out:last-of-type{border-bottom:0}
+      .gcct-route .rt-bm{margin:6px 0 2px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--hover)}
+      .gcct-route .rt-bm-row{display:flex;gap:6px}
+      .gcct-route .rt-bm-row input{flex:1;min-width:0}
+      .gcct-route .rt-bm-msg{margin:6px 0 0;font-size:12px;color:var(--muted)}
+      .gcct-route .rt-bm-msg:empty{display:none}
+      .gcct-route .rt-bm-msg a{color:var(--accent)}
       .gcct-route .rt-ic-place{color:#1a7f37;display:inline-flex;align-items:center;justify-content:center}
       .gcct-route .rt-sec{padding:6px 10px 4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--soft);border-bottom:1px solid var(--line)}
       .gcct-route em.tag-pin{background:#fde7f1;color:#a3165b}
@@ -5459,7 +5514,7 @@
             if (ftfLive.has(k)) return;
             const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, title: T('Never found – first to find is still open'), ...labelPane(),
               icon: L.divIcon({ className: 'gcct-ftflbl', html: '<span>FTF</span>', iconSize: null, iconAnchor: [-5, 7] }) });
-            m.__gcct = true;
+            m.__gcct = true; m.__lbl = { k: 'ftf', ll: x.ll };
             ftfLayer.addLayer(m);
             ftfLive.set(k, m);
           });
@@ -5473,7 +5528,7 @@
             if (dtLive.has(k)) return;
             const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, ...labelPane(),
               icon: L.divIcon({ className: 'gcct-dtlbl', html: `<span>${x.txt}</span>`, iconSize: null, iconAnchor: [0, -9 - x.n * 14] }) });
-            m.__gcct = true;
+            m.__gcct = true; m.__lbl = { k: 'dt', ll: x.ll, txt: x.txt, n: x.n };
             dtLayer.addLayer(m);
             dtLive.set(k, m);
           });
@@ -5486,13 +5541,20 @@
           if (favLive.has(k)) return;
           const m = L.marker(x.ll, { interactive: false, clickable: false, keyboard: false, ...labelPane(),
             icon: L.divIcon({ className: 'gcct-favlbl', html: `<span><i>♥</i>${x.fav}</span>`, iconSize: null, iconAnchor: [0, 27 + x.n * 17] }) });
-          m.__gcct = true;
+          m.__gcct = true; m.__lbl = { k: 'fav', ll: x.ll, txt: String(x.fav), n: x.n };
           favLayer.addLayer(m);
           favLive.set(k, m);
         });
       } catch (e) { console.error('[gcct] favourites failed', e); }
     }
     let favTimers = [];
+    // For the print page: the labels drawn now (hearts, D/T, FTF), after a fresh look at the map.
+    window.__gcctPrintLabels = (fresh) => {
+      if (fresh) { favMoving = false; try { refreshFav(true, true); } catch (e) { /* ignore */ } }
+      const out = [];
+      [favLive, dtLive, ftfLive].forEach(m => m.forEach(mk => { if (mk.__lbl) out.push(mk.__lbl); }));
+      return out;
+    };
     map.on('movestart zoomstart', () => { favMoving = true; favTimers.forEach(clearTimeout); });
     map.on('moveend zoomend', () => {
       favMoving = false;
@@ -6697,6 +6759,7 @@
           ${r('ruler', T('<b>Measure</b> – click points (a click on a cache snaps to it), double-click for a new line, Esc to stop.'))}
           ${r('route', T('<b>Route</b> – geocaches and pins in order, downloaded as GPX for your GPS.'))}
           ${PLAY_MAP ? '' : r('list', T('<b>Geocaches on the map</b> – a list that follows the map (only on /map; /play/map has its own).'))}
+          ${r('print', T('<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.'))}
           ${r('sliders', T('<b>Show on map</b> – 161 m circles, marks at solved caches, favourite points, D/T, FTF and type icons, each with the zoom it shows from.'))}
           ${r('eyeoff', T('<b>Hide all geocaches</b> to see the map underneath.'))}
           ${r('eraser', T('<b>Clear</b> measurements, single circles and pins.'))}
@@ -6800,6 +6863,7 @@
         const routeBtn = add(null, 'route', 'Route: pick geocaches and pins, and export them as a GPX route', openRoute);
         // The new map (/play/map) has its own list of caches, so the cache list is only on the old one.
         const listBtn = !PLAY_MAP ? add(null, 'list', 'Geocaches on the map: a list that follows the map – click one to zoom to it', openCacheList) : null;
+        add(null, 'print', 'Print the map: what it shows now, with a title and a scale bar', openMapPrint);
         // The green edge on Route and the cache list while their window is open.
         setInterval(() => {
           const rt = !!document.querySelector('.gcct-dlg.gcct-route:not(.gcct-cachelist)'), cl = !!document.querySelector('.gcct-dlg.gcct-cachelist');
@@ -8284,7 +8348,41 @@ ${calcTrk(stamp)}</gpx>
       foot: { color: '#f5a000', weight: 4, opacity: 0.85 },
       air: { color: '#f5a000', weight: 4, opacity: 0.85, dashArray: '10 6', lineCap: 'butt' },
     };
-    let routeDlg = null, routeRefresh = null;
+    // A route's geocaches as a bookmark list on geocaching.com, through the site's own web API (as its "Add to
+    // list" does): the list is made, then the caches put in, in the order of the route.
+    async function saveRouteAsList(name) {
+      const codes = [...new Set(route.filter(x => x.kind === 'cache' && /^GC[0-9A-Z]+$/i.test(x.code || '')).map(x => x.code.toUpperCase()))];
+      if (!codes.length) throw new Error(T('There are no geocaches in the route.'));
+      // the page's request token (a cache page has it), and the site's sign-in token as a fallback
+      let vt = '';
+      try {
+        const h = await (await fetch('/geocache/' + codes[0], { credentials: 'same-origin' })).text();
+        const m = h.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/) || h.match(/__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"/);
+        if (m) vt = m[1];
+      } catch (e) { /* try without */ }
+      const call = async (method, url, body) => {
+        const base = { 'Content-Type': 'application/json', Accept: 'application/json' };
+        let r = await fetch(url, { method, credentials: 'same-origin', headers: Object.assign({}, base, vt ? { 'X-Verification-Token': vt } : {}), body: JSON.stringify(body) });
+        if (r.status === 401 || r.status === 403) {
+          const auth = await siteToken();
+          if (auth) r = await fetch(url, { method, credentials: 'same-origin', headers: Object.assign({}, base, { Authorization: auth }), body: JSON.stringify(body) });
+        }
+        if (!r.ok) {
+          let msg = '';
+          try { const t = await r.text(); const j = JSON.parse(t); msg = j.message || j.Message || j.error || ''; if (!msg) msg = t.slice(0, 160); } catch (e) { /* none */ }
+          throw new Error('HTTP ' + r.status + (msg ? ' – ' + msg : ''));
+        }
+        const t = await r.text();
+        try { return t ? JSON.parse(t) : {}; } catch (e) { return {}; }
+      };
+      const made = await call('POST', '/api/proxy/web/v1/lists', { name, description: T('A route of {n} geocaches, made in Geocaching Map – Custom Tile Layers.', { n: codes.length }), type: { code: 'bm' } });
+      const ref = made && (made.referenceCode || made.ReferenceCode);
+      if (!ref) throw new Error(T('the site did not answer with a list'));
+      await call('PUT', '/api/proxy/web/v1/lists/' + encodeURIComponent(ref) + '/geocaches', codes.map(c => ({ referenceCode: c })));
+      routeDebug.push({ savedList: ref, n: codes.length });
+      return { ref, n: codes.length };
+    }
+    let routeDlg = null, routeRefresh = null, routeTitle = "";   // routeTitle: the name given to the list or printout
     const routeOpen = () => !!(routeDlg && routeDlg.isConnected);
     // The list follows the map while the route window is open.
     map.on('moveend', () => { if (routeOpen() && routeRefresh) routeRefresh(); });
@@ -8480,6 +8578,181 @@ ${calcTrk(stamp)}</gpx>
       draw();
       if (api.placeSide) api.placeSide(d); else if (api.fillHeight) api.fillHeight(d);
     }
+    // --- Printing ---------------------------------------------------------------------------------
+    // A copy of what the map shows (the tiles, the site's caches, the script's labels and drawings), for a page
+    // of its own. o.box(cp, rect) gives the part to take (default: all of it); o.all also takes the lines and
+    // markers the script has drawn (the route print draws the route itself); o.minMs: wait at least so long.
+    async function snapMap(o = {}) {
+      const root = map.getContainer();
+      // Wait for the tiles, and long enough for the cache labels (hearts, D/T) to be drawn for the new view.
+      const t0 = Date.now();
+      let nCache = -1;
+      for (let k = 0; k < 64; k++) {                   // up to ~9.5 s
+        await new Promise(r => setTimeout(r, 150));
+        const ims = [...root.querySelectorAll('img.leaflet-tile')], nc = root.querySelectorAll('img[src*="map.png"]').length + (window.__gcctPrintLabels ? window.__gcctPrintLabels(k % 6 === 5).length : 0);
+        if (Date.now() - t0 > (o.minMs || 0) && ims.every(im => im.complete) && nc === nCache) break;
+        nCache = nc;
+      }
+      const rr = root.getBoundingClientRect(), cp = ll => map.latLngToContainerPoint(ll);
+      const [x0, y0, x1, y1] = o.box ? o.box(cp, rr) : [0, 0, rr.width, rr.height];
+      const W = Math.max(50, Math.round(x1 - x0)), H = Math.max(50, Math.round(y1 - y0)), px = v => v.toFixed(1) + 'px';
+      // What is drawn where: [stacking key, html]. The key is the z-index of every layer above it, so the
+      // copy stacks as the map does (the site's cache tiles are raised above our base map by z-index).
+      const below = [], above = [];
+      const zKey = el => { const k = []; for (let e = el; e && e !== root; e = e.parentElement) { const z = parseInt(getComputedStyle(e).zIndex, 10); k.unshift(isFinite(z) ? z : 0); } return k; };
+      const cmp = (a, b) => { for (let i = 0; i < Math.max(a[0].length, b[0].length); i++) { const d = (a[0][i] || 0) - (b[0][i] || 0); if (d) return d; } return a[2] - b[2]; };
+      const opOf = el => { let op = 1; for (let e = el; e && e !== root; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return 0; op *= +cs.opacity; } return op; };
+      const inBox = r => { const x = r.left - rr.left, y = r.top - rr.top; return !(x + r.width < x0 - 40 || x > x1 + 40 || y + r.height < y0 - 40 || y > y1 + 40); };
+      // The route print draws the route itself; the map print takes the route as it is drawn on the map.
+      const skip = el => el.closest('.gcct-dlg, .gcct-dock, .leaflet-popup-pane, .leaflet-control-container, .gcct-glow, .gcct-popup, .gcct-favlbl, .gcct-dtlbl, .gcct-ftflbl' + (o.all ? '' : ', .gcct-rtnum, .gcct-park'));
+      let seq = 0;
+      root.querySelectorAll('img.leaflet-tile, img.leaflet-marker-icon, canvas').forEach(im => {
+        if (skip(im)) return;
+        const r = im.getBoundingClientRect();
+        if (!r.width || !inBox(r)) return;
+        const op = opOf(im); if (op < 0.03) return;
+        let src = '';
+        if (im.tagName === 'CANVAS') { try { src = im.toDataURL(); } catch (e) { return; } }   // a canvas from another site can't be read
+        else { if (!im.complete || !im.naturalWidth) return; if (im.classList.contains('leaflet-tile') && !im.classList.contains('leaflet-tile-loaded')) return; src = im.src; }
+        const cache = im.tagName !== 'IMG' || !im.classList.contains('leaflet-tile') || /map\.png/.test(src);
+        (cache ? above : below).push([zKey(im), `<img src="${esc(src)}" alt="" style="left:${px(r.left - rr.left - x0)};top:${px(r.top - rr.top - y0)};width:${px(r.width)};height:${px(r.height)};opacity:${op.toFixed(2)}">`, seq++]);
+      });
+      // Labels drawn as HTML (favourite points, D/T, FTF, pin names, solved marks …): copied with their look.
+      const styled = (el, top) => {
+        const c = el.cloneNode(false), cs = getComputedStyle(el);
+        if (c.nodeType === 1) {
+          // only what differs from a plain element of the same kind (and what is inherited), to keep the page small
+          const base = baseCss[el.tagName] || (baseCss[el.tagName] = (() => { const b = document.createElement(el.tagName); baseBox.appendChild(b); const bs = getComputedStyle(b), o = {}; for (let i = 0; i < bs.length; i++) o[bs[i]] = bs.getPropertyValue(bs[i]); return o; })());
+          let css = '';
+          for (let i = 0; i < cs.length; i++) {
+            const k = cs[i], v = cs.getPropertyValue(k);
+            if (/^(transition|animation|cursor|pointer-events|will-change|-webkit-locale|inset)/.test(k)) continue;   // inset-*: shorthands that would undo left/top
+            if (top && /^(left|top|right|bottom|margin|transform$|translate)/.test(k)) continue;                   // the marker's place is set below
+            if (v === base[k] && !/^(font|color|line-height|letter-spacing|text-|white-space|visibility)/.test(k)) continue;
+            css += `${k}:${v};`;
+          }
+          c.setAttribute('style', css); c.removeAttribute('class'); c.removeAttribute('id');
+        }
+        el.childNodes.forEach(ch => c.appendChild(ch.nodeType === 1 ? styled(ch, false) : ch.cloneNode(true)));
+        return c;
+      };
+      const baseCss = {}, baseBox = document.body.appendChild(document.createElement('div'));
+      baseBox.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden';
+      root.querySelectorAll('div.leaflet-marker-icon').forEach(el => {
+        if (skip(el)) return;
+        const r = el.getBoundingClientRect();
+        if (!inBox(r)) return;
+        const op = opOf(el); if (op < 0.03) return;
+        const c = styled(el, true);
+        c.style.position = 'absolute'; c.style.margin = '0'; c.style.transform = 'none';
+        c.style.left = px(r.left - rr.left - x0); c.style.top = px(r.top - rr.top - y0); c.style.opacity = op.toFixed(2);
+        above.push([zKey(el), c.outerHTML, seq++]);
+      });
+      baseBox.remove();
+      // Lines and circles drawn on the map (measurements, 161 m circles, the route …): the map's own SVG, as it is.
+      if (o.all) root.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-overlay-pane canvas').forEach(sv => {
+        if (skip(sv)) return;
+        const r = sv.getBoundingClientRect(); if (!r.width || !inBox(r)) return;
+        const op = opOf(sv); if (op < 0.03) return;
+        let html;
+        if (sv.tagName === 'CANVAS') { try { html = `<img src="${sv.toDataURL()}" alt="">`; } catch (e) { return; } }
+        else { const c = sv.cloneNode(true); c.setAttribute('width', r.width); c.setAttribute('height', r.height); html = c.outerHTML; }
+        html = html.replace(/^<(svg|img)/, `<$1 style="position:absolute;left:${px(r.left - rr.left - x0)};top:${px(r.top - rr.top - y0)};width:${px(r.width)};height:${px(r.height)};opacity:${op.toFixed(2)};transform:none;overflow:visible"`);
+        above.push([zKey(sv), html, seq++]);
+      });
+      // Hearts with favourite points, D/T and FTF – drawn here as on the map (from zoom 15, when they are on).
+      let lbls = '';
+      const halo = 'stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke"';
+      (window.__gcctPrintLabels ? window.__gcctPrintLabels(true) : []).forEach(l => {
+        const q = cp(l.ll), x = q.x - x0, y = q.y - y0;
+        if (x < -20 || y < -40 || x > W + 20 || y > H + 40) return;
+        if (l.k === 'fav') lbls += `<text x="${x.toFixed(1)}" y="${(y - 27 - l.n * 17 + 12.5).toFixed(1)}" class="lb" ${halo}><tspan fill="#d1242f" font-size="16.5">♥</tspan>${esc(l.txt)}</text>`;
+        else if (l.k === 'dt') lbls += `<text x="${x.toFixed(1)}" y="${(y + 9 + l.n * 14 + 11).toFixed(1)}" class="lb" ${halo}>${esc(l.txt)}</text>`;
+        else lbls += `<g transform="translate(${(x + 5).toFixed(1)},${(y - 7).toFixed(1)})"><rect x="0" y="-7" width="27" height="14" rx="7" fill="#d1242f" stroke="#fff" stroke-width="1.5"/><text x="13.5" y="3.5" class="ftf">FTF</text></g>`;
+      });
+      below.sort(cmp); above.sort(cmp);
+      return { W, H, x0, y0, cp, below, above, lbls };
+    }
+    // A scale bar for the copy: a round length about a fifth of the width, in the copy's own pixels.
+    function scaleBarSvg(S) {
+      const y = S.H / 2, a = map.containerPointToLatLng([S.x0 + S.W * 0.1, S.y0 + y]), b = map.containerPointToLatLng([S.x0 + S.W * 0.9, S.y0 + y]);
+      const mpp = a.distanceTo(b) / (S.W * 0.8);
+      if (!(mpp > 0)) return '';
+      const want = mpp * S.W / 5, p10 = Math.pow(10, Math.floor(Math.log10(want)));
+      const len = [1, 2, 5, 10].map(k => k * p10).filter(v => v <= want).pop() || p10, w = len / mpp;
+      const txt = len >= 1000 ? `${len / 1000} km` : `${len} m`, x = 12, yb = S.H - 14, h = 6;
+      return `<g class="sb"><rect x="${x - 6}" y="${yb - 22}" width="${(w + 12 + 30).toFixed(1)}" height="30" rx="4" fill="#fff" fill-opacity=".85"/>
+        <rect x="${x}" y="${yb - h}" width="${(w / 2).toFixed(1)}" height="${h}" fill="#1f2328"/><rect x="${(x + w / 2).toFixed(1)}" y="${yb - h}" width="${(w / 2).toFixed(1)}" height="${h}" fill="#fff" stroke="#1f2328"/>
+        <rect x="${x}" y="${yb - h}" width="${w.toFixed(1)}" height="${h}" fill="none" stroke="#1f2328"/>
+        <text x="${x}" y="${yb - h - 4}">0</text><text x="${(x + w).toFixed(1)}" y="${yb - h - 4}" text-anchor="middle">${txt}</text></g>`;
+    }
+    function mapAttribution() {
+      const el = map.getContainer().querySelector('.leaflet-control-attribution');
+      return el ? el.textContent.replace(/\s+/g, ' ').replace(/^\s*Leaflet\s*\|?\s*/, '').trim() : '';
+    }
+    // The map as an SVG figure: tiles, [between], caches and labels, [top], scale bar.
+    function mapFigure(S, between, top) {
+      return `<div class="map"><svg viewBox="0 0 ${S.W} ${S.H}"><foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.below.map(x => x[1]).join('')}</div></foreignObject>${between || ''}<foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.above.map(x => x[1]).join('')}</div></foreignObject>${S.lbls}${top || ''}${scaleBarSvg(S)}</svg></div>`;
+    }
+    const PRINT_CSS = S => `
+          @page{size:A4;margin:16mm 18mm 16mm 18mm}
+          body{font:10.5pt/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2328;margin:0 auto;padding:28px 32px;max-width:190mm}
+          @media print{body{padding:0;max-width:none}.noprint{display:none}}
+          h1{font-size:17pt;margin:0 0 2px} h2{font-size:12pt;margin:14px 0 6px}
+          .sub{color:#59636e;margin:0 0 10px}
+          .map{box-sizing:border-box;position:relative;width:${S.H / S.W > 1.25 ? '72%' : '100%'};margin:0 auto;aspect-ratio:${S.W}/${S.H};overflow:hidden;border:1px solid #c4cbd3;border-radius:6px;background:#fff}
+          .map svg{display:block;width:100%;height:100%} .map .lay{position:relative;width:${S.W}px;height:${S.H}px;overflow:hidden} .map .lay img{position:absolute;max-width:none}
+          .map text.n{font:bold 11px system-ui,sans-serif;fill:#fff;text-anchor:middle} .map text.pk{font:bold 11px system-ui,sans-serif;fill:#fff;text-anchor:middle}
+          .map text.lb{font:600 11px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#1f2328;text-anchor:middle} .map text.ftf{font:600 10px system-ui,sans-serif;fill:#fff;text-anchor:middle}
+          .map .sb text{font:600 11px system-ui,sans-serif;fill:#1f2328}
+          .attr{color:#8c959f;font-size:7.5pt;margin:3px 0 0;text-align:right}
+          .foot{margin-top:14px;color:#8c959f;font-size:8pt}
+          .noprint{position:fixed;top:12px;right:12px} .noprint button{font:600 14px system-ui;padding:8px 16px;border-radius:8px;border:0;background:#1f7a34;color:#fff;cursor:pointer}`;
+    const printHead = (title, css) => `<!doctype html><html lang="${LANG === 'no' ? 'nb' : 'en'}"><head><meta charset="utf-8"><base href="${location.origin}/"><title>${esc(title)}</title><style>${css}</style></head><body><div class="noprint"><button onclick="print()">${esc(T('Print'))}</button></div>`;
+    const printFoot = () => `<p class="foot">${esc(T('Made {d} with Geocaching Map – Custom Tile Layers.', { d: gpxStamp().slice(0, 16) }))}</p></body></html>`;
+    // Opens the tab now (while it is a click – later it would be blocked) and fills it when the page is made.
+    async function printTab(make) {
+      const w = window.open('', '_blank');
+      if (!w) { toast(T('The browser blocked the new tab – allow pop-ups for geocaching.com.')); return; }
+      w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(T('Print'))}</title><p style="font:15px system-ui;padding:24px">${esc(T('Making the page …'))}</p>`);
+      try { const html = await make(); w.document.open(); w.document.write(html); w.document.close(); }
+      catch (err) { try { w.document.body.textContent = T('Could not make the page: {e}', { e: err.message || String(err) }); } catch (e2) { /* closed */ } }
+    }
+    // The toolbar's Print: what the map shows right now, with a title of your own.
+    let mapPrintTitle = '';
+    function openMapPrint() {
+      const d = api.openDialog(T('Print the map'), `
+        <p class="sm">${esc(T('A page with what the map shows now – background, caches, labels and what you have drawn – with a scale bar, to print or save as PDF.'))}</p>
+        <label class="f"><span class="l">${esc(T('Title'))}</span><input type="text" data-a="t" maxlength="100"></label>
+        <div class="btns"><button class="primary" data-a="go">${icon('print', 15)} ${esc(T('Make the page'))}</button><button data-a="no">${esc(T('Cancel'))}</button></div>`, { small: true, cls: 'gcct-mapprint' });
+      const t = d.querySelector('[data-a=t]'), go = d.querySelector('[data-a=go]');
+      t.value = mapPrintTitle || T('Map') + ' ' + gpxStamp().slice(0, 10);
+      t.oninput = () => { go.disabled = !t.value.trim(); };
+      t.onkeydown = e => { if (e.key === 'Enter') go.click(); };
+      d.querySelector('[data-a=no]').onclick = () => api.closeDialog();
+      go.onclick = () => {
+        const title = t.value.trim(); if (!title) return;
+        mapPrintTitle = title; api.closeDialog();
+        printTab(() => mapPrintPage(title));
+      };
+      setTimeout(() => { t.focus(); t.select(); }, 0);
+    }
+    async function mapPrintPage(title) {
+      await new Promise(r => setTimeout(r, 300));          // the dialog gone and the map still
+      const S = await snapMap({ all: true, minMs: 0 });
+      const c = map.getCenter(), attr = mapAttribution();
+      // Landscape for a map wider than it is tall (the usual screen), portrait otherwise; the map as large as
+      // the sheet allows below the title.
+      const wide = S.W >= S.H;
+      const fit = `
+          @page{size:A4 ${wide ? 'landscape' : 'portrait'};margin:12mm 14mm}
+          body{max-width:${wide ? '277mm' : '190mm'}}
+          .map{width:min(100%, calc((100vh - 34mm) * ${S.W} / ${S.H}))}
+          @media print{.map{width:min(100%, calc((100vh - 36mm) * ${S.W} / ${S.H}))}}`;
+      return printHead(title, PRINT_CSS(S) + fit) + `<h1>${esc(title)}</h1>
+          <p class="sub">${esc(fmtDMM(c.lat, c.lng))} · ${esc(T('zoom {z}', { z: map.getZoom() }))}</p>
+          ${mapFigure(S)}${attr ? `<p class="attr">${esc(attr)}</p>` : ''}` + printFoot();
+    }
     function openRoute() {
       if (routeOpen()) { api.closeDialog(); return; }            // the button opens and closes it
       const d = api.openDialog(T('Route'), `
@@ -8490,7 +8763,16 @@ ${calcTrk(stamp)}</gpx>
         <ol class="rt-route"></ol>
         <div class="rt-pv" style="display:none"></div>
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
-        <div class="btns rt-pv-btns" style="display:none"><button data-a="back">${esc(T('Back'))}</button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label><span class="sp"></span><button class="primary rt-gpx" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button></div>`, { cls: 'gcct-route' });
+        <div class="btns rt-pv-btns" style="display:none">
+          <div class="rt-out-h">${esc(T('Take the route with you'))}</div>
+          <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On your GPS'))}</b><span>${esc(T('a GPX file'))}</span></div><div class="rt-out-r"><button class="primary rt-act" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label></div></div>
+
+          <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On Geocaching.com'))}</b><span>${esc(T('a list – also in the app'))}</span></div><button class="rt-act" data-a="bm" title="${esc(T('Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app'))}">${icon('list', 15)}<span>${esc(T('Save as list'))}</span></button></div>
+          <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On paper'))}</b><span>${esc(T('map and list, to print'))}</span></div><button class="rt-act" data-a="print" title="${esc(T('A page with a map of the route and everything about the stops, to print or save as PDF'))}">${icon('print', 15)}<span>${esc(T('Print'))}</span></button></div>
+          <div class="rt-bm" style="display:none"><div class="rt-bm-row"><input type="text" data-a="bmname" maxlength="100" aria-label="${esc(T('Name of the list'))}"><button class="primary" data-a="bmsave">${esc(T('Save'))}</button><button data-a="bmcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg"></p></div>
+          <div class="rt-bm rt-pr" style="display:none"><div class="rt-bm-row"><input type="text" data-a="prname" maxlength="100" aria-label="${esc(T('Title of the printout'))}"><button class="primary" data-a="prgo">${esc(T('Make the page'))}</button><button data-a="prcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg">${esc(T('The title at the top of the printout.'))}</p></div>
+          <div class="rt-out-back"><button data-a="back">${icon('back', 15)}<span>${esc(T('Back to the stops'))}</span></button></div>
+        </div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
       const tag = c => c.kind === 'place' && c.pkind === 'home' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
         c.kind === 'cache' && c.code && window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
@@ -9034,7 +9316,7 @@ ${calcTrk(stamp)}</gpx>
         }
         route = out; changed();
       };
-      d.querySelector('[data-a=clear]').onclick = () => { route = []; changed(); if (api.closeDialog) api.closeDialog(); };
+      d.querySelector('[data-a=clear]').onclick = () => { route = []; routeTitle = ''; changed(); if (api.closeDialog) api.closeDialog(); };
       const loopBox = d.querySelector('[data-a=loop]');
       loopBox.checked = routeLoop;
       loopBox.onchange = () => { setRouteLoop(loopBox.checked); changed(); };
@@ -9042,6 +9324,160 @@ ${calcTrk(stamp)}</gpx>
       const fullBox = d.querySelector('[data-a=full]');
       try { fullBox.checked = sessionStorage.getItem('gcct.gpxFull') === '1'; } catch (e) { /* ignore */ }
       fullBox.onchange = () => { try { sessionStorage.setItem('gcct.gpxFull', fullBox.checked ? '1' : '0'); } catch (e) { /* ignore */ } };
+      // Save as a list on geocaching.com (a bookmark list: it shows up under Lists in the Geocaching app). Only
+      // the geocaches go in – pins and the calculated route cannot be in such a list.
+      const bmBox = d.querySelector('.rt-bm:not(.rt-pr)'), bmName = d.querySelector('[data-a=bmname]'), bmMsg = d.querySelector('.rt-bm-msg');
+      const bmSaveBtn = d.querySelector('[data-a=bmsave]');
+      d.querySelector('[data-a=bm]').onclick = () => {
+        if (bmBox.style.display !== 'none') { bmBox.style.display = 'none'; return; }
+        const n = new Set(route.filter(x => x.kind === 'cache' && /^GC[0-9A-Z]+$/i.test(x.code || '')).map(x => x.code.toUpperCase())).size;
+        bmName.value = routeTitle || T('Route') + ' ' + gpxStamp().slice(0, 16);
+        if (prBox) prBox.style.display = 'none';
+        bmMsg.textContent = n ? T('{n} geocaches go in the list, in the order of the route; pins do not.', { n }) : T('There are no geocaches in the route.');
+        bmSaveBtn.disabled = !n;
+        bmBox.style.display = '';
+        bmName.focus(); bmName.select();
+      };
+      bmName.oninput = () => { bmSaveBtn.disabled = !bmName.value.trim(); };
+      d.querySelector('[data-a=bmcancel]').onclick = () => { bmBox.style.display = 'none'; };
+      bmName.onkeydown = e => { if (e.key === 'Enter') bmSaveBtn.click(); if (e.key === 'Escape') { e.stopPropagation(); bmBox.style.display = 'none'; } };
+      bmSaveBtn.onclick = async () => {
+        const name = bmName.value.trim();
+        if (!name || bmSaveBtn.disabled) return;
+        routeTitle = name;
+        bmSaveBtn.disabled = true; bmMsg.textContent = T('Saving …');
+        try {
+          const r = await saveRouteAsList(name);
+          bmMsg.innerHTML = T('Saved as the list {link} – {n} geocaches. Open it under Lists in the Geocaching app.', {
+            link: `<a href="/plan/lists/${encodeURIComponent(r.ref)}" target="_blank" rel="noopener">${esc(name)}</a>`, n: r.n });
+          bmSaveBtn.disabled = false;                      // saving again makes another list
+        } catch (err) {
+          bmMsg.textContent = T('Could not save the list: {e}', { e: err.message || String(err) });
+          bmSaveBtn.disabled = false;
+        }
+      };
+      // On paper: a page of its own with a map of the route and everything about the stops, to print.
+      // First a title (as for a list; the same name is offered for both), then the page.
+      const prBox = d.querySelector('.rt-pr'), prName = d.querySelector('[data-a=prname]'), prGo = d.querySelector('[data-a=prgo]');
+      d.querySelector('[data-a=print]').onclick = () => {
+        if (!route.length) return;
+        if (prBox.style.display !== 'none') { prBox.style.display = 'none'; return; }
+        bmBox.style.display = 'none';
+        prName.value = routeTitle || T('Route') + ' ' + gpxStamp().slice(0, 10);
+        prGo.disabled = false; prBox.style.display = '';
+        prName.focus(); prName.select();
+      };
+      prName.oninput = () => { prGo.disabled = !prName.value.trim(); };
+      prName.onkeydown = e => { if (e.key === 'Enter') prGo.click(); if (e.key === 'Escape') { e.stopPropagation(); prBox.style.display = 'none'; } };
+      d.querySelector('[data-a=prcancel]').onclick = () => { prBox.style.display = 'none'; };
+      prGo.onclick = async e => {
+        const b = e.currentTarget, title = prName.value.trim();
+        if (!route.length || b.disabled || !title) return;
+        routeTitle = title;
+        b.disabled = true;
+        try { await printTab(() => routePrintPage(title)); } finally { b.disabled = false; }
+      };
+      async function routePrintPage(title) {
+        const stops = routeStops(), cOn = calcOn(), legs = cOn ? routeCalc.legs : null;
+        const lls = stops.map(r => L.latLng(r.lat, r.lng));
+        if (cOn) legs.forEach(l => l.segs.forEach(sg => sg.pts.forEach(q => lls.push(L.latLng(q[0], q[1])))));
+        const B = L.latLngBounds(lls);
+        // The map: the whole route fitted into the map on screen, its tiles copied (the background you have
+        // chosen, overlays, the site's caches), then the view put back as it was.
+        const was = { c: map.getCenter(), z: map.getZoom() };
+        try { if (lls.length > 1) map.fitBounds(B, { padding: [44, 44], maxZoom: 17, animate: false }); else map.setView(lls[0], 16, { animate: false }); } catch (e) { /* ignore */ }
+        const S = await snapMap({ minMs: 3200, box: (cp, rr) => {
+          const nw = cp(B.getNorthWest()), se = cp(B.getSouthEast()), pad = 30;
+          return [Math.max(0, Math.min(nw.x, se.x) - pad), Math.max(0, Math.min(nw.y, se.y) - pad), Math.min(rr.width, Math.max(nw.x, se.x) + pad), Math.min(rr.height, Math.max(nw.y, se.y) + pad)];
+        } });
+        const { W, H, x0, y0, cp } = S;
+        const XY = (lat, lng) => { const q = cp(L.latLng(lat, lng)); return [(q.x - x0).toFixed(1), (q.y - y0).toFixed(1)]; };
+        let lines = '';
+        if (cOn) {
+          legs.forEach(l => l.segs.forEach(sg => {
+            const st = CALC_STYLE[sg.m] || CALC_STYLE.foot;
+            lines += `<polyline points="${sg.pts.map(q => XY(q[0], q[1]).join(',')).join(' ')}" fill="none" stroke="${st.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="${sg.m === 'air' ? 'butt' : 'round'}"${sg.m === 'air' ? ' stroke-dasharray="9 6"' : ''}/>`;
+          }));
+        } else if (stops.length > 1) {
+          lines = `<polyline points="${stops.map(r => XY(r.lat, r.lng).join(',')).join(' ')}" fill="none" stroke="#8250df" stroke-width="3" stroke-dasharray="8 6"/>`;
+        }
+        let marks = '';
+        if (cOn) {
+          const seen = new Set();
+          legs.forEach(l => [[l.park, routeCalc.mode === 'bike' ? 'S' : 'P'], [l.bpark, 'S']].forEach(([sp, k]) => {
+            if (!sp) return; const key = k + sp[0].toFixed(5) + sp[1].toFixed(5); if (seen.has(key)) return; seen.add(key);
+            const [x, y] = XY(sp[0], sp[1]);
+            marks += `<rect x="${x - 8}" y="${y - 8}" width="16" height="16" rx="3" fill="#0b5cad" stroke="#fff" stroke-width="1.5"/><text x="${x}" y="${+y + 4}" class="pk">${k === 'S' ? '🚲' : 'P'}</text>`;
+          }));
+        }
+        // The stop numbers beside the spot, not on it, so the cache icon there is seen: a corner free of the
+        // other stops and the numbers already placed, tied to the spot with a short line.
+        const spots = route.map(r => XY(r.lat, r.lng).map(Number)), placedN = [];
+        const OFF = [[-19, -19], [19, -19], [-19, 19], [19, 19], [0, -27], [-27, 0], [27, 0], [0, 27]];
+        route.forEach((r, i) => {
+          const [x, y] = spots[i];
+          const cost = ([dx, dy]) => { const cx = x + dx, cy = y + dy; let c = 0;
+            spots.forEach(([sx, sy], j) => { if (j !== i) { const d = Math.hypot(sx - cx, sy - cy); if (d < 22) c += 22 - d; } });
+            placedN.forEach(([px2, py2]) => { const d = Math.hypot(px2 - cx, py2 - cy); if (d < 22) c += 3 * (22 - d); });
+            if (cx < 10 || cy < 10 || cx > W - 10 || cy > H - 10) c += 40;
+            return c; };
+          const o = OFF.reduce((b, q) => (cost(q) < cost(b) ? q : b), OFF[0]), cx = x + o[0], cy = y + o[1];
+          placedN.push([cx, cy]);
+          const len = Math.hypot(o[0], o[1]), ux = o[0] / len, uy = o[1] / len;   // the line starts outside the icon
+          marks += `<line x1="${(x + ux * 12).toFixed(1)}" y1="${(y + uy * 12).toFixed(1)}" x2="${cx}" y2="${cy}" stroke="#8250df" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="9" fill="#8250df" stroke="#fff" stroke-width="2"/><text x="${cx}" y="${cy + 4}" class="n">${i + 1}</text>`;
+        });
+        try { map.setView(was.c, was.z, { animate: false }); } catch (e) { /* ignore */ }
+        // heights, when there are some to be had (as for the elevation profile)
+        let P = null;
+        if (route.length > 1) P = await Promise.race([new Promise(res => routeHeights(res)), new Promise(res => setTimeout(() => res(null), 9000))]);
+        let prof = '', climbs = null;
+        if (P && P.z && P.z.some(v => v != null)) {
+          const ok = P.z.map((v, i) => [v, i]).filter(([v]) => v != null);
+          const z = P.z.map((v, i) => v != null ? v : ok.reduce((bb, [ww, j]) => (Math.abs(j - i) < Math.abs(bb[1] - i) ? [ww, j] : bb), ok[0])[0]);
+          climbs = [];
+          for (let k = 1; k < P.stopIdx.length; k++) climbs.push(climbOf(z, P.stopIdx[k - 1], P.stopIdx[k]));
+          const up = climbs.reduce((a, c) => a + (c ? c.up : 0), 0), dn = climbs.reduce((a, c) => a + (c ? c.down : 0), 0);
+          const lo = Math.min(...z), hi = Math.max(...z), span = Math.max(10, hi - lo), PW = 680, PH = 130, pl = 36, pr = 8, pt = 8, pb = 18;
+          const X = v => pl + (PW - pl - pr) * v / (P.tot || 1), Y = v => pt + (PH - pt - pb) * (1 - (v - (lo - span * 0.08)) / (span * 1.16));
+          const ln = z.map((v, i) => `${i ? 'L' : 'M'}${X(P.at[i]).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+          prof = `<h2>${esc(T('Elevation profile'))}</h2><svg viewBox="0 0 ${PW} ${PH}" class="prof"><path d="${ln}L${X(P.tot)},${PH - pb}L${X(0)},${PH - pb}Z" fill="#e9e2fb"/><path d="${ln}" fill="none" stroke="#8250df" stroke-width="2"/>
+            ${P.stopAt.map((d0, i) => `<line x1="${X(d0)}" x2="${X(d0)}" y1="${pt}" y2="${PH - pb}" stroke="#999" stroke-dasharray="2 3"/><text x="${X(d0)}" y="${PH - 5}" class="sn">${i < route.length ? i + 1 : 1}</text>`).join('')}
+            <text x="${pl - 4}" y="${Y(hi) + 4}" class="ax">${Math.round(hi)}</text><text x="${pl - 4}" y="${Y(lo) + 4}" class="ax">${Math.round(lo)}</text></svg>
+            <p class="sm">↑ ${Math.round(up)} m · ↓ ${Math.round(dn)} m · ${esc(T('lowest'))} ${Math.round(lo)} m · ${esc(T('highest'))} ${Math.round(hi)} m</p>`;
+        }
+        // the stops
+        let tot = 0, totT = 0;
+        const rows = stops.map((r, i) => {
+          const ci = r.kind === 'cache' ? (CACHE_INFO.get(r.code) || {}) : {};
+          const leg = !i ? 0 : cOn ? legs[i - 1].d : distM(L.latLng(stops[i - 1].lat, stops[i - 1].lng), L.latLng(r.lat, r.lng));
+          tot += leg; if (i && cOn) totT += legs[i - 1].t;
+          const c = climbs && i ? climbs[i - 1] : null;
+          const dt = ci.diff != null && ci.terr != null ? `${ci.diff}/${ci.terr}` : '';
+          return `<tr><td class="n"><span>${i < route.length ? i + 1 : 1}</span></td><td>${typeIcon(r)}</td><td><b>${esc(r.kind === 'cache' ? r.code : r.name)}</b>${r.kind === 'cache' && r.name ? `<div>${esc(r.name)}</div>` : ''}${ci.solved ? `<div class="sm">${esc(T('Solved'))}</div>` : ''}</td>
+            <td>${esc(dt)}</td><td class="mono">${esc(fmtDMM(r.lat, r.lng))}</td>
+            <td class="r">${i ? `${esc(cOn ? fmtDist(leg) + ' · ' + fmtDur(legs[i - 1].t) : legTextStraight(i, stops))}${c ? `<div class="sm">↑ ${Math.round(c.up)} m ↓ ${Math.round(c.down)} m</div>` : ''}` : '–'}</td>
+            <td class="r">${i ? esc(fmtDist(tot) + (cOn ? ' · ' + fmtDur(totT) : '')) : ''}</td></tr>`;
+        }).join('');
+        const modeTxt = cOn ? T(MODE_NAME[routeCalc.mode] || 'Calculated route') : T('Straight-line distances; the way there is always longer.');
+        const legend = cOn ? `<p class="sm lg">${[['car', 'by car'], ['bike', 'by bike'], ['foot', 'on foot'], ['air', 'straight across the terrain']].filter(([m]) => legs.some(l => l.segs.some(sg => sg.m === m)))
+          .map(([m, t]) => `<span><i style="border-top:4px ${m === 'air' ? 'dashed' : 'solid'} ${CALC_STYLE[m].color}"></i>${esc(T(t))}</span>`).join('')}</p>` : '';
+        title = title || T('Route') + ' ' + gpxStamp().slice(0, 10);
+        return printHead(title, PRINT_CSS(S) + `
+          .prof{width:100%;height:auto} .prof text{font:10px system-ui,sans-serif;fill:#59636e} .prof .sn{text-anchor:middle} .prof .ax{text-anchor:end}
+          table{width:100%;border-collapse:collapse;font-size:9.5pt} th{text-align:left;border-bottom:1.5px solid #8c959f;padding:4px 5px;font-size:8.5pt;color:#59636e}
+          td{border-bottom:1px solid #d8dee4;padding:4px 5px;vertical-align:top} tr{break-inside:avoid}
+          td.n span{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:#8250df;color:#fff;font-weight:700;font-size:8.5pt;text-align:center;line-height:18px}
+          td.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.5pt;white-space:nowrap} td.r,th.r{text-align:right;white-space:nowrap}
+          .sm{color:#59636e;font-size:8.5pt} .rt-ic{width:16px;height:16px;display:inline-block;vertical-align:middle} .rt-ic svg{width:15px;height:15px}
+          .lg span{margin-right:12px;white-space:nowrap} .lg i{display:inline-block;width:22px;margin-right:5px;vertical-align:middle}`) + `
+          <h1>${esc(title)}</h1>
+          <p class="sub">${esc(T('{n} stops · {d}', { n: route.length, d: fmtDist(routeLength()) }))}${cOn ? ' · ' + esc(T('about {t}', { t: fmtDur(totT) })) : ''}${routeLoop && route.length > 1 ? ' · ' + esc(T('round trip')) : ''} · ${esc(modeTxt)}</p>
+          ${mapFigure(S, lines, marks)}${legend}${(a => a ? `<p class="attr">${esc(a)}</p>` : '')(mapAttribution())}
+          ${prof}
+          <h2>${esc(T('Stops'))}</h2>
+          <table><thead><tr><th>#</th><th></th><th>${esc(T('Geocache'))}</th><th>D/T</th><th>${esc(T('Coordinates'))}</th><th class="r">${esc(T('Leg'))}</th><th class="r">${esc(T('Total'))}</th></tr></thead><tbody>${rows}</tbody></table>
+` + printFoot();
+      }
       d.querySelector('[data-a=gpx]').onclick = async e => {
         const b = e.currentTarget;
         if (!route.length || b.disabled) return;
