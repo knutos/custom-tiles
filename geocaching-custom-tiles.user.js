@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.125
+// @version      1.56.133
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -400,6 +400,8 @@
     "Name of the list": "Navn på listen",
     "Title of the printout": "Tittel på utskriften",
     "Title": "Tittel",
+    "The background map did not come along": "Bakgrunnskartet kom ikke med",
+    "Parallels and meridians, with latitude and longitude in the margin": "Breddesirkler og meridianer, med bredde og lengde i margen",
     "<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.": "<b>Skriv ut kartet</b> – det kartet viser nå, med egen tittel og målestokk.",
     "Map": "Kart",
     "zoom {z}": "zoom {z}",
@@ -4696,7 +4698,7 @@
       .gcct-route .rt-out-back{margin-top:10px;display:flex}
       .gcct-route .rt-out:last-of-type{border-bottom:0}
       .gcct-route .rt-bm{margin:8px 0 8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--hover)}
-      .gcct-route .rt-bm-row{display:flex;gap:6px}
+      .gcct-route .rt-bm-row{display:flex;gap:6px} .gcct-route .rt-grid{display:flex;margin:8px 0 0;white-space:normal}
       .gcct-route .rt-bm-row input{flex:1;min-width:0}
       .gcct-route .rt-bm-msg{margin:6px 0 0;font-size:12px;color:var(--muted)}
       .gcct-route .rt-bm-msg:empty{display:none}
@@ -7187,6 +7189,9 @@
     let routeRenderer = null;
     // The dashes of a straight bit fit its length on screen: always a few of them, also zoomed out, where a
     // short line would otherwise be one dash – solid.
+    // A straight bit is drawn from the same end whichever way it is walked: there and back on the same line,
+    // the dashes then lie on top of each other instead of filling each other's gaps (it looked solid).
+    const airPts = pts => (pts.length === 2 && (pts[0][0] > pts[1][0] || (pts[0][0] === pts[1][0] && pts[0][1] > pts[1][1])) ? [pts[1], pts[0]] : pts);
     function airDash() {
       try {
         routeLayer.eachLayer(pl => {
@@ -7238,7 +7243,7 @@
       if (lls.length > 1 && calcValid()) {
         // the calculated route: by car / bike solid, on foot dotted, the straight bits off the path dashed red
         routeCalc.legs.forEach(l => l.segs.forEach(sg => {
-          const pl = L.polyline(sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air, { opacity: 1 - routeAlpha / 100 }));
+          const pl = L.polyline(sg.m === 'air' ? airPts(sg.pts) : sg.pts, Object.assign(routeLineOpts(), { dashArray: null }, CALC_STYLE[sg.m] || CALC_STYLE.air, { opacity: 1 - routeAlpha / 100 }));
           pl.__calcLine = true;
           if (sg.m === 'air') pl.__air = sg.pts;
           routeLayer.addLayer(pl);
@@ -8071,7 +8076,26 @@ ${calcTrk(stamp)}</gpx>
     }
     // A straight line goes neither across water nor through built-up areas or farmland (walk the streets and roads).
     const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= Math.max(16, step || 8); };
-    async function walk(a, b) {
+    // A walk takes the same way there and back: both directions are worked out and the quicker one is used
+    // for both (the services can pick different ways each direction – where the path is joined, a straight
+    // bit, which side of a loop). Kept, so the way back comes from memory.
+    const walkMemo = new Map();
+    function walk(a, b) {
+      const k = p => `${(+p.lat).toFixed(6)},${(+p.lng).toFixed(6)}`, ka = k(a), kb = k(b), key = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+      let job = walkMemo.get(key);
+      if (!job) {
+        const lo = ka < kb ? a : b, hi = ka < kb ? b : a;
+        job = Promise.all([walk1(lo, hi), walk1(hi, lo)]).then(([f, r]) => {
+          const tf = f.segs.reduce((x, sg) => x + sg.t, 0), tr = r.segs.reduce((x, sg) => x + sg.t, 0);
+          if (Math.abs(tf - tr) > 5) routeDebug.push({ walkBothWays: [Math.round(tf), Math.round(tr)] });
+          return tr < tf - 1 ? { segs: reversed(r.segs), end: hi } : f;          // lo → hi
+        });
+        job.catch(() => walkMemo.delete(key));
+        walkMemo.set(key, job);
+      }
+      return job.then(w => (k(a) === (ka < kb ? ka : kb) ? { segs: w.segs, end: b } : { segs: reversed(w.segs), end: b }));
+    }
+    async function walk1(a, b) {
       const r = await along('foot', a, b), viaPath = r.segs.reduce((m, sg) => m + sg.d, 0), dd = distM(a, b);
       if (acrossOk(dd, viaPath) && await dry(a, b)) return { segs: [{ m: 'air', pts: [[a.lat, a.lng], [b.lat, b.lng]], d: dd, t: dd / ACROSS }], end: b };
       // The "path" way may itself be mostly straight across: the nearest path can be far from both ends, so
@@ -8209,6 +8233,7 @@ ${calcTrk(stamp)}</gpx>
       return out;
     }
     async function calcLegs(stops, mode, progress) {
+      walkMemo.clear();                                    // the settings (how far straight across, water) may have changed
       if (mode === 'carbike') {
         const keep0 = routeDebug.filter(x => x.orderMs != null).slice(-1);
         routeDebug.length = 0; routeDebug.push(...keep0);
@@ -8603,7 +8628,7 @@ ${calcTrk(stamp)}</gpx>
       // Wait for the tiles, and long enough for the cache labels (hearts, D/T) to be drawn for the new view.
       const t0 = Date.now();
       let nCache = -1;
-      for (let k = 0; k < 64; k++) {                   // up to ~9.5 s
+      for (let k = 0; k < (o.tries ? 14 : 64); k++) {  // up to ~9.5 s (2 s when looking again)
         await new Promise(r => setTimeout(r, 150));
         const ims = [...root.querySelectorAll('img.leaflet-tile')], nc = root.querySelectorAll('img[src*="map.png"]').length + (window.__gcctPrintLabels ? window.__gcctPrintLabels(k % 6 === 5).length : 0);
         if (Date.now() - t0 > (o.minMs || 0) && ims.every(im => im.complete) && nc === nCache) break;
@@ -8624,11 +8649,19 @@ ${calcTrk(stamp)}</gpx>
       // The route print draws the route itself; the map print takes the route as it is drawn on the map.
       const skip = el => el.closest('.gcct-dlg, .gcct-dock, .leaflet-popup-pane, .leaflet-control-container, .gcct-glow, .gcct-popup, .gcct-favlbl, .gcct-dtlbl, .gcct-ftflbl' + (o.all ? '' : ', .gcct-rtnum, .gcct-park'));
       let seq = 0;
+      const why = { tiles: 0, skipped: 0, outside: 0, faint: 0, notLoaded: 0, cacheTiles: 0 };   // shown on the page when no background came along
       root.querySelectorAll('img.leaflet-tile, img.leaflet-marker-icon, canvas').forEach(im => {
-        if (skip(im)) return;
+        const tile = im.tagName === 'IMG' && im.classList.contains('leaflet-tile');
+        if (tile) why.tiles++;
+        if (skip(im)) { if (tile) why.skipped++; return; }
         const r = im.getBoundingClientRect();
-        if (!r.width || !inBox(r)) return;
-        const op = opOf(im); if (op < 0.03) return;
+        if (!r.width || !inBox(r)) { if (tile) why.outside++; return; }
+        // A loaded tile counts as fully shown even while it is still fading in: Leaflet fades new tiles in step
+        // with the screen, and that stops while this tab is in the background (the print tab is in front).
+        const fading = tile && im.complete && im.naturalWidth && im.classList.contains('leaflet-tile-loaded') && getComputedStyle(im).visibility !== 'hidden' && getComputedStyle(im).display !== 'none';
+        const op = fading ? opOf(im.parentElement) : opOf(im); if (op < 0.03) { if (tile) why.faint++; return; }
+        if (tile && (!im.complete || !im.naturalWidth || !im.classList.contains('leaflet-tile-loaded'))) why.notLoaded++;
+        if (tile && /map\.png/.test(im.src)) why.cacheTiles++;
         let src = '';
         if (im.tagName === 'CANVAS') { try { src = im.toDataURL(); } catch (e) { return; } }   // a canvas from another site can't be read
         else { if (!im.complete || !im.naturalWidth) return; if (im.classList.contains('leaflet-tile') && !im.classList.contains('leaflet-tile-loaded')) return; src = im.src; }
@@ -8689,7 +8722,9 @@ ${calcTrk(stamp)}</gpx>
         else lbls += `<g transform="translate(${(x + 5).toFixed(1)},${(y - 7).toFixed(1)})"><rect x="0" y="-7" width="27" height="14" rx="7" fill="#d1242f" stroke="#fff" stroke-width="1.5"/><text x="13.5" y="3.5" class="ftf">FTF</text></g>`;
       });
       below.sort(cmp); above.sort(cmp);
-      return { W, H, x0, y0, cp, below, above, lbls };
+      // No background at all: the tiles were not in yet (or still fading in) – look once more, a moment later.
+      if (!below.length && (o.tries || 0) < 2) { await new Promise(r => setTimeout(r, 700)); return snapMap(Object.assign({}, o, { tries: (o.tries || 0) + 1, minMs: 0 })); }
+      return { W, H, x0, y0, cp, below, above, lbls, why: below.length ? null : Object.assign(why, { zoom: map.getZoom(), box: [x0, y0, x1, y1].map(Math.round), rect: [rr.width, rr.height].map(Math.round) }) };
     }
     // A scale bar for the copy: a round length about a fifth of the width, in the copy's own pixels.
     function scaleBarSvg(S) {
@@ -8698,19 +8733,69 @@ ${calcTrk(stamp)}</gpx>
       if (!(mpp > 0)) return '';
       const want = mpp * S.W / 5, p10 = Math.pow(10, Math.floor(Math.log10(want)));
       const len = [1, 2, 5, 10].map(k => k * p10).filter(v => v <= want).pop() || p10, w = len / mpp;
-      const txt = len >= 1000 ? `${len / 1000} km` : `${len} m`, x = 12, yb = S.H - 14, h = 6;
-      return `<g class="sb"><rect x="${x - 6}" y="${yb - 22}" width="${(w + 12 + 30).toFixed(1)}" height="30" rx="4" fill="#fff" fill-opacity=".85"/>
+      // drawn larger on a large copy, so it reads the same on the sheet
+      // below the map, in a strip of its own as wide as the map (with its margin), so it scales with it
+      const k = Math.max(1, Math.max(S.W, S.H) / 1100), txt = len >= 1000 ? `${len / 1000} km` : `${len} m`, TW = S.W + 2 * (S.gm || 0), sh = 30 * k;
+      const x = (S.gm || 0) + 6 * k, yb = sh - 4 * k, h = 6 * k;
+      return `<svg class="sbar" viewBox="0 0 ${TW} ${sh}"><g class="sb" font-size="${(11 * k).toFixed(1)}" stroke-width="${k.toFixed(2)}">
         <rect x="${x}" y="${yb - h}" width="${(w / 2).toFixed(1)}" height="${h}" fill="#1f2328"/><rect x="${(x + w / 2).toFixed(1)}" y="${yb - h}" width="${(w / 2).toFixed(1)}" height="${h}" fill="#fff" stroke="#1f2328"/>
         <rect x="${x}" y="${yb - h}" width="${w.toFixed(1)}" height="${h}" fill="none" stroke="#1f2328"/>
-        <text x="${x}" y="${yb - h - 4}">0</text><text x="${(x + w).toFixed(1)}" y="${yb - h - 4}" text-anchor="middle">${txt}</text></g>`;
+        <text x="${x}" y="${yb - h - 4 * k}" text-anchor="middle">0</text><text x="${(x + w).toFixed(1)}" y="${yb - h - 4 * k}" text-anchor="middle">${txt}</text></g></svg>`;
     }
     function mapAttribution() {
       const el = map.getContainer().querySelector('.leaflet-control-attribution');
       return el ? el.textContent.replace(/\s+/g, ' ').replace(/^\s*Leaflet\s*\|?\s*/, '').trim() : '';
     }
     // The map as an SVG figure: tiles, [between], caches and labels, [top], scale bar.
+    // Parallels and meridians at a round step in minutes (about every 110–220 px of the copy), with the
+    // latitudes and longitudes in the margin around the map (S.gm wide). Web Mercator: straight lines.
+    const GRID_STEPS = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200];
+    function gridSvg(S) {
+      const m = S.gm, at = (x, y) => map.containerPointToLatLng([S.x0 + x, S.y0 + y]);
+      const latTop = at(0, 0).lat, latBot = at(0, S.H).lat, lngL = at(0, 0).lng, lngR = at(S.W, 0).lng;
+      const yOf = lat => map.latLngToContainerPoint([lat, lngL]).y - S.y0, xOf = lng => map.latLngToContainerPoint([latTop, lng]).x - S.x0;
+      // the same gap both ways, about a sixth of the map's longer side (so some 4–6 lines across on the sheet)
+      const gap = Math.max(110, Math.max(S.W, S.H) / 6.5);
+      const pick = (span, px) => GRID_STEPS.find(st => px / (span * 60 / st) >= gap) || GRID_STEPS[GRID_STEPS.length - 1];
+      const fs = S.gf || 11, tk = fs * 0.5;
+      const sLat = pick(latTop - latBot, S.H), sLng = pick(lngR - lngL, S.W);
+      const fmt = (v, st, pos, neg) => {
+        const h = v < 0 ? neg : pos, a = Math.abs(v), d = Math.floor(a + 1e-9), mi = (a - d) * 60;
+        const dec = st < 0.1 ? 2 : st < 1 ? (Math.abs(st * 10 - Math.round(st * 10)) > 1e-6 ? 2 : 1) : 0;
+        const mt = Math.abs(mi - 60) < 1e-6 ? 0 : mi;
+        return `${h} ${mt === 0 && mi > 30 ? d + 1 : d}°${st >= 60 ? '' : mt.toFixed(dec).padStart(dec ? 3 + dec : 2, '0') + "'"}`;
+      };
+      let lines = '', labs = '';
+      for (let k = Math.ceil(latBot * 60 / sLat); k * sLat / 60 <= latTop; k++) {
+        const lat = k * sLat / 60, y = yOf(lat); if (y < 2 || y > S.H - 2) continue;
+        lines += `<line x1="0" x2="${S.W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+        const t = esc(fmt(lat, sLat, 'N', 'S'));
+        labs += `<text transform="translate(${-m / 2 + fs * 0.35},${y.toFixed(1)}) rotate(-90)">${t}</text><text transform="translate(${S.W + m / 2 - fs * 0.35},${y.toFixed(1)}) rotate(90)">${t}</text>`
+          + `<line class="tk" x1="${-tk}" x2="0" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/><line class="tk" x1="${S.W}" x2="${S.W + tk}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+      }
+      for (let k = Math.ceil(lngL * 60 / sLng); k * sLng / 60 <= lngR; k++) {
+        const lng = k * sLng / 60, x = xOf(lng); if (x < 2 || x > S.W - 2) continue;
+        lines += `<line y1="0" y2="${S.H}" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}"/>`;
+        const t = esc(fmt(lng, sLng, 'E', 'W'));
+        labs += `<text x="${x.toFixed(1)}" y="${-m / 2 + fs * 0.35}">${t}</text><text x="${x.toFixed(1)}" y="${S.H + m / 2 + fs * 0.35}">${t}</text>`
+          + `<line class="tk" y1="${-tk}" y2="0" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}"/><line class="tk" y1="${S.H}" y2="${S.H + tk}" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}"/>`;
+      }
+      return { lines: `<g class="gl" stroke-width="${(fs / 10).toFixed(2)}" stroke-dasharray="${(fs * 0.6).toFixed(1)} ${(fs * 0.4).toFixed(1)}">${lines}</g>`, labs: `<g class="gx" font-size="${fs.toFixed(1)}" stroke-width="${(fs / 10).toFixed(2)}">${labs}</g>` };
+    }
     function mapFigure(S, between, top) {
-      return `<div class="map"><svg viewBox="0 0 ${S.W} ${S.H}"><foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.below.map(x => x[1]).join('')}</div></foreignObject>${between || ''}<foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.above.map(x => x[1]).join('')}</div></foreignObject>${S.lbls}${top || ''}${scaleBarSvg(S)}</svg></div>`;
+      if (S.why) console.warn('[gcct] print: no background map', S.why);
+      const diag = S.why ? `<p class="attr" style="text-align:left;color:#d1242f">${esc(T('The background map did not come along'))}: ${esc(JSON.stringify(S.why))}</p>` : '';
+      return mapFigure0(S, between, top) + diag;
+    }
+    function mapFigure0(S, between, top) {
+      if (S.gm) {
+        // with the grid: the map inside, the latitudes and longitudes in a margin around it
+        const g = gridSvg(S), m = S.gm;
+        return `<div class="mapw"><div class="map grid"><svg viewBox="${-m} ${-m} ${S.W + 2 * m} ${S.H + 2 * m}"><svg x="0" y="0" width="${S.W}" height="${S.H}" viewBox="0 0 ${S.W} ${S.H}" overflow="hidden">`
+          + `<foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.below.map(x => x[1]).join('')}</div></foreignObject>${g.lines}${between || ''}<foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.above.map(x => x[1]).join('')}</div></foreignObject>${S.lbls}${top || ''}</svg>`
+          + `<rect x="0" y="0" width="${S.W}" height="${S.H}" fill="none" stroke="#59636e" stroke-width="1"/>${g.labs}</svg></div>${scaleBarSvg(S)}</div>`;
+      }
+      return `<div class="mapw"><div class="map"><svg viewBox="0 0 ${S.W} ${S.H}"><foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.below.map(x => x[1]).join('')}</div></foreignObject>${between || ''}<foreignObject x="0" y="0" width="${S.W}" height="${S.H}"><div xmlns="http://www.w3.org/1999/xhtml" class="lay">${S.above.map(x => x[1]).join('')}</div></foreignObject>${S.lbls}${top || ''}</svg></div>${scaleBarSvg(S)}</div>`;
     }
     const PRINT_CSS = S => `
           @page{size:A4;margin:16mm 18mm 16mm 18mm}
@@ -8718,11 +8803,14 @@ ${calcTrk(stamp)}</gpx>
           @media print{body{padding:0;max-width:none}.noprint{display:none}}
           h1{font-size:17pt;margin:0 0 2px} h2{font-size:12pt;margin:14px 0 6px}
           .sub{color:#59636e;margin:0 0 10px}
-          .map{box-sizing:border-box;position:relative;width:${S.H / S.W > 1.25 ? '72%' : '100%'};margin:0 auto;aspect-ratio:${S.W}/${S.H};overflow:hidden;border:1px solid #c4cbd3;border-radius:6px;background:#fff}
+          .mapw{width:${S.H / S.W > 1.25 ? '72%' : '100%'};margin:0 auto} .mapw .sbar{display:block;width:100%;height:auto;margin-top:4px}
+          .map{box-sizing:border-box;position:relative;width:100%;aspect-ratio:${S.W + 2 * (S.gm || 0)}/${S.H + 2 * (S.gm || 0)};overflow:hidden;border:1px solid #c4cbd3;border-radius:6px;background:#fff}
+          .map.grid{border:0;border-radius:0;overflow:visible} .map .gl line{stroke:#1f2328;stroke-opacity:.55}
+          .map .gx text{font-family:system-ui,sans-serif;font-weight:600;fill:#1f2328;text-anchor:middle} .map .gx .tk{stroke:#59636e}
           .map svg{display:block;width:100%;height:100%} .map .lay{position:relative;width:${S.W}px;height:${S.H}px;overflow:hidden} .map .lay img{position:absolute;max-width:none}
           .map text.n{font:bold 11px system-ui,sans-serif;fill:#fff;text-anchor:middle} .map text.pk{font:bold 11px system-ui,sans-serif;fill:#fff;text-anchor:middle}
           .map text.lb{font:600 11px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#1f2328;text-anchor:middle} .map text.ftf{font:600 10px system-ui,sans-serif;fill:#fff;text-anchor:middle}
-          .map .sb text{font:600 11px system-ui,sans-serif;fill:#1f2328}
+          .map .sb text{font-family:system-ui,sans-serif;font-weight:600;fill:#1f2328}
           .attr{color:#8c959f;font-size:7.5pt;margin:3px 0 0;text-align:right}
           .foot{margin-top:14px;color:#8c959f;font-size:8pt}
           .noprint{position:fixed;top:12px;right:12px} .noprint button{font:600 14px system-ui;padding:8px 16px;border-radius:8px;border:0;background:#1f7a34;color:#fff;cursor:pointer}`;
@@ -8742,6 +8830,7 @@ ${calcTrk(stamp)}</gpx>
       const d = api.openDialog(T('Print the map'), `
         <p class="sm">${esc(T('A page with what the map shows now – background, caches, labels and what you have drawn – with a scale bar, to print or save as PDF.'))}</p>
         <label class="f"><span class="l">${esc(T('Title'))}</span><input type="text" data-a="t" maxlength="100"></label>
+        <label class="chk"><input type="checkbox" data-a="grid"${load('gcct.printGrid', false) ? ' checked' : ''}> ${esc(T('Parallels and meridians, with latitude and longitude in the margin'))}</label>
         <div class="btns"><button class="primary" data-a="go">${icon('print', 15)} ${esc(T('Make the page'))}</button><button data-a="no">${esc(T('Cancel'))}</button></div>`, { small: true, cls: 'gcct-mapprint' });
       const t = d.querySelector('[data-a=t]'), go = d.querySelector('[data-a=go]');
       t.value = mapPrintTitle || T('Map') + ' ' + gpxStamp().slice(0, 10);
@@ -8750,14 +8839,16 @@ ${calcTrk(stamp)}</gpx>
       d.querySelector('[data-a=no]').onclick = () => api.closeDialog();
       go.onclick = () => {
         const title = t.value.trim(); if (!title) return;
+        const grid = d.querySelector('[data-a=grid]').checked; save('gcct.printGrid', grid);
         mapPrintTitle = title; api.closeDialog();
-        printTab(() => mapPrintPage(title));
+        printTab(() => mapPrintPage(title, grid));
       };
       setTimeout(() => { t.focus(); t.select(); }, 0);
     }
-    async function mapPrintPage(title) {
+    async function mapPrintPage(title, grid) {
       await new Promise(r => setTimeout(r, 300));          // the dialog gone and the map still
       const S = await snapMap({ all: true, minMs: 0 });
+      if (grid) { S.gf = Math.max(11, Math.max(S.W, S.H) / 95); S.gm = Math.round(S.gf * 2); }   // ~2.6 mm text on the sheet
       const c = map.getCenter(), attr = mapAttribution();
       // Landscape for a map wider than it is tall (the usual screen), portrait otherwise; the map as large as
       // the sheet allows below the title.
@@ -8765,8 +8856,8 @@ ${calcTrk(stamp)}</gpx>
       const fit = `
           @page{size:A4 ${wide ? 'landscape' : 'portrait'};margin:12mm 14mm}
           body{max-width:${wide ? '277mm' : '190mm'}}
-          .map{width:min(100%, calc((100vh - 34mm) * ${S.W} / ${S.H}))}
-          @media print{.map{width:min(100%, calc((100vh - 36mm) * ${S.W} / ${S.H}))}}`;
+          .mapw{width:min(100%, calc((100vh - 42mm) * ${S.W + 2 * (S.gm || 0)} / ${S.H + 2 * (S.gm || 0)}))}
+          @media print{.mapw{width:min(100%, calc((100vh - 44mm) * ${S.W + 2 * (S.gm || 0)} / ${S.H + 2 * (S.gm || 0)}))}}`;
       return printHead(title, PRINT_CSS(S) + fit) + `<h1>${esc(title)}</h1>
           <p class="sub">${esc(fmtDMM(c.lat, c.lng))} · ${esc(T('zoom {z}', { z: map.getZoom() }))}</p>
           ${mapFigure(S)}${attr ? `<p class="attr">${esc(attr)}</p>` : ''}` + printFoot();
@@ -8788,7 +8879,7 @@ ${calcTrk(stamp)}</gpx>
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On Geocaching.com'))}</b><span>${esc(T('a list – also in the app'))}</span></div><button class="rt-act" data-a="bm" title="${esc(T('Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app'))}">${icon('list', 15)}<span>${esc(T('Save as list'))}</span></button></div>
           <div class="rt-bm" style="display:none"><div class="rt-bm-row"><input type="text" data-a="bmname" maxlength="100" aria-label="${esc(T('Name of the list'))}"><button class="primary" data-a="bmsave">${esc(T('Save'))}</button><button data-a="bmcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg"></p></div>
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On paper'))}</b><span>${esc(T('map and list, to print'))}</span></div><button class="rt-act" data-a="print" title="${esc(T('A page with a map of the route and everything about the stops, to print or save as PDF'))}">${icon('print', 15)}<span>${esc(T('Print'))}</span></button></div>
-          <div class="rt-bm rt-pr" style="display:none"><div class="rt-bm-row"><input type="text" data-a="prname" maxlength="100" aria-label="${esc(T('Title of the printout'))}"><button class="primary" data-a="prgo">${esc(T('Make the page'))}</button><button data-a="prcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg">${esc(T('The title at the top of the printout.'))}</p></div>
+          <div class="rt-bm rt-pr" style="display:none"><div class="rt-bm-row"><input type="text" data-a="prname" maxlength="100" aria-label="${esc(T('Title of the printout'))}"><button class="primary" data-a="prgo">${esc(T('Make the page'))}</button><button data-a="prcancel">${esc(T('Cancel'))}</button></div><label class="rt-full rt-grid"><input type="checkbox" data-a="prgrid"> ${esc(T('Parallels and meridians, with latitude and longitude in the margin'))}</label><p class="rt-bm-msg">${esc(T('The title at the top of the printout.'))}</p></div>
           <div class="rt-out-back"><button data-a="back">${icon('back', 15)}<span>${esc(T('Back to the stops'))}</span></button></div>
         </div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
@@ -9383,6 +9474,7 @@ ${calcTrk(stamp)}</gpx>
         bmBox.style.display = 'none';
         prName.value = routeTitle || T('Route') + ' ' + gpxStamp().slice(0, 10);
         prGo.disabled = false; prBox.style.display = '';
+        d.querySelector('[data-a=prgrid]').checked = !!load('gcct.printGrid', false);
         prName.focus(); prName.select();
       };
       prName.oninput = () => { prGo.disabled = !prName.value.trim(); };
@@ -9392,11 +9484,12 @@ ${calcTrk(stamp)}</gpx>
         const b = e.currentTarget, title = prName.value.trim();
         if (!route.length || b.disabled || !title) return;
         routeTitle = title;
+        const grid = d.querySelector('[data-a=prgrid]').checked; save('gcct.printGrid', grid);
         b.disabled = true;
-        try { await printTab(() => routePrintPage(title)); } finally { b.disabled = false; }
+        try { await printTab(() => routePrintPage(title, grid)); } finally { b.disabled = false; }
       };
-      async function routePrintPage(title) {
-        const stops = routeStops(), cOn = calcOn(), legs = cOn ? routeCalc.legs : null;
+      async function routePrintPage(title, grid) {
+        const stops = routeStops(), cOn = calcValid(), legs = cOn ? routeCalc.legs : null;   // as on the map: shown, accepted or not
         const lls = stops.map(r => L.latLng(r.lat, r.lng));
         if (cOn) legs.forEach(l => l.segs.forEach(sg => sg.pts.forEach(q => lls.push(L.latLng(q[0], q[1])))));
         const B = L.latLngBounds(lls);
@@ -9406,15 +9499,27 @@ ${calcTrk(stamp)}</gpx>
         try { if (lls.length > 1) map.fitBounds(B, { padding: [44, 44], maxZoom: 17, animate: false }); else map.setView(lls[0], 16, { animate: false }); } catch (e) { /* ignore */ }
         const S = await snapMap({ minMs: 3200, box: (cp, rr) => {
           const nw = cp(B.getNorthWest()), se = cp(B.getSouthEast()), pad = 30;
-          return [Math.max(0, Math.min(nw.x, se.x) - pad), Math.max(0, Math.min(nw.y, se.y) - pad), Math.min(rr.width, Math.max(nw.x, se.x) + pad), Math.min(rr.height, Math.max(nw.y, se.y) + pad)];
+          let bx = [Math.max(0, Math.min(nw.x, se.x) - pad), Math.max(0, Math.min(nw.y, se.y) - pad), Math.min(rr.width, Math.max(nw.x, se.x) + pad), Math.min(rr.height, Math.max(nw.y, se.y) + pad)];
+          // Never a thin strip: at least 0.6 as high as wide (and half as wide as high), widened evenly
+          // round the route as far as the map on screen reaches.
+          const grow = (lo, hi, want, max) => {
+            if (hi - lo >= want) return [lo, hi];
+            want = Math.min(want, max); let a = (lo + hi - want) / 2, b = a + want;
+            if (a < 0) { b -= a; a = 0; } if (b > max) { a -= b - max; b = max; }
+            return [Math.max(0, a), Math.min(max, b)];
+          };
+          [bx[1], bx[3]] = grow(bx[1], bx[3], (bx[2] - bx[0]) * 0.6, rr.height);
+          [bx[0], bx[2]] = grow(bx[0], bx[2], (bx[3] - bx[1]) * 0.5, rr.width);
+          return bx;
         } });
         const { W, H, x0, y0, cp } = S;
+        if (grid) { S.gf = Math.max(11, Math.max(S.W, S.H) / 65); S.gm = Math.round(S.gf * 2); }
         const XY = (lat, lng) => { const q = cp(L.latLng(lat, lng)); return [(q.x - x0).toFixed(1), (q.y - y0).toFixed(1)]; };
         let lines = '';
         if (cOn) {
           legs.forEach(l => l.segs.forEach(sg => {
             const st = CALC_STYLE[sg.m] || CALC_STYLE.foot;
-            lines += `<polyline points="${sg.pts.map(q => XY(q[0], q[1]).join(',')).join(' ')}" fill="none" stroke="${st.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="${sg.m === 'air' ? 'butt' : 'round'}"${sg.m === 'air' ? ' stroke-dasharray="9 6"' : ''}/>`;
+            lines += `<polyline points="${(sg.m === 'air' ? airPts(sg.pts) : sg.pts).map(q => XY(q[0], q[1]).join(',')).join(' ')}" fill="none" stroke="${st.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="${sg.m === 'air' ? 'butt' : 'round'}"${sg.m === 'air' ? ' stroke-dasharray="9 6"' : ''}/>`;
           }));
         } else if (stops.length > 1) {
           lines = `<polyline points="${stops.map(r => XY(r.lat, r.lng).join(',')).join(' ')}" fill="none" stroke="#8250df" stroke-width="3" stroke-dasharray="8 6"/>`;
