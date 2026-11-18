@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.121
+// @version      1.56.123
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -4985,8 +4985,9 @@
       if (!m.__pin) return;
       m.__pin.name = name.trim() || m.__pin.name;
       savePins();
-      if (m.__label) { tools.removeLayer(m.__label); m.__label = pinLabel(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); }
-      pinRenamedInRoute(m.__pin.id, m.__pin.name);
+      // the route first: a hitch in redrawing the label must not leave the old name in the route
+      try { pinRenamedInRoute(m.__pin.id, m.__pin.name, m.__pin); } catch (e) { console.error('[gcct] pin rename in route', e); }
+      try { if (m.__label) { tools.removeLayer(m.__label); m.__label = pinLabel(m.getLatLng(), pinLabelHtml(m.__pin.name)); showPin(m); } } catch (e) { console.error('[gcct] pin label', e); }
     }
     const xmlEsc = t => String(t).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
     function downloadGpx(recs, fileName) {
@@ -8387,9 +8388,24 @@ ${calcTrk(stamp)}</gpx>
     // The list follows the map while the route window is open.
     map.on('moveend', () => { if (routeOpen() && routeRefresh) routeRefresh(); });
     // A pin renamed on the map gets the new name in the route too (and in an open route window).
-    function pinRenamedInRoute(id, name) {
+    // A stop whose own pin is gone (removed, or all drawings cleared) but with a pin now on the very same spot is
+    // taken to be that pin: it gets the name, and the pin's key so later renames find it straight away.
+    // Console: the pin stops of the route and the pins on the map (names, keys, spots) – to see why a name differs.
+    window.gcctRouteDebug = () => {
+      const out = { stops: route.filter(r => r.kind === 'pin').map(r => ({ key: r.key, name: r.name, lat: r.lat, lng: r.lng })),
+        pins: pinRecs.map(p => ({ key: 'p:' + p.id, name: p.name, lat: p.lat, lng: p.lng })),
+        markers: pins.filter(m => tools.hasLayer(m)).map(m => ({ key: m.__pin ? 'p:' + m.__pin.id : null, name: m.__pin ? m.__pin.name : null, sameRec: m.__pin ? pinRecs.includes(m.__pin) : null })) };
+      console.log(JSON.stringify(out, null, 1)); return out;
+    };
+    function pinRenamedInRoute(id, name, at) {
       let hit = false;
-      route.forEach(r => { if (r.key === 'p:' + id && r.name !== name) { r.name = name; hit = true; } });
+      const live = new Set(pinRecs.map(p => 'p:' + p.id));
+      route.forEach(r => {
+        const same = r.key === 'p:' + id || (at && r.kind === 'pin' && !live.has(r.key) && !route.some(q => q.key === 'p:' + id) && distM(L.latLng(r.lat, r.lng), L.latLng(at.lat, at.lng)) < 3);
+        if (!same) return;
+        if (r.key !== 'p:' + id) { r.key = 'p:' + id; hit = true; }
+        if (r.name !== name) { r.name = name; hit = true; }
+      });
       if (hit) { saveRoute(); drawRoute(); }
       if (routeOpen() && routeRefresh) routeRefresh();
     }
