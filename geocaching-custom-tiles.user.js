@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.143
+// @version      1.56.144
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -8076,12 +8076,15 @@ ${calcTrk(stamp)}</gpx>
     // How much of the straight line from a to b is on water, in metres (the first and last 10 m left out: a
     // geocache may be right at the shore). A point is water when it and its neighbours 2 px away have the
     // water's colour – so the hatching of a bog, a stream or a name in blue does not count.
-    async function wetM(a, b, step = 8) {
+    async function wetM(a, b, step = 5) {
       if (waterOff) return { wet: 0, built: 0 };
       const d = distM(a, b);
       if (d < 25) return { wet: 0, built: 0 };
       const src = waterSrc(a), pts = [];
-      for (let x = 10; x <= d - 10; x += step) { const t = x / d; pts.push(merc(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)); }
+      // evenly from 10 m in to 10 m short, so the same points are read whichever way the line goes
+      const nS = Math.max(1, Math.round((d - 20) / step) + 1), stepM = nS > 1 ? (d - 20) / (nS - 1) : 0;
+      for (let k = 0; k < nS; k++) { const t = (10 + k * stepM) / d; pts.push(merc(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)); }
+      step = stepM || step;
       const tiles = new Map(), keys = new Set();
       pts.forEach(p => [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]].forEach(([dx, dy]) => keys.add(`${Math.floor((p.x + dx) / 256)},${Math.floor((p.y + dy) / 256)}`)));
       await Promise.all([...keys].map(async k => { const [tx, ty] = k.split(',').map(Number); tiles.set(k, await waterTile(src, tx, ty)); }));
@@ -8124,7 +8127,8 @@ ${calcTrk(stamp)}</gpx>
       console.log(JSON.stringify(out, null, 1)); return out;
     };
     // A straight line goes neither across water nor through built-up areas or farmland (walk the streets and roads).
-    const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= Math.max(16, step || 8); };
+    // (a few metres of built-up colour are allowed: the edge of the road or yard the line starts from)
+    const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= Math.max(10, (step || 5) * 1.5); };
     // A walk takes the same way there and back: both directions are worked out and the quicker one is used
     // for both (the services can pick different ways each direction – where the path is joined, a straight
     // bit, which side of a loop). Kept, so the way back comes from memory.
