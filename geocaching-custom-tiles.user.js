@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.144
+// @version      1.56.145
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7278,7 +7278,15 @@
         }));
         airDash();
         tuckRouteLine();
-      } else if (lls.length > 1) { const pl = L.polyline(lls, Object.assign(routeLineOpts(), { opacity: 1 - routeAlpha / 100 })); pl.__calcLine = true; routeLayer.addLayer(pl); tuckRouteLine(); }
+      } else if (lls.length > 1) {
+        // one line per leg, each drawn from the same end whichever way it goes (there and back on the same line
+        // would otherwise fill each other's gaps and look solid)
+        for (let k = 1; k < lls.length; k++) {
+          const ab = airPts([[lls[k - 1].lat, lls[k - 1].lng], [lls[k].lat, lls[k].lng]]);
+          const pl = L.polyline(ab, Object.assign(routeLineOpts(), { opacity: 1 - routeAlpha / 100 })); pl.__calcLine = true; routeLayer.addLayer(pl);
+        }
+        tuckRouteLine();
+      }
       // Each number sits as close to its stop's icon as it can without touching anything: the icon itself,
       // the cache's ♥ (above), D/T (below) and FTF badge (right) as far as they are shown, the icons of
       // caches nearby and the route's lines. Tried on rings around the stop, nearest first.
@@ -9627,7 +9635,7 @@ ${calcTrk(stamp)}</gpx>
             lines += `<polyline points="${(sg.m === 'air' ? airPts(sg.pts) : sg.pts).map(q => XY(q[0], q[1]).join(',')).join(' ')}" fill="none" stroke="${st.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="${sg.m === 'air' ? 'butt' : 'round'}"${sg.m === 'air' ? ' stroke-dasharray="9 6"' : ''}/>`;
           }));
         } else if (stops.length > 1) {
-          lines = `<polyline points="${stops.map(r => XY(r.lat, r.lng).join(',')).join(' ')}" fill="none" stroke="#8250df" stroke-width="3" stroke-dasharray="8 6"/>`;
+          lines = stops.slice(1).map((r, i) => airPts([[stops[i].lat, stops[i].lng], [r.lat, r.lng]])).map(ab => `<polyline points="${ab.map(q => XY(q[0], q[1]).join(',')).join(' ')}" fill="none" stroke="#8250df" stroke-width="3" stroke-dasharray="8 6"/>`).join('');
         }
         let marks = '';
         if (cOn) {
