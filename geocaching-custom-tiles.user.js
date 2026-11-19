@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.138
+// @version      1.56.141
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -229,10 +229,10 @@
     "Route": "Rute",
     "Route: pick geocaches and pins, and export them as a GPX route": "Rute: velg geocacher og merkenåler, og eksporter dem som en GPX-rute",
     "Search code or name …": "Søk etter kode eller navn …",
-    "Geocaches and pins nearest the middle of the map. Click one to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en for å legge den til i ruten.",
+    "Geocaches and pins nearest the middle of the map. Click one to add it to the route.": "Geocacher og merkenåler nærmest midten av kartet. Klikk på en for å legge den til i ruta.",
     "No stops yet.": "Ingen stopp ennå.",
     "Sort by nearest": "Sorter etter nærmeste",
-    "Clear route": "Glem ruten",
+    "Clear route": "Glem ruta",
     "Route from here": "Rute herfra",
     "{n} stops · {d}": "{n} stopp · {d}",
     "Solved": "Løst",
@@ -244,7 +244,7 @@
     "Layout": "Utseende",
     "Elevation profile": "Høydeprofil",
     "Fetching heights …": "Henter høyder …",
-    "No heights found for this route.": "Fant ingen høyder for denne ruten.",
+    "No heights found for this route.": "Fant ingen høyder for denne ruta.",
     "lowest": "lavest",
     "highest": "høyest",
     "Along the straight lines between the stops; heights from Kartverket (Norway) or Open-Meteo.": "Langs de rette linjene mellom stoppene; høyder fra Kartverket (Norge) eller Open-Meteo.",
@@ -275,17 +275,17 @@
     "The roads could not be checked (the road service did not answer), so the car may be shown on tracks and trails. Discard and try again in a minute.": "Vegene kunne ikke sjekkes (vegtjenesten svarte ikke), så bilen kan være lagt på traktorveger og stier. Forkast og prøv igjen om et minutt.",
     "Pause": "Pause",
     "Continue": "Fortsett",
-    "Play the route": "Spill av ruten",
+    "Play the route": "Spill av ruta",
     "Stop": "Stopp",
     "Pace": "Tempo",
-    "along the calculated route": "langs den beregnede ruten",
+    "along the calculated route": "langs den beregnede ruta",
     "straight lines, walking pace": "luftlinje, gåtempo",
     "leg {i}": "etappe {i}",
     "where the car is left": "der bilen settes igjen",
     "where the bike is left": "der sykkelen settes igjen",
     "Calculated route – shown on the map": "Beregnet rute – vist i kartet",
-    "Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.": "Langs den beregnede ruten; høyder fra Kartverket (Norge) eller Open-Meteo.",
-    "Along the calculated route.": "Langs den beregnede ruten.",
+    "Along the calculated route; heights from Kartverket (Norway) or Open-Meteo.": "Langs den beregnede ruta; høyder fra Kartverket (Norge) eller Open-Meteo.",
+    "Along the calculated route.": "Langs den beregnede ruta.",
     "By car": "Med bil",
     "By bike": "Med sykkel",
     "On foot": "Til fots",
@@ -301,15 +301,15 @@
     "Accept it to measure the legs and the total along it.": "Godta den for å måle etappene og totalen langs den.",
     "Accept": "Godta",
     "Discard": "Forkast",
-    "Discard the calculated route": "Forkast den beregnede ruten",
+    "Discard the calculated route": "Forkast den beregnede ruta",
     "How you travel between the geocaches": "Hvordan du kommer deg mellom cachene",
     "Calculate route": "Beregn rute",
     "Along roads and paths, and in a straight line from the nearest point on the path to each geocache. From OpenStreetMap.": "Langs veger og stier, og i luftlinje fra nærmeste punkt på stien til hver cache. Fra OpenStreetMap.",
-    "Could not calculate the route: {e}": "Kunne ikke beregne ruten: {e}",
+    "Could not calculate the route: {e}": "Kunne ikke beregne ruta: {e}",
     "stop {n} ({name}) cannot be reached without crossing water": "stopp {n} ({name}) kan ikke nås uten å krysse vann",
     "Checking the order of the stops …": "Sjekker rekkefølgen på stoppene …",
-    "Calculating the route …": "Beregner ruten …",
-    "Calculating the route … leg {i} of {n}": "Beregner ruten … etappe {i} av {n}",
+    "Calculating the route …": "Beregner ruta …",
+    "Calculating the route … leg {i} of {n}": "Beregner ruta … etappe {i} av {n}",
     "Hide the site’s icon at the posted coordinates": "Skjul nettstedets ikon ved oppgitte koordinater",
     "Solved caches you have found: only the smiley at the solved spot is left (with the marks on)": "Løste cacher du har funnet: bare smilefjeset ved den løste plassen blir igjen (når merkene er på)",
     "Crosshair": "Trådkors",
@@ -372,16 +372,16 @@
     "The geocaches are hidden – click the eye button in the toolbar to show them again.": "Geocachene er skjult – klikk på øyeknappen i verktøylinjen for å vise dem igjen.",
     "Geocaches on the map: a list that follows the map – click one to zoom to it": "Geocacher på kartet: en liste som følger kartet – klikk på en for å zoome til den",
     "Pin (tag)": "Nål",
-    "In the route": "I ruten",
+    "In the route": "I ruta",
     "Move up": "Flytt opp",
-    "Add to route": "Legg til i ruten",
+    "Add to route": "Legg til i ruta",
     "Preview": "Forhåndsvis",
     "Back": "Tilbake",
     "Download GPX route": "Last ned GPX-rute",
     "Save as list": "Lagre som liste",
     "On paper": "På papir",
     "map and list, to print": "kart og liste, til utskrift",
-    "A page with a map of the route and everything about the stops, to print or save as PDF": "En side med kart over ruten og alt om stoppene, til å skrive ut eller lagre som PDF",
+    "A page with a map of the route and everything about the stops, to print or save as PDF": "En side med kart over ruta og alt om stoppene, til å skrive ut eller lagre som PDF",
     "Print": "Skriv ut",
     "The browser blocked the new tab – allow pop-ups for geocaching.com.": "Nettleseren blokkerte den nye fanen – tillat sprettoppvinduer for geocaching.com.",
     "Making the page …": "Lager siden …",
@@ -389,21 +389,22 @@
     "Stops": "Stopp",
     "Made {d} with Geocaching Map – Custom Tile Layers.": "Laget {d} med Geocaching Map – Custom Tile Layers.",
     "straight across the terrain": "rett på i terrenget",
-    "Take the route with you": "Ta med ruten",
+    "Take the route with you": "Ta med ruta",
     "On your GPS": "På GPS'en",
     "a GPX file": "en GPX-fil",
     "On Geocaching.com": "På Geocaching.com",
     "a list – also in the app": "en liste – også i appen",
     "Back to the stops": "Tilbake til stoppene",
     "Save": "Lagre",
-    "Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app": "Lagre geocachene i ruten, i rekkefølge, som en liste på geocaching.com – den dukker opp under Lister i Geocaching-appen",
+    "Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app": "Lagre geocachene i ruta, i rekkefølge, som en liste på geocaching.com – den dukker opp under Lister i Geocaching-appen",
     "Name of the list": "Navn på listen",
     "Title of the printout": "Tittel på utskriften",
     "Title": "Tittel",
+    "The route": "Ruta",
     "You have a route with {n} stops. Shall it be forgotten too?": "Du har en rute med {n} stopp. Skal den også glemmes?",
-    "Clear all, the route too": "Fjern alt, også ruten",
-    "Keep the route": "Behold ruten",
-    "<b>Clear</b> measurements, single circles, pins – and the route, if you say so.": "<b>Fjern</b> målinger, enkeltsirkler, nåler – og ruten, om du vil.",
+    "Clear all, the route too": "Fjern alt, også ruta",
+    "Keep the route": "Behold ruta",
+    "<b>Clear</b> measurements, single circles, pins – and the route, if you say so.": "<b>Fjern</b> målinger, enkeltsirkler, nåler – og ruta, om du vil.",
     "The background map did not come along": "Bakgrunnskartet kom ikke med",
     "Parallels and meridians, with latitude and longitude in the margin": "Breddesirkler og meridianer, med bredde og lengde i margen",
     "<b>Print the map</b> – what the map shows now, with a title of your own and a scale bar.": "<b>Skriv ut kartet</b> – det kartet viser nå, med egen tittel og målestokk.",
@@ -414,8 +415,8 @@
     "A page with what the map shows now – background, caches, labels and what you have drawn – with a scale bar, to print or save as PDF.": "En side med det kartet viser nå – bakgrunn, cacher, merker og det du har tegnet – med målestokk, til å skrive ut eller lagre som PDF.",
     "Make the page": "Lag siden",
     "The title at the top of the printout.": "Tittelen øverst på utskriften.",
-    "{n} geocaches go in the list, in the order of the route; pins do not.": "{n} geocacher kommer med i listen, i rutens rekkefølge; merkenåler kommer ikke med.",
-    "There are no geocaches in the route.": "Det er ingen geocacher i ruten.",
+    "{n} geocaches go in the list, in the order of the route; pins do not.": "{n} geocacher kommer med i listen, i rutas rekkefølge; merkenåler kommer ikke med.",
+    "There are no geocaches in the route.": "Det er ingen geocacher i ruta.",
     "Saving …": "Lagrer …",
     "Saved as the list {link} – {n} geocaches. Open it under Lists in the Geocaching app.": "Lagret som listen {link} – {n} geocacher. Åpne den under Lister i Geocaching-appen.",
     "Could not save the list: {e}": "Kunne ikke lagre listen: {e}",
@@ -423,10 +424,10 @@
     "the site did not answer with a list": "nettstedet svarte ikke med en liste",
     "Full cache data": "Fulle cachedata",
     "Back to the start": "Tilbake til start",
-    "End the route at the first stop again": "Avslutt ruten ved første stopp igjen",
+    "End the route at the first stop again": "Avslutt ruta ved første stopp igjen",
     "round trip": "rundtur",
     "Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.": "Hver geocache med beskrivelse, hint, attributter, logger og ekstra veipunkter, som GPX-fila på cachesiden. Tar litt tid, siden hver cacheside hentes.",
-    "This is what the GPX file will contain – the map shows the whole route.": "Slik blir GPX-filen – kartet viser hele ruten.",
+    "This is what the GPX file will contain – the map shows the whole route.": "Slik blir GPX-filen – kartet viser hele ruta.",
     "Name in GPS": "Navn i GPS",
     "Description": "Beskrivelse",
     "Coordinates": "Koordinater",
@@ -434,8 +435,8 @@
     "Total": "Totalt",
     "Show on the map": "Vis på kartet",
     "Straight-line distances; the way there is always longer.": "Avstander i luftlinje; veien dit er alltid lengre.",
-    "Added to the route: {name}": "Lagt til i ruten: {name}",
-    "Geocaches on the map and your pins, nearest the middle first – search to find others. Click one here to add it to the route – or right-click a geocache or pin on the map and choose Add to route.": "Geocacher i kartutsnittet og merkenålene dine, nærmest midten først – søk for å finne andre. Klikk på en her for å legge den til i ruten – eller høyreklikk på en geocache eller nål i kartet og velg Legg til i ruten.",
+    "Added to the route: {name}": "Lagt til i ruta: {name}",
+    "Geocaches on the map and your pins, nearest the middle first – search to find others. Click one here to add it to the route – or right-click a geocache or pin on the map and choose Add to route.": "Geocacher i kartutsnittet og merkenålene dine, nærmest midten først – søk for å finne andre. Klikk på en her for å legge den til i ruta – eller høyreklikk på en geocache eller nål i kartet og velg Legg til i ruta.",
     "Move down": "Flytt ned",
     "Remove": "Fjern",
     "Download GPX": "Last ned GPX",
@@ -578,7 +579,7 @@
     "Place": "Sted",
     "Abroad": "Utland",
     "Fetching {n} geocaches …": "Henter {n} geocacher …",
-    "Could not fetch {list} – only in the route, without description.": "Fikk ikke hentet {list} – bare med i ruten, uten beskrivelse.",
+    "Could not fetch {list} – only in the route, without description.": "Fikk ikke hentet {list} – bare med i ruta, uten beskrivelse.",
     "Route with {n} stops from geocaching.com": "Rute med {n} stopp fra geocaching.com",
     "Some search services did not answer: {list}": "Noen søketjenester svarte ikke: {list}",
     "Places in Norway, addresses and places abroad appear as you type. Use <b>↑</b> <b>↓</b> and <b>Enter</b> to pick one. Tip: press <b>/</b> on the map to open this box.": "Steder i Norge, adresser og steder i utlandet vises mens du skriver. Bruk <b>↑</b> <b>↓</b> og <b>Enter</b> for å velge. Tips: trykk <b>/</b> på kartet for å åpne denne boksen.",
@@ -4691,6 +4692,13 @@
       .gcct-route .rt-back{color:var(--muted)}
       .gcct-route .rt-back .rt-n{opacity:.6}
       .gcct-route .bd > .btns.rt-pv-btns{display:block;padding:10px 20px 12px}
+      .gcct-route .rt-out-back{margin-top:0!important}
+      .gcct-route .tabs{display:flex;gap:3px;margin:0 0 10px;padding:3px;border-radius:var(--rc);background:var(--soft)}
+      .gcct-route .tabs button.tab{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:32px;padding:4px 6px;border:0;border-radius:6px;
+        background:transparent;box-shadow:none;color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .gcct-route .tabs button.tab:hover{background:rgba(255,255,255,.6);color:var(--ink)}
+      .gcct-route .tabs button.tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
+      .gcct-route .rt-outpane{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
       .gcct-route .rt-out-h{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px}
       .gcct-route .rt-out{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
       .gcct-route .rt-out-l{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
@@ -8928,18 +8936,18 @@ ${calcTrk(stamp)}</gpx>
         <div class="rt-list"></div>
         <h4 class="rt-h">${esc(T('Route'))} <span class="rt-sum"></span></h4>
         <ol class="rt-route"></ol>
+        <div class="tabs rt-tabs" role="tablist" style="display:none"><button class="tab on" data-tab="route" role="tab">${esc(T('The route'))}</button><button class="tab" data-tab="out" role="tab">${esc(T('Take the route with you'))}</button></div>
         <div class="rt-pv" style="display:none"></div>
         <div class="btns rt-edit-btns"><button data-a="sort">${esc(T('Sort by nearest'))}</button><button data-a="clear">${esc(T('Clear route'))}</button><label class="rt-full" title="${esc(T('End the route at the first stop again'))}"><input type="checkbox" data-a="loop"> ${esc(T('Back to the start'))}</label><span class="sp"></span><button class="primary" data-a="preview">${esc(T('Preview'))}</button></div>
-        <div class="btns rt-pv-btns" style="display:none">
-          <div class="rt-out-h">${esc(T('Take the route with you'))}</div>
+        <div class="rt-outpane" style="display:none">
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On your GPS'))}</b><span>${esc(T('a GPX file'))}</span></div><div class="rt-out-r"><button class="primary rt-act" data-a="gpx">${icon('download', 15)}<span>${esc(T('Download GPX route'))}</span></button><label class="rt-full" title="${esc(T('Each geocache with description, hint, attributes, logs and additional waypoints, like the GPX file on the cache page. Takes a moment, as every cache page is fetched.'))}"><input type="checkbox" data-a="full"> ${esc(T('Full cache data'))}</label></div></div>
 
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On Geocaching.com'))}</b><span>${esc(T('a list – also in the app'))}</span></div><button class="rt-act" data-a="bm" title="${esc(T('Save the geocaches of the route, in order, as a list on geocaching.com – it shows up under Lists in the Geocaching app'))}">${icon('list', 15)}<span>${esc(T('Save as list'))}</span></button></div>
           <div class="rt-bm" style="display:none"><div class="rt-bm-row"><input type="text" data-a="bmname" maxlength="100" aria-label="${esc(T('Name of the list'))}"><button class="primary" data-a="bmsave">${esc(T('Save'))}</button><button data-a="bmcancel">${esc(T('Cancel'))}</button></div><p class="rt-bm-msg"></p></div>
           <div class="rt-out"><div class="rt-out-l"><b>${esc(T('On paper'))}</b><span>${esc(T('map and list, to print'))}</span></div><button class="rt-act" data-a="print" title="${esc(T('A page with a map of the route and everything about the stops, to print or save as PDF'))}">${icon('print', 15)}<span>${esc(T('Print'))}</span></button></div>
           <div class="rt-bm rt-pr" style="display:none"><div class="rt-bm-row"><input type="text" data-a="prname" maxlength="100" aria-label="${esc(T('Title of the printout'))}"><button class="primary" data-a="prgo">${esc(T('Make the page'))}</button><button data-a="prcancel">${esc(T('Cancel'))}</button></div><label class="rt-full rt-grid"><input type="checkbox" data-a="prgrid"> ${esc(T('Parallels and meridians, with latitude and longitude in the margin'))}</label><p class="rt-bm-msg">${esc(T('The title at the top of the printout.'))}</p></div>
-          <div class="rt-out-back"><button data-a="back">${icon('back', 15)}<span>${esc(T('Back to the stops'))}</span></button></div>
-        </div>`, { cls: 'gcct-route' });
+        </div>
+        <div class="btns rt-pv-btns" style="display:none"><div class="rt-out-back"><button data-a="back">${icon('back', 15)}<span>${esc(T('Back to the stops'))}</span></button></div></div>`, { cls: 'gcct-route' });
       const q = d.querySelector('.rt-q'), list = d.querySelector('.rt-list'), ol = d.querySelector('.rt-route'), sum = d.querySelector('.rt-sum');
       const tag = c => c.kind === 'place' && c.pkind === 'home' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : c.kind === 'place' ? `<em class="tag tag-${c.pkind === 'addr' ? 'addr' : c.pkind === 'abroad' ? 'abroad' : 'place'}">${esc(c.pkind === 'addr' ? T('Address') : c.pkind === 'abroad' ? T('Abroad') : T('Place'))}</em>` : c.kind === 'pin' ? `<em class="tag tag-pin">${esc(LANG === 'no' ? T('Pin (tag)') : 'Pin')}</em>` : [c.solved ? `<em class="tag tag-solved">${esc(T('Solved'))}</em>` : '', c.found ? `<em class="tag tag-found">${esc(T('Found'))}</em>` : '',
         c.kind === 'cache' && c.code && window.__gcctLikelyOwn && window.__gcctLikelyOwn(c.code) ? `<em class="tag tag-owned">${esc(T('Owned'))}</em>` : ''].join('');
@@ -9328,7 +9336,7 @@ ${calcTrk(stamp)}</gpx>
           routeCalc = { id: Date.now().toString(36), sig, mode, legs, accepted: false, unchecked: mode !== 'foot' && !!calcLegs.unchecked, timing };
           saveCalc(); calcBusy = null;
           drawRoute();
-          if (routeOpen() && pv.style.display !== 'none') preview(true, false);
+          if (routeOpen() && pvOn()) preview(true, false);
           try {
             const b = L.latLngBounds([]);
             legs.forEach(l => l.segs.forEach(sg => sg.pts.forEach(p => b.extend(p))));
@@ -9443,9 +9451,22 @@ ${calcTrk(stamp)}</gpx>
         if (bar) bar.oninput = () => { play.t = play.tl.T * (+bar.value) / 1000; play.follow = true; playShow(); play.follow = false; };
         if (started) playShow();
       }
+      // The preview in two tabs, as the layers window: the route itself (calculation, playback, profile, stops)
+      // and what to take it along on (GPS, Geocaching.com, paper) – so neither has to share the height.
+      let pvTab = 'route';
+      const pvOn = () => d.querySelector('.rt-tabs').style.display !== 'none';   // in the preview, whichever tab
+      function showPvTab(t) {
+        if (t) pvTab = t;
+        pv.style.display = t === 'route' ? '' : 'none';
+        d.querySelector('.rt-outpane').style.display = t === 'out' ? '' : 'none';
+        d.querySelectorAll('.rt-tabs .tab').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+      }
+      d.querySelectorAll('.rt-tabs .tab').forEach(b => { b.onclick = () => showPvTab(b.dataset.tab); });
       function preview(on, refit = true) {
         editEls.forEach(el => { el.style.display = on ? 'none' : ''; });
-        pv.style.display = on ? '' : 'none'; d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
+        d.querySelector('.rt-pv-btns').style.display = on ? '' : 'none';
+        d.querySelector('.rt-tabs').style.display = on ? '' : 'none';
+        showPvTab(on ? pvTab : null);
         if (!on) return;
         let tot = 0, totT = 0;
         const pts = routeStops(), cOn = calcOn();
@@ -9471,7 +9492,7 @@ ${calcTrk(stamp)}</gpx>
       d.querySelector('[data-a=preview]').onclick = () => preview(true);
       d.querySelector('[data-a=back]').onclick = () => { clearProfMark(); playStop(); preview(false); };
       function changed() { saveRoute(); drawRoute(); drawRouteList(); drawList(); }
-      routeDlg = d; routeRefresh = () => { if (play.on || play.panning) return; drawRouteList(); drawList(); if (pv.style.display !== 'none') preview(true, false); };
+      routeDlg = d; routeRefresh = () => { if (play.on || play.panning) return; drawRouteList(); drawList(); if (pvOn()) preview(true, false); };
       d.querySelector('[data-a=sort]').onclick = () => {          // nearest neighbour from the first stop
         if (route.length < 3) return;
         const rest = route.slice(1), out = [route[0]];
