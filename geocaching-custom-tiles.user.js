@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.142
+// @version      1.56.143
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -8104,6 +8104,25 @@ ${calcTrk(stamp)}</gpx>
       });
       return { wet, built };
     }
+    // Console: for each straight bit of the calculated route, how much is counted as water and built-up, and
+    // the map colours along it (most common first) – to tune the colour rules. No names or codes.
+    window.gcctAirDebug = async () => {
+      if (!routeCalc) return 'No calculated route';
+      const out = [];
+      for (const l of routeCalc.legs) for (const sg of l.segs) {
+        if (sg.m !== 'air') continue;
+        const a = L.latLng(sg.pts[0][0], sg.pts[0][1]), b = L.latLng(sg.pts[sg.pts.length - 1][0], sg.pts[sg.pts.length - 1][1]);
+        const w = await wetM(a, b), src = waterSrc(a), d = distM(a, b), hist = {};
+        for (let x = 10; x <= d - 10; x += 8) {
+          const t = x / d, p = merc(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t), tx = Math.floor(p.x / 256), ty = Math.floor(p.y / 256);
+          const dt = await waterTile(src, tx, ty); if (!dt) continue;
+          const i = ((Math.floor(p.y) - ty * 256) * 256 + (Math.floor(p.x) - tx * 256)) * 4, k = `${dt[i]},${dt[i + 1]},${dt[i + 2]}${src.built(dt[i], dt[i + 1], dt[i + 2]) ? ' B' : ''}${src.water(dt[i], dt[i + 1], dt[i + 2]) ? ' W' : ''}`;
+          hist[k] = (hist[k] || 0) + 1;
+        }
+        out.push({ m: Math.round(d), wet: w.wet, built: w.built, colours: Object.entries(hist).sort((x, y) => y[1] - x[1]).slice(0, 12) });
+      }
+      console.log(JSON.stringify(out, null, 1)); return out;
+    };
     // A straight line goes neither across water nor through built-up areas or farmland (walk the streets and roads).
     const dry = async (a, b, step) => { const w = await wetM(a, b, step); return w.wet <= 20 && w.built <= Math.max(16, step || 8); };
     // A walk takes the same way there and back: both directions are worked out and the quicker one is used
@@ -8446,7 +8465,7 @@ ${calcTrk(stamp)}</gpx>
     // A stop whose own pin is gone (removed, or all drawings cleared) but with a pin now on the very same spot is
     // taken to be that pin: it gets the name, and the pin's key so later renames find it straight away.
     // Console: the pin stops of the route and the pins on the map (names, keys, spots) – to see why a name differs.
-    window.gcctRouteDebug = () => {
+    window.gcctPinDebug = () => {
       const out = { stops: route.filter(r => r.kind === 'pin').map(r => ({ key: r.key, name: r.name, lat: r.lat, lng: r.lng })),
         pins: pinRecs.map(p => ({ key: 'p:' + p.id, name: p.name, lat: p.lat, lng: p.lng })),
         markers: pins.filter(m => tools.hasLayer(m)).map(m => ({ key: m.__pin ? 'p:' + m.__pin.id : null, name: m.__pin ? m.__pin.name : null, sameRec: m.__pin ? pinRecs.includes(m.__pin) : null })) };
