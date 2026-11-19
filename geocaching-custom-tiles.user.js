@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Geocaching Map – Custom Tile Layers
 // @namespace    https://geocaching.com/userscripts/custom-tiles
-// @version      1.56.141
+// @version      1.56.142
 // @description:no  Egne kartlag (XYZ/TMS/WMS/WMTS), stedssøk, koordinater, måling og 161 m-sirkler på geocaching.com-kartene
 // @description  Any XYZ/TMS/WMS/WMTS layer on the geocaching.com maps (/map and /play/map), with a layer editor (URL auto-detect, capabilities browser, live preview, import/export) plus place/address search, coordinate, measuring and 161 m tools
 // @match        https://www.geocaching.com/map/*
@@ -7421,7 +7421,10 @@
       const fa = freeArea(avoid);
       try {
         if (route.length === 1) { showInFree(L.latLng(route[0].lat, route[0].lng), Math.max(map.getZoom(), 15), avoid); return; }
-        map.fitBounds(L.latLngBounds(route.map(r => [r.lat, r.lng])), { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
+        // the whole calculated route when there is one (it can go well outside the stops), else the stops
+        const B = L.latLngBounds(route.map(r => [r.lat, r.lng]));
+        if (calcValid()) routeCalc.legs.forEach(l => l.segs.forEach(sg => sg.pts.forEach(q => B.extend(q))));
+        map.fitBounds(B, { paddingTopLeft: fa.tl, paddingBottomRight: fa.br, maxZoom: 17 });
       } catch (e) { /* ignore */ }
     }
     const routeLength = () => calcOn() ? routeCalc.legs.reduce((a, l) => a + l.d, 0) : routeStops().reduce((sum, r, i, pts) => i ? sum + distM(L.latLng(pts[i - 1].lat, pts[i - 1].lng), L.latLng(r.lat, r.lng)) : 0, 0);
